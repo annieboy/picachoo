@@ -276,35 +276,36 @@ export default function UploadScreen({
   const dash   = CIRC * (pct / 100);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-full bg-[#080809] px-6 gap-7">
+    <div className="flex flex-col items-center justify-center min-h-full px-6 gap-7"
+         style={{ background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%)' }}>
 
       {eventName && (
-        <p className="text-zinc-600 text-xs uppercase tracking-[0.16em] font-semibold text-center">
+        <p className="text-white/60 text-xs uppercase tracking-[0.16em] font-semibold text-center">
           {eventName}
         </p>
       )}
 
       {/* Ring + thumbnail */}
       <div className="relative flex items-center justify-center">
-        <div className="w-40 h-40 rounded-full overflow-hidden ring-1 ring-white/10">
+        <div className="w-40 h-40 rounded-full overflow-hidden ring-2 ring-white/20">
           <img src={previewUrl.current} alt="Your photo" className="w-full h-full object-cover" />
         </div>
 
         {!isDone && (
           <svg className="absolute -inset-5 w-[calc(100%+40px)] h-[calc(100%+40px)]"
                viewBox="0 0 128 128" fill="none" aria-hidden="true">
-            <circle cx="64" cy="64" r={RADIUS} stroke="rgba(255,255,255,0.07)" strokeWidth="5" />
+            <circle cx="64" cy="64" r={RADIUS} stroke="rgba(255,255,255,0.15)" strokeWidth="5" />
             <circle cx="64" cy="64" r={RADIUS}
-              stroke={ringColor} strokeWidth="5" strokeLinecap="round"
+              stroke="#fff" strokeWidth="5" strokeLinecap="round"
               strokeDasharray={`${dash} ${CIRC - dash}`} strokeDashoffset={CIRC * 0.25}
-              style={{ transition: 'stroke-dasharray 0.25s ease, stroke 0.4s ease' }}
+              style={{ transition: 'stroke-dasharray 0.25s ease' }}
             />
           </svg>
         )}
 
         {isDone && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full backdrop-blur-sm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5"
+          <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-full backdrop-blur-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5"
                  strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 animate-pop-in">
               <polyline points="20 6 9 17 4 12" />
             </svg>
@@ -314,34 +315,22 @@ export default function UploadScreen({
 
       {/* Percentage */}
       {!isDone && (
-        <p className="text-5xl font-bold tabular-nums tracking-tight -mt-2"
-           style={{ color: ringColor }}>
+        <p className="text-5xl font-black tabular-nums tracking-tight -mt-2 text-white">
           {pct}%
         </p>
       )}
 
       {/* Status */}
       <div className="text-center space-y-1.5 -mt-2">
-        <p className="text-white text-lg font-semibold">{statusText}</p>
+        <p className="text-white text-lg font-bold">{statusText}</p>
 
         {subLabel && !isDone && (
-          <p className="text-zinc-600 text-xs tracking-wide">{subLabel}</p>
+          <p className="text-white/60 text-xs tracking-wide">{subLabel}</p>
         )}
 
-        {/* Quality badge — shown during active direct upload */}
         {isDirect && isWarm && (
-          <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{
-              background: hostTier === 'pro'
-                ? 'rgba(124,58,237,0.15)'
-                : 'rgba(245,158,11,0.1)',
-              color:  hostTier === 'pro' ? '#a78bfa' : '#fbbf24',
-              border: hostTier === 'pro'
-                ? '1px solid rgba(124,58,237,0.3)'
-                : '1px solid rgba(245,158,11,0.2)',
-            }}
-          >
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}>
             {hostTier === 'pro' ? '✦ Pro · Full resolution' : '◆ Standard quality'}
           </span>
         )}
@@ -349,21 +338,13 @@ export default function UploadScreen({
 
       {/* Progress bar */}
       <div className="w-full max-w-xs">
-        <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)' }}>
           <div className="h-full rounded-full transition-all duration-300"
-               style={{
-                 width:      `${pct}%`,
-                 background: isCompressing || phase === 'init'
-                   ? 'linear-gradient(90deg, #d97706, #f59e0b)'
-                   : isDone
-                   ? 'linear-gradient(90deg, #059669, #34d399)'
-                   : 'linear-gradient(90deg, #6d28d9, #a78bfa)',
-               }} />
+               style={{ width: `${pct}%`, background: '#fff' }} />
         </div>
       </div>
 
-      <button onClick={onRetake}
-              className="text-zinc-700 text-sm active:text-zinc-400 transition-colors">
+      <button onClick={onRetake} className="text-white/50 text-sm active:text-white transition-colors">
         Cancel and retake
       </button>
     </div>

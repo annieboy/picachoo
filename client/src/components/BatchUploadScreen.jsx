@@ -102,25 +102,28 @@ export default function BatchUploadScreen({
   const dash   = CIRC * (pct / 100);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-full bg-[#080809] px-6 gap-7">
+    <div className="flex flex-col items-center justify-center min-h-full px-6 gap-7"
+         style={{ background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%)' }}>
+
       {eventName && (
-        <p className="text-zinc-600 text-xs uppercase tracking-[0.16em] font-semibold text-center">
+        <p className="text-white/60 text-xs uppercase tracking-[0.16em] font-semibold text-center">
           {eventName}
         </p>
       )}
 
       <div className="relative flex items-center justify-center">
-        <div className="w-40 h-40 rounded-full bg-zinc-800 flex items-center justify-center">
-          <span className="text-4xl font-bold text-violet-400 tabular-nums">
+        <div className="w-40 h-40 rounded-full flex items-center justify-center"
+             style={{ background: 'rgba(255,255,255,0.15)' }}>
+          <span className="text-4xl font-black text-white tabular-nums">
             {isDone ? '✓' : `${current + 1}/${total}`}
           </span>
         </div>
         {!isDone && (
           <svg className="absolute -inset-5 w-[calc(100%+40px)] h-[calc(100%+40px)]"
                viewBox="0 0 128 128" fill="none" aria-hidden="true">
-            <circle cx="64" cy="64" r={RADIUS} stroke="rgba(255,255,255,0.07)" strokeWidth="5" />
+            <circle cx="64" cy="64" r={RADIUS} stroke="rgba(255,255,255,0.15)" strokeWidth="5" />
             <circle cx="64" cy="64" r={RADIUS}
-              stroke="#7c3aed" strokeWidth="5" strokeLinecap="round"
+              stroke="#fff" strokeWidth="5" strokeLinecap="round"
               strokeDasharray={`${dash} ${CIRC - dash}`} strokeDashoffset={CIRC * 0.25}
               style={{ transition: 'stroke-dasharray 0.3s ease' }}
             />
@@ -129,35 +132,29 @@ export default function BatchUploadScreen({
       </div>
 
       <div className="text-center space-y-1.5">
-        <p className="text-white text-lg font-semibold">
+        <p className="text-white text-lg font-bold">
           {isDone ? 'All done!' : `Uploading photo ${current + 1} of ${total}`}
         </p>
-        <p className="text-zinc-600 text-xs tracking-wide">
+        <p className="text-white/60 text-xs tracking-wide">
           {isDone ? `${total} photos uploaded` : 'Please wait…'}
         </p>
         {!isDone && (
-          <span
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-            style={{
-              background: hostTier === 'pro' ? 'rgba(124,58,237,0.15)' : 'rgba(245,158,11,0.1)',
-              color:      hostTier === 'pro' ? '#a78bfa' : '#fbbf24',
-              border:     hostTier === 'pro' ? '1px solid rgba(124,58,237,0.3)' : '1px solid rgba(245,158,11,0.2)',
-            }}
-          >
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+                style={{ background: 'rgba(255,255,255,0.2)', color: '#fff', border: '1px solid rgba(255,255,255,0.3)' }}>
             {hostTier === 'pro' ? '✦ Pro · Full resolution' : '◆ Standard quality'}
           </span>
         )}
       </div>
 
       <div className="w-full max-w-xs">
-        <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
+        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.2)' }}>
           <div className="h-full rounded-full transition-all duration-300"
-               style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #6d28d9, #a78bfa)' }} />
+               style={{ width: `${pct}%`, background: '#fff' }} />
         </div>
       </div>
 
       {!isDone && (
-        <button onClick={onCancel} className="text-zinc-700 text-sm active:text-zinc-400 transition-colors">
+        <button onClick={onCancel} className="text-white/50 text-sm active:text-white transition-colors">
           Cancel
         </button>
       )}
