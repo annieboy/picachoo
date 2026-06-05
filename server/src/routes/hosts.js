@@ -17,7 +17,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
          email        = EXCLUDED.email,
          display_name = COALESCE(NULLIF(EXCLUDED.display_name, ''), hosts.display_name),
          updated_at   = NOW()
-       RETURNING id, email, display_name, created_at`,
+       RETURNING id, email, display_name, tier, created_at`,
       [authId, email.toLowerCase(), name || email.split('@')[0]],
     );
 

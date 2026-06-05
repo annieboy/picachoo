@@ -196,11 +196,26 @@ function Dashboard({ session, host, events, setEvents, signOut }) {
     <Shell>
       <div className="dash-topbar">
         <div>
-          <p className="dash-welcome">Welcome back, <strong>{host?.display_name}</strong></p>
+          <p className="dash-welcome">
+            Welcome back, <strong>{host?.display_name}</strong>
+            {host?.tier === 'pro'
+              ? <span className="tier-badge tier-pro">Pro</span>
+              : <span className="tier-badge tier-free">Free</span>}
+          </p>
           <p className="dash-email">{host?.email}</p>
         </div>
         <button className="btn-ghost" onClick={signOut}>Sign out</button>
       </div>
+
+      {host?.tier === 'free' && (
+        <div className="upgrade-banner">
+          <div className="upgrade-banner-text">
+            <strong>Upgrade to Pro</strong> — unlock full-resolution uploads (no 4.5 MB limit),
+            direct-to-cloud delivery, and priority support.
+          </div>
+          <a href="/upgrade" className="upgrade-banner-btn">Upgrade</a>
+        </div>
+      )}
 
       {linked === 'google'   && <div className="banner-success">✓ Google Drive connected!</div>}
       {linked === 'dropbox'  && <div className="banner-success">✓ Dropbox connected!</div>}

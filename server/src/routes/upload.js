@@ -6,7 +6,7 @@ const { singleImageUpload } = require('../middleware/uploadMiddleware');
 
 // Google Drive
 const { getValidAccessToken }  = require('../services/googleTokenService');
-const { buildDriveClient, getOrCreateEventFolder: getDriveFolder, uploadFile: uploadToDrive, makeFilePublic, thumbnailUrl: driveThumb } = require('../services/driveService');
+const { buildDriveClient, getOrCreateEventFolder: getDriveFolder, uploadFile: uploadToDrive, makeFilePublic, thumbnailUrl: driveThumb, createResumableUploadSession } = require('../services/driveService');
 
 // Dropbox
 const { getValidDropboxToken } = require('../services/dropboxTokenService');
@@ -14,7 +14,7 @@ const { getOrCreateEventFolder: getDropboxFolder, uploadFile: uploadToDropbox, g
 
 // OneDrive
 const { getValidOneDriveToken } = require('../services/oneDriveTokenService');
-const { getOrCreateEventFolder: getOneDriveFolder, uploadFile: uploadToOneDrive, getPublicThumbnailUrl: oneDriveThumb } = require('../services/oneDriveService');
+const { getOrCreateEventFolder: getOneDriveFolder, uploadFile: uploadToOneDrive, getPublicThumbnailUrl: oneDriveThumb, createUploadSession: createOneDriveUploadSession } = require('../services/oneDriveService');
 
 const uploadRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -218,6 +218,148 @@ router.post(
         success: true,
         file: { name: filename, fileId, thumbnailUrl: thumbUrl },
       });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ─── POST /api/events/:eventCode/upload-session ───────────────────────────────
+// Pro tier only. Creates a direct-to-cloud upload session so the guest's
+// browser can bypass Vercel entirely — no 4.5 MB limit.
+// Returns { direct:true, uploadUrl, filename, provider, eventId }
+// or      { direct:false } when the host is on the free tier or Dropbox.
+router.post(
+  '/events/:eventCode/upload-session',
+  uploadRateLimit,
+  async (req, res, next) => {
+    try {
+      const { eventCode } = req.params;
+      const { guestName: rawName, mimeType = 'image/jpeg' } = req.body ?? {};
+      const guestName = sanitizeGuestName(rawName);
+
+      const { rows } = await pool.query(
+        `SELECT
+           e.id              AS event_id,
+           e.name            AS event_name,
+           e.status          AS event_status,
+           e.drive_folder_id,
+           ct.id, ct.provider,
+           ct.access_token_enc, ct.refresh_token_enc, ct.token_expires_at,
+           h.tier            AS host_tier
+         FROM events e
+         JOIN cloud_tokens ct ON ct.event_id = e.id
+         JOIN hosts h         ON h.id        = e.host_id
+         WHERE e.join_code = $1
+         ORDER BY ct.updated_at DESC
+         LIMIT 1`,
+        [eventCode.toUpperCase()],
+      );
+
+      // No storage linked or event not found → fall back to compressed upload
+      if (!rows.length) return res.json({ direct: false });
+
+      const row = rows[0];
+
+      if (row.event_status === 'closed') {
+        const err = new Error('This event has ended and is no longer accepting uploads.');
+        err.status = 403;
+        return next(err);
+      }
+
+      // Free tier or Dropbox → instruct client to use compressed upload path
+      if (row.host_tier !== 'pro' || row.provider === 'dropbox') {
+        return res.json({ direct: false });
+      }
+
+      const ext      = extForMime(mimeType);
+      const filename = `${guestName}_${safeTimestamp()}${ext}`;
+
+      let uploadUrl;
+      try {
+        if (row.provider === 'google_drive') {
+          const accessToken = await getValidAccessToken(row);
+          const driveClient = buildDriveClient(accessToken);
+          const event       = { id: row.event_id, name: row.event_name, drive_folder_id: row.drive_folder_id };
+          const folderId    = await getDriveFolder(driveClient, event);
+          uploadUrl = await createResumableUploadSession(accessToken, filename, mimeType, folderId);
+        } else if (row.provider === 'onedrive') {
+          const token    = await getValidOneDriveToken(row);
+          const event    = { id: row.event_id, name: row.event_name, drive_folder_id: row.drive_folder_id };
+          const folderId = await getOneDriveFolder(token, event);
+          uploadUrl = await createOneDriveUploadSession(token, filename, folderId);
+        } else {
+          return res.json({ direct: false });
+        }
+      } catch (sessionErr) {
+        console.error('[upload-session] provider error:', sessionErr.message);
+        return res.json({ direct: false }); // Degrade gracefully
+      }
+
+      res.json({ direct: true, uploadUrl, filename, provider: row.provider, eventId: row.event_id });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// ─── POST /api/events/:eventCode/record-upload ────────────────────────────────
+// Called by the client after a successful direct-to-cloud upload.
+// Finalises the file (make public, generate thumbnail URL) and records it in DB.
+router.post(
+  '/events/:eventCode/record-upload',
+  uploadRateLimit,
+  async (req, res, next) => {
+    try {
+      const { eventCode } = req.params;
+      const { fileId, filename, guestName: rawName } = req.body ?? {};
+      const guestName = sanitizeGuestName(rawName);
+
+      if (!fileId || !guestName) {
+        const err = new Error('fileId and guestName are required');
+        err.status = 400;
+        return next(err);
+      }
+
+      const { rows } = await pool.query(
+        `SELECT
+           e.id AS event_id,
+           ct.id, ct.provider,
+           ct.access_token_enc, ct.refresh_token_enc, ct.token_expires_at
+         FROM events e
+         JOIN cloud_tokens ct ON ct.event_id = e.id
+         WHERE e.join_code = $1
+         ORDER BY ct.updated_at DESC
+         LIMIT 1`,
+        [eventCode.toUpperCase()],
+      );
+
+      if (!rows.length) {
+        const err = new Error('Event not found');
+        err.status = 404;
+        return next(err);
+      }
+
+      const row = rows[0];
+      let thumbUrl = null;
+
+      if (row.provider === 'google_drive') {
+        const accessToken = await getValidAccessToken(row);
+        const driveClient = buildDriveClient(accessToken);
+        try { await makeFilePublic(driveClient, fileId); } catch { /* non-fatal */ }
+        thumbUrl = driveThumb(fileId);
+      } else if (row.provider === 'onedrive') {
+        const token = await getValidOneDriveToken(row);
+        try { thumbUrl = await oneDriveThumb(token, fileId); } catch { /* non-fatal */ }
+      }
+
+      await pool.query(
+        `INSERT INTO photos (event_id, guest_name, drive_file_id, thumbnail_url)
+         VALUES ($1, $2, $3, $4)`,
+        [row.event_id, guestName, fileId, thumbUrl],
+      );
+
+      res.status(201).json({ success: true, file: { fileId, thumbnailUrl: thumbUrl } });
     } catch (err) {
       next(err);
     }

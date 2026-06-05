@@ -130,6 +130,35 @@ async function getPublicThumbnailUrl(token, itemId) {
   return `https://api.onedrive.com/v1.0/shares/u!${encoded}/root/content`;
 }
 
+// ── Direct upload session (bypasses Vercel body size limit) ──────────────────
+
+/**
+ * Creates an OneDrive upload session for direct browser-to-OneDrive upload.
+ * The returned uploadUrl contains an embedded SAS token — no Authorization
+ * header needed when the browser PUTs the file directly to this URL.
+ * Sessions expire after ~15 minutes if unused.
+ *
+ * @param {string} token    - Valid OneDrive access token (server-side only)
+ * @param {string} filename - Desired file name in OneDrive
+ * @param {string} folderId - OneDrive item ID of the target folder
+ * @returns {Promise<string>} Direct upload URL for the client to PUT to
+ */
+async function createUploadSession(token, filename, folderId) {
+  const url = `${GRAPH}/items/${folderId}:/${encodeURIComponent(filename)}:/createUploadSession`;
+  const data = await graphRequest(url, token, {
+    method: 'POST',
+    body: {
+      item: {
+        '@microsoft.graph.conflictBehavior': 'rename',
+        name: filename,
+      },
+      deferCommit: false,
+    },
+  });
+  if (!data?.uploadUrl) throw new Error('OneDrive did not return an uploadUrl');
+  return data.uploadUrl;
+}
+
 // ── Current user ──────────────────────────────────────────────────────────────
 
 async function getCurrentUserEmail(token) {
@@ -140,6 +169,7 @@ async function getCurrentUserEmail(token) {
 module.exports = {
   getOrCreateEventFolder,
   uploadFile,
+  createUploadSession,
   getPublicThumbnailUrl,
   getCurrentUserEmail,
 };

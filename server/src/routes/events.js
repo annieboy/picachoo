@@ -67,7 +67,10 @@ router.post('/create', requireAuth, createEvent);
 router.get('/by-code/:joinCode', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT id, name, join_code, status FROM events WHERE join_code = $1`,
+      `SELECT e.id, e.name, e.join_code, e.status, h.tier AS host_tier
+       FROM events e
+       JOIN hosts h ON h.id = e.host_id
+       WHERE e.join_code = $1`,
       [req.params.joinCode.toUpperCase()],
     );
     if (!rows.length) {

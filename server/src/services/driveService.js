@@ -147,6 +147,46 @@ async function makeFilePublic(driveClient, fileId) {
 }
 
 /**
+ * Creates a Google Drive resumable upload session for direct browser-to-Drive
+ * upload. The returned Location URL is an opaque, credential-free upload URI
+ * valid for 7 days — safe to give to the guest's browser.
+ *
+ * The guest PUTs the raw file to this URL (no Authorization header needed).
+ * On success, Drive returns { id, name, ... } with the new file ID.
+ *
+ * @param {string} accessToken - Valid Drive access token (server-side only)
+ * @param {string} filename    - Desired filename in Drive
+ * @param {string} mimeType    - e.g. 'image/jpeg'
+ * @param {string} folderId    - Drive folder ID to place the file in
+ * @returns {Promise<string>}  Resumable upload URI for the client to PUT to
+ */
+async function createResumableUploadSession(accessToken, filename, mimeType, folderId) {
+  const res = await fetch(
+    'https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable',
+    {
+      method: 'POST',
+      headers: {
+        Authorization:           `Bearer ${accessToken}`,
+        'Content-Type':          'application/json',
+        'X-Upload-Content-Type': mimeType,
+      },
+      body: JSON.stringify({ name: filename, parents: [folderId] }),
+    },
+  );
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    const err  = new Error(body?.error?.message ?? `Drive session failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+
+  const location = res.headers.get('Location');
+  if (!location) throw new Error('Drive did not return an upload session URI');
+  return location;
+}
+
+/**
  * Returns a stable public thumbnail URL for a Drive file ID.
  * Works once the file has been made public via makeFilePublic().
  * sz=w1200 gives a 1200px-wide image — sharp on retina venue screens.
@@ -155,4 +195,4 @@ function thumbnailUrl(fileId) {
   return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`;
 }
 
-module.exports = { buildDriveClient, getOrCreateEventFolder, uploadFile, makeFilePublic, thumbnailUrl };
+module.exports = { buildDriveClient, getOrCreateEventFolder, uploadFile, makeFilePublic, thumbnailUrl, createResumableUploadSession };

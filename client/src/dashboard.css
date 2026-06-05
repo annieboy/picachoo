@@ -793,3 +793,58 @@ input::placeholder { color: #3f3f46; }
 }
 .event-delete-confirm-yes:hover:not(:disabled) { background: rgba(239,68,68,0.3); }
 .event-delete-confirm-yes:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Tier badge ────────────────────────────────────────────────────────────── */
+.tier-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  text-transform: uppercase;
+}
+.tier-pro {
+  background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(167,139,250,0.2));
+  border: 1px solid rgba(167,139,250,0.4);
+  color: #c4b5fd;
+}
+.tier-free {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: #71717a;
+}
+
+/* ── Upgrade banner ────────────────────────────────────────────────────────── */
+.upgrade-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: linear-gradient(135deg, rgba(109,40,217,0.12), rgba(124,58,237,0.08));
+  border: 1px solid rgba(124,58,237,0.25);
+  border-radius: 0.875rem;
+  padding: 0.875rem 1.25rem;
+  margin: 0 0 0.5rem;
+}
+.upgrade-banner-text {
+  font-size: 0.82rem;
+  color: #a1a1aa;
+  line-height: 1.5;
+}
+.upgrade-banner-text strong { color: #c4b5fd; }
+.upgrade-banner-btn {
+  flex-shrink: 0;
+  padding: 0.45rem 1rem;
+  border-radius: 0.625rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #6d28d9, #7c3aed);
+  color: #fff;
+  text-decoration: none;
+  transition: opacity 0.15s, transform 0.1s;
+}
+.upgrade-banner-btn:hover { opacity: 0.9; transform: translateY(-1px); }
