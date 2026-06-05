@@ -26,6 +26,8 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
   const [progress, setProgress] = useState(0);
   const [sizeInfo, setSizeInfo]  = useState('');
   const abortRef = useRef(false);
+  const previewUrl = useRef(URL.createObjectURL(blob));
+  useEffect(() => () => URL.revokeObjectURL(previewUrl.current), []);
 
   useEffect(() => {
     abortRef.current = false;
@@ -70,7 +72,7 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
         if (!res.ok) throw new Error(body.error ?? `Upload failed (${res.status})`);
         setProgress(100);
         setPhase('done');
-        setTimeout(onSuccess, 400);
+        setTimeout(onSuccess, 500);
       } catch (err) {
         clearInterval(timer);
         if (!abortRef.current) onError(err.message);
@@ -81,59 +83,104 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
     return () => { abortRef.current = true; };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const previewUrl = useRef(URL.createObjectURL(blob));
-  useEffect(() => () => URL.revokeObjectURL(previewUrl.current), []);
-
   const isCompressing = phase === 'compressing';
-  const statusLabel   = isCompressing ? 'Preparing your photo…' : phase === 'uploading' ? 'Sending to Drive…' : 'Done!';
-  const stepLabel     = isCompressing ? 'Optimising · Step 1 of 2' : 'Uploading · Step 2 of 2';
+  const isDone        = phase === 'done';
+  const pct           = Math.round(progress);
+
+  const statusLabel = isCompressing ? 'Preparing your photo…'
+    : isDone        ? 'All done!'
+    : 'Uploading to Drive…';
+
+  const stepLabel = sizeInfo
+    ? `Compressed: ${sizeInfo}`
+    : isCompressing ? 'Optimising  ·  Step 1 of 2'
+    : 'Uploading  ·  Step 2 of 2';
+
+  // SVG ring progress
+  const RADIUS = 54;
+  const CIRC   = 2 * Math.PI * RADIUS;
+  const dash   = CIRC * (pct / 100);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-full bg-black px-6 gap-6">
+    <div className="flex flex-col items-center justify-center min-h-full bg-[#080809] px-6 gap-7">
 
-      {/* Event context */}
+      {/* Event label */}
       {eventName && (
-        <p className="text-zinc-500 text-xs uppercase tracking-widest font-medium text-center">
+        <p className="text-zinc-600 text-xs uppercase tracking-[0.16em] font-semibold text-center">
           {eventName}
         </p>
       )}
 
-      {/* Thumbnail with spinner overlay */}
-      <div className="relative w-52 h-52 rounded-3xl overflow-hidden shadow-2xl ring-1 ring-white/10">
-        <img src={previewUrl.current} alt="Your photo" className="w-full h-full object-cover" />
+      {/* Circular progress + thumbnail */}
+      <div className="relative flex items-center justify-center">
+        {/* Photo thumbnail */}
+        <div className="w-40 h-40 rounded-full overflow-hidden ring-1 ring-white/10">
+          <img src={previewUrl.current} alt="Your photo" className="w-full h-full object-cover" />
+        </div>
 
-        {/* Blurred dark overlay */}
-        {phase !== 'done' && (
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
-            {/* Stylised dual-ring spinner */}
-            <div className="relative w-14 h-14">
-              <svg className="absolute inset-0 w-full h-full animate-spin" viewBox="0 0 56 56" fill="none">
-                <circle cx="28" cy="28" r="24" stroke="white" strokeOpacity="0.1" strokeWidth="4"/>
-                <path d="M28 4 A24 24 0 0 1 52 28" stroke="#a78bfa" strokeWidth="4" strokeLinecap="round"/>
-              </svg>
-              <svg className="absolute inset-0 w-full h-full animate-spin [animation-duration:1.5s] [animation-direction:reverse]" viewBox="0 0 56 56" fill="none">
-                <path d="M28 52 A24 24 0 0 1 4 28" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeOpacity="0.5"/>
-              </svg>
-            </div>
-            <p className="text-white text-xs font-medium">{Math.round(progress)}%</p>
+        {/* SVG ring */}
+        {!isDone && (
+          <svg
+            className="absolute -inset-5 w-[calc(100%+40px)] h-[calc(100%+40px)]"
+            viewBox="0 0 128 128"
+            fill="none"
+            aria-hidden="true"
+          >
+            {/* Track */}
+            <circle cx="64" cy="64" r={RADIUS} stroke="rgba(255,255,255,0.07)" strokeWidth="5" />
+            {/* Progress arc */}
+            <circle
+              cx="64" cy="64" r={RADIUS}
+              stroke={isCompressing ? '#f59e0b' : '#7c3aed'}
+              strokeWidth="5"
+              strokeLinecap="round"
+              strokeDasharray={`${dash} ${CIRC - dash}`}
+              strokeDashoffset={CIRC * 0.25}
+              style={{ transition: 'stroke-dasharray 0.3s ease, stroke 0.4s ease' }}
+            />
+          </svg>
+        )}
+
+        {/* Done check */}
+        {isDone && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full backdrop-blur-sm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#34d399" strokeWidth="2.5"
+                 strokeLinecap="round" strokeLinejoin="round" className="w-10 h-10 animate-pop-in">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
           </div>
         )}
       </div>
 
+      {/* Big percentage */}
+      {!isDone && (
+        <div className="text-center -mt-2">
+          <p
+            className="text-5xl font-bold tabular-nums tracking-tight"
+            style={{ color: isCompressing ? '#f59e0b' : '#a78bfa' }}
+          >
+            {pct}%
+          </p>
+        </div>
+      )}
+
       {/* Status text */}
-      <div className="text-center space-y-1">
+      <div className="text-center space-y-1 -mt-2">
         <p className="text-white text-lg font-semibold">{statusLabel}</p>
-        <p className="text-zinc-500 text-xs tracking-wide">{sizeInfo || stepLabel}</p>
+        <p className="text-zinc-600 text-xs tracking-wide">{stepLabel}</p>
       </div>
 
-      {/* Progress bar */}
-      <div className="w-full max-w-xs space-y-1.5">
-        <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+      {/* Linear bar */}
+      <div className="w-full max-w-xs">
+        <div className="h-1 rounded-full bg-zinc-800 overflow-hidden">
           <div
-            className={`h-full rounded-full transition-all duration-300 ${
-              isCompressing ? 'bg-amber-400' : 'bg-violet-500'
-            }`}
-            style={{ width: `${progress}%` }}
+            className="h-full rounded-full transition-all duration-300"
+            style={{
+              width: `${pct}%`,
+              background: isCompressing
+                ? 'linear-gradient(90deg, #d97706, #f59e0b)'
+                : 'linear-gradient(90deg, #6d28d9, #a78bfa)',
+            }}
           />
         </div>
       </div>
@@ -141,7 +188,7 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
       {/* Cancel */}
       <button
         onClick={onRetake}
-        className="text-zinc-600 text-sm underline underline-offset-2 active:text-zinc-400 transition-colors"
+        className="text-zinc-700 text-sm active:text-zinc-400 transition-colors"
       >
         Cancel and retake
       </button>
