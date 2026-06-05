@@ -365,7 +365,7 @@ function Pricing() {
               ))}
             </ul>
             <Link to="/pricing" className="btn-white w-full py-3.5 text-center text-sm">
-              Start 14-day trial
+              Get started free
             </Link>
           </div>
         </div>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
   setAuthToken, getOrCreateHost, createEvent,
@@ -271,6 +271,7 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
   const isPro = tier !== 'free';
 
   return (
+    <>
     <Shell>
       {/* Top bar */}
       <div className="dash-topbar">
@@ -368,6 +369,7 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
     </Shell>
 
     {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+    </>
   );
 }
 
@@ -651,6 +653,8 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
   const [deleting,     setDeleting]     = useState(false);
   const [mgmtError,    setMgmtError]    = useState('');
   const [copied,       setCopied]       = useState(false);
+  const [wallPicker,   setWallPicker]   = useState(false);
+  const [wallSaving,   setWallSaving]   = useState(false);
 
   const statusColors = { active: 'status-active', draft: 'status-draft', closed: 'status-closed' };
   const guestUrl = `${window.location.origin}/e/${ev.join_code}`;
@@ -686,6 +690,21 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
       setDelConfirm(false);
     } finally {
       setDeleting(false);
+    }
+  }
+
+  async function handleWallMode(mode) {
+    setWallSaving(true);
+    try {
+      const { event: updated } = await updateEvent(ev.id, { wallMode: mode });
+      const merged = { ...ev, ...updated };
+      setEv(merged);
+      onUpdate?.(merged);
+      setWallPicker(false);
+    } catch (err) {
+      setMgmtError(err.message);
+    } finally {
+      setWallSaving(false);
     }
   }
 
@@ -742,9 +761,53 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
         )}
       </div>
 
-      <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="wall-link">
-        <span>📺</span> Open Live Wall
-      </a>
+      {/* Live wall section */}
+      <div className="wall-section">
+        <div className="wall-section-row">
+          <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="wall-link">
+            <span>📺</span> Open Live Wall
+          </a>
+          <button
+            className={`wall-toggle-btn${ev.wall_mode !== 'off' ? ' wall-toggle-on' : ''}`}
+            onClick={() => ev.wall_mode !== 'off' ? handleWallMode('off') : setWallPicker(true)}
+            disabled={wallSaving}
+          >
+            <span className={`wall-toggle-dot${ev.wall_mode !== 'off' ? ' wall-toggle-dot-on' : ''}`} />
+            {ev.wall_mode === 'off' ? 'Wall off' : ev.wall_mode === 'everyone' ? 'Visible to all' : 'Host only'}
+          </button>
+        </div>
+
+        {wallPicker && (
+          <div className="wall-picker">
+            <p className="wall-picker-label">Who can see the live wall?</p>
+            <div className="wall-picker-options">
+              <button
+                className="wall-picker-opt"
+                onClick={() => handleWallMode('everyone')}
+                disabled={wallSaving}
+              >
+                <span className="wall-picker-opt-icon">🌐</span>
+                <div>
+                  <strong>Everyone</strong>
+                  <p>Guests and hosts can view the live wall</p>
+                </div>
+              </button>
+              <button
+                className="wall-picker-opt"
+                onClick={() => handleWallMode('host_only')}
+                disabled={wallSaving}
+              >
+                <span className="wall-picker-opt-icon">🔒</span>
+                <div>
+                  <strong>Host only</strong>
+                  <p>Only you can see the live wall</p>
+                </div>
+              </button>
+            </div>
+            <button className="wall-picker-cancel" onClick={() => setWallPicker(false)}>Cancel</button>
+          </div>
+        )}
+      </div>
 
       {ev.linked_provider ? (
         <StorageStatus
@@ -916,9 +979,9 @@ function UpgradeModal({ onClose }) {
 
         <div className="px-6 pb-6 flex items-center justify-center gap-1.5 text-gray-400 text-xs">
           <svg viewBox="0 0 20 20" fill="#34d399" className="w-3.5 h-3.5">
-            <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/>
           </svg>
-          30-day money-back guarantee · Secure payment via Stripe
+          Secure payment via Stripe · Cancel anytime
         </div>
       </div>
     </div>
@@ -1198,7 +1261,9 @@ function Shell({ children }) {
   return (
     <div className="dash-shell">
       <header className="dash-header">
-        <span className="logo">pica<span>choo</span></span>
+        <Link to="/" className="logo" style={{ textDecoration: 'none' }}>
+          pica<span>choo</span>
+        </Link>
       </header>
       <main className="dash-main">{children}</main>
     </div>

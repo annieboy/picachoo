@@ -55,7 +55,7 @@ export default function UpgradePage() {
             <Link to="/dashboard" className="btn-white block w-full py-4 text-center text-base">
               Upgrade to Pro — £9/mo
             </Link>
-            <p className="text-center text-white/50 text-xs mt-3">14-day free trial · Cancel any time</p>
+            <p className="text-center text-white/50 text-xs mt-3">Cancel any time</p>
           </div>
 
           {/* Comparison */}
