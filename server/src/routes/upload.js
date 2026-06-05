@@ -4,7 +4,7 @@ const path = require('path');
 const pool = require('../config/db');
 const { singleImageUpload } = require('../middleware/uploadMiddleware');
 const { getValidAccessToken } = require('../services/googleTokenService');
-const { buildDriveClient, getOrCreateEventFolder, uploadFile } = require('../services/driveService');
+const { buildDriveClient, getOrCreateEventFolder, uploadFile, makeFilePublic, thumbnailUrl } = require('../services/driveService');
 
 // Stricter rate limit for the upload endpoint specifically.
 // 30 uploads per IP per 15 minutes is plenty for a single guest at an event.
@@ -139,12 +139,30 @@ router.post(
         folderId,
       );
 
+      // Make the file publicly readable so the photo wall can display it
+      // without a server-side proxy. Best-effort — never fails the upload.
+      try {
+        await makeFilePublic(driveClient, uploaded.id);
+      } catch (e) {
+        console.warn('makeFilePublic failed (non-fatal):', e.message);
+      }
+
+      const thumb = thumbnailUrl(uploaded.id);
+
+      // Write photo metadata to Supabase so Realtime can push it to the wall.
+      await pool.query(
+        `INSERT INTO photos (event_id, guest_name, drive_file_id, thumbnail_url)
+         VALUES ($1, $2, $3, $4)`,
+        [row.event_id, guestName, uploaded.id, thumb],
+      );
+
       res.status(201).json({
         success: true,
         file: {
           name: uploaded.name,
           driveFileId: uploaded.id,
           viewLink: uploaded.webViewLink,
+          thumbnailUrl: thumb,
         },
       });
     } catch (err) {

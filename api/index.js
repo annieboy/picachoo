@@ -13,6 +13,7 @@ const authRouter   = require('../server/src/routes/auth');
 const hostsRouter  = require('../server/src/routes/hosts');
 const eventsRouter = require('../server/src/routes/events');
 const uploadRouter = require('../server/src/routes/upload');
+const photosRouter = require('../server/src/routes/photos');
 
 const app = express();
 
@@ -57,6 +58,7 @@ app.use('/api/auth',   authRouter);
 app.use('/api/hosts',  hostsRouter);
 app.use('/api/events', eventsRouter);
 app.use('/api',        uploadRouter);
+app.use('/api',        photosRouter);
 
 // ─── 404 + error handler ──────────────────────────────────────────────────────
 app.use(notFound);

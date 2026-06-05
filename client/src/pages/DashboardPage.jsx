@@ -157,6 +157,16 @@ function EventCard({ event, hostId }) {
         </button>
       </div>
 
+      {/* Wall link */}
+      <a
+        href={`/e/${event.join_code}/wall`}
+        target="_blank"
+        rel="noreferrer"
+        className="wall-link"
+      >
+        <span>📺</span> Open Live Wall
+      </a>
+
       {/* Drive status */}
       {driveLinked ? (
         <p className="drive-linked">

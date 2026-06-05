@@ -129,4 +129,30 @@ async function uploadFile(driveClient, buffer, filename, mimeType, folderId) {
   return res.data;
 }
 
-module.exports = { buildDriveClient, getOrCreateEventFolder, uploadFile };
+/**
+ * Grants "reader" access to anyone with the link so the photo wall can
+ * display images directly without an auth proxy.
+ *
+ * Called best-effort after upload — a failure here does NOT fail the upload.
+ *
+ * @param {object} driveClient
+ * @param {string} fileId
+ */
+async function makeFilePublic(driveClient, fileId) {
+  await driveClient.permissions.create({
+    fileId,
+    requestBody: { role: 'reader', type: 'anyone' },
+    fields: 'id',
+  });
+}
+
+/**
+ * Returns a stable public thumbnail URL for a Drive file ID.
+ * Works once the file has been made public via makeFilePublic().
+ * sz=w1200 gives a 1200px-wide image — sharp on retina venue screens.
+ */
+function thumbnailUrl(fileId) {
+  return `https://drive.google.com/thumbnail?id=${fileId}&sz=w1200`;
+}
+
+module.exports = { buildDriveClient, getOrCreateEventFolder, uploadFile, makeFilePublic, thumbnailUrl };

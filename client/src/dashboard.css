@@ -314,6 +314,19 @@ input::placeholder { color: #3f3f46; }
   font-size: 0.875rem;
 }
 
+/* ── Wall link ──────────────────────────────────────────────────────────────── */
+.wall-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #a78bfa;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.wall-link:hover { color: #c4b5fd; }
+
 /* ── Misc ───────────────────────────────────────────────────────────────────── */
 .badge {
   display: inline-flex;

@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import DashboardPage from './pages/DashboardPage';
 import GuestPage     from './pages/GuestPage';
+import WallPage      from './pages/WallPage';
 import './dashboard.css';
 
 export default function App() {
@@ -12,6 +13,9 @@ export default function App() {
 
         {/* Guest camera view — /e/:eventCode */}
         <Route path="/e/:eventCode" element={<GuestPage />} />
+
+        {/* Live photo wall — /e/:eventCode/wall */}
+        <Route path="/e/:eventCode/wall" element={<WallPage />} />
 
         {/* Legacy path kept for backwards compatibility */}
         <Route path="/events/:eventCode" element={<GuestPage />} />
