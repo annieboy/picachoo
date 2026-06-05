@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { registerHost, createEvent, getHost, googleAuthUrl } from '../api';
+import { registerHost, createEvent, getHost, googleAuthUrl, dropboxAuthUrl } from '../api';
 import QRCard from '../components/QRCard';
 
 const HOST_KEY = 'picachoo_host_id';
@@ -22,7 +22,7 @@ export default function DashboardPage() {
   }, [hostId]);
 
   const params   = new URLSearchParams(window.location.search);
-  const linked   = params.get('linked');
+  const linked   = params.get('linked');   // 'google' | 'dropbox'
   const oauthErr = params.get('error');
 
   async function handleRegister(e) {
@@ -53,14 +53,14 @@ export default function DashboardPage() {
     setHostId(''); setHost(null); setEvents([]);
   }
 
-  // ── Registration ────────────────────────────────────────────────────────────
+  // ── Registration ─────────────────────────────────────────────────────────────
   if (!hostId) {
     return (
       <Shell>
         <div className="auth-card">
           <div className="auth-logo">pica<span>choo</span></div>
           <h1>Welcome</h1>
-          <p className="auth-sub">Create events and receive photos directly to your Google Drive.</p>
+          <p className="auth-sub">Create events and receive photos directly to your cloud storage.</p>
           <form onSubmit={handleRegister}>
             <label>
               Email
@@ -82,7 +82,7 @@ export default function DashboardPage() {
     );
   }
 
-  // ── Dashboard ───────────────────────────────────────────────────────────────
+  // ── Dashboard ─────────────────────────────────────────────────────────────────
   return (
     <Shell>
       {/* Top bar */}
@@ -98,8 +98,13 @@ export default function DashboardPage() {
       {linked === 'google' && (
         <div className="banner-success">✓ Google Drive connected successfully!</div>
       )}
+      {linked === 'dropbox' && (
+        <div className="banner-success">✓ Dropbox connected successfully!</div>
+      )}
       {oauthErr && (
-        <div className="banner-error">Google auth failed: {oauthErr}</div>
+        <div className="banner-error">
+          {oauthErr === 'dropbox_auth_denied' ? 'Dropbox authorisation was cancelled.' : 'Google auth failed: ' + oauthErr}
+        </div>
       )}
 
       {/* Create event */}
@@ -132,9 +137,11 @@ export default function DashboardPage() {
   );
 }
 
+// ── Event card ────────────────────────────────────────────────────────────────
+
 function EventCard({ event, hostId }) {
   const [showQR, setShowQR] = useState(false);
-  const driveLinked = !!event.linked_provider;
+  const provider = event.linked_provider; // 'google_drive' | 'dropbox' | null
 
   const statusColors = {
     active: 'status-active',
@@ -158,24 +165,15 @@ function EventCard({ event, hostId }) {
       </div>
 
       {/* Wall link */}
-      <a
-        href={`/e/${event.join_code}/wall`}
-        target="_blank"
-        rel="noreferrer"
-        className="wall-link"
-      >
+      <a href={`/e/${event.join_code}/wall`} target="_blank" rel="noreferrer" className="wall-link">
         <span>📺</span> Open Live Wall
       </a>
 
-      {/* Drive status */}
-      {driveLinked ? (
-        <p className="drive-linked">
-          <DriveIcon /> Drive connected · {event.linked_account}
-        </p>
+      {/* Storage section */}
+      {provider ? (
+        <LinkedBadge provider={provider} account={event.linked_account} />
       ) : (
-        <a href={googleAuthUrl({ hostId, eventId: event.id })} className="btn-drive">
-          <DriveIcon /> Connect Google Drive
-        </a>
+        <StoragePicker hostId={hostId} eventId={event.id} />
       )}
 
       {/* QR panel */}
@@ -184,6 +182,39 @@ function EventCard({ event, hostId }) {
   );
 }
 
+// ── Connected badge ───────────────────────────────────────────────────────────
+
+function LinkedBadge({ provider, account }) {
+  const isDropbox = provider === 'dropbox';
+  return (
+    <p className="drive-linked">
+      {isDropbox ? <DropboxIcon /> : <DriveIcon />}
+      {isDropbox ? 'Dropbox' : 'Google Drive'} connected
+      {account ? ` · ${account}` : ''}
+    </p>
+  );
+}
+
+// ── Storage picker (shown when nothing is connected) ──────────────────────────
+
+function StoragePicker({ hostId, eventId }) {
+  return (
+    <div className="storage-picker">
+      <p className="storage-picker-label">Connect cloud storage to start receiving photos</p>
+      <div className="storage-picker-btns">
+        <a href={googleAuthUrl({ hostId, eventId })} className="btn-drive">
+          <DriveIcon /> Google Drive
+        </a>
+        <a href={dropboxAuthUrl({ hostId, eventId })} className="btn-dropbox">
+          <DropboxIcon /> Dropbox
+        </a>
+      </div>
+    </div>
+  );
+}
+
+// ── Icons ─────────────────────────────────────────────────────────────────────
+
 function DriveIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
@@ -191,6 +222,16 @@ function DriveIcon() {
     </svg>
   );
 }
+
+function DropboxIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
+      <path d="M6 2L0 6l6 4-6 4 6 4 6-4-6-4 6-4L6 2zm12 0l-6 4 6 4-6 4 6 4 6-4-6-4 6-4-6-4zM6 16.5L12 20l6-3.5-6-4-6 4z"/>
+    </svg>
+  );
+}
+
+// ── Shell ─────────────────────────────────────────────────────────────────────
 
 function Shell({ children }) {
   return (

@@ -3,11 +3,15 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const pool = require('../config/db');
 const { singleImageUpload } = require('../middleware/uploadMiddleware');
-const { getValidAccessToken } = require('../services/googleTokenService');
-const { buildDriveClient, getOrCreateEventFolder, uploadFile, makeFilePublic, thumbnailUrl } = require('../services/driveService');
 
-// Stricter rate limit for the upload endpoint specifically.
-// 30 uploads per IP per 15 minutes is plenty for a single guest at an event.
+// Google Drive
+const { getValidAccessToken }  = require('../services/googleTokenService');
+const { buildDriveClient, getOrCreateEventFolder: getDriveFolder, uploadFile: uploadToDrive, makeFilePublic, thumbnailUrl: driveThumb } = require('../services/driveService');
+
+// Dropbox
+const { getValidDropboxToken } = require('../services/dropboxTokenService');
+const { getOrCreateEventFolder: getDropboxFolder, uploadFile: uploadToDropbox, getPublicThumbnailUrl } = require('../services/dropboxService');
+
 const uploadRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,
@@ -16,11 +20,6 @@ const uploadRateLimit = rateLimit({
   message: { error: 'Too many uploads from this device. Please wait a few minutes.' },
 });
 
-/**
- * Sanitizes a guest display name for use in a filename:
- * strips path separators and control characters, collapses whitespace,
- * truncates to 50 chars so filenames stay reasonable.
- */
 function sanitizeGuestName(raw) {
   return (raw ?? 'Guest')
     .replace(/[/\\?%*:|"<>\x00-\x1f]/g, '')
@@ -29,17 +28,10 @@ function sanitizeGuestName(raw) {
     .slice(0, 50) || 'Guest';
 }
 
-/**
- * Returns a filesystem-safe ISO timestamp, e.g. "2024-06-01T12-00-00.000Z"
- * (colons replaced with dashes so the name is valid on all OSes).
- */
 function safeTimestamp() {
   return new Date().toISOString().replace(/:/g, '-');
 }
 
-/**
- * Maps a MIME type to a canonical extension for the saved filename.
- */
 function extForMime(mimeType) {
   const map = {
     'image/jpeg': '.jpg',
@@ -48,22 +40,48 @@ function extForMime(mimeType) {
     'image/heic': '.heic',
     'image/heif': '.heif',
   };
-  return map[mimeType] ?? path.extname(/* fallback */ '');
+  return map[mimeType] ?? path.extname('');
+}
+
+// ── Provider dispatch ─────────────────────────────────────────────────────────
+
+async function uploadViaGoogleDrive(row, buffer, filename, mimeType) {
+  const accessToken = await getValidAccessToken(row);
+  const driveClient = buildDriveClient(accessToken);
+
+  const event = { id: row.event_id, name: row.event_name, drive_folder_id: row.drive_folder_id };
+  const folderId = await getDriveFolder(driveClient, event);
+
+  const uploaded = await uploadToDrive(driveClient, buffer, filename, mimeType, folderId);
+
+  try {
+    await makeFilePublic(driveClient, uploaded.id);
+  } catch (e) {
+    console.warn('makeFilePublic failed (non-fatal):', e.message);
+  }
+
+  return { fileId: uploaded.id, thumbnailUrl: driveThumb(uploaded.id) };
+}
+
+async function uploadViaDropbox(row, buffer, filename) {
+  const token = await getValidDropboxToken(row);
+
+  const event = { id: row.event_id, name: row.event_name, drive_folder_id: row.drive_folder_id };
+  const folderPath = await getDropboxFolder(token, event);
+
+  const uploaded = await uploadToDropbox(token, buffer, filename, null, folderPath);
+  const thumbUrl  = await getPublicThumbnailUrl(token, uploaded.path_display);
+
+  return { fileId: uploaded.id, thumbnailUrl: thumbUrl };
 }
 
 // ─── POST /api/events/:eventCode/upload ───────────────────────────────────────
-//
-// Multipart form-data fields:
-//   photo       (file, required)  — the image to upload
-//   guestName   (text, optional)  — display name shown in the filename
-//
 router.post(
   '/events/:eventCode/upload',
   uploadRateLimit,
   singleImageUpload,
   async (req, res, next) => {
     try {
-      // ── 1. Validate the uploaded file ──────────────────────────────────────
       if (!req.file) {
         const err = new Error('No photo file received. Send the image in a field named "photo".');
         err.status = 400;
@@ -73,9 +91,7 @@ router.post(
       const { eventCode } = req.params;
       const guestName = sanitizeGuestName(req.body.guestName);
 
-      // ── 2. Look up event + token in a single JOIN ──────────────────────────
-      // We fetch the cloud_tokens row alongside the event so we have everything
-      // needed without a second round-trip.
+      // Fetch event + whichever cloud token is linked (most recently updated wins)
       const { rows } = await pool.query(
         `SELECT
            e.id              AS event_id,
@@ -83,18 +99,20 @@ router.post(
            e.status          AS event_status,
            e.drive_folder_id,
            ct.id             AS id,
+           ct.provider,
            ct.access_token_enc,
            ct.refresh_token_enc,
            ct.token_expires_at
          FROM events e
-         JOIN cloud_tokens ct
-           ON ct.event_id = e.id AND ct.provider = 'google_drive'
-         WHERE e.join_code = $1`,
+         JOIN cloud_tokens ct ON ct.event_id = e.id
+         WHERE e.join_code = $1
+         ORDER BY ct.updated_at DESC
+         LIMIT 1`,
         [eventCode.toUpperCase()],
       );
 
       if (!rows.length) {
-        const err = new Error('Event not found or Google Drive is not linked to this event.');
+        const err = new Error('Event not found or no cloud storage is linked to this event.');
         err.status = 404;
         return next(err);
       }
@@ -113,57 +131,32 @@ router.post(
         return next(err);
       }
 
-      // ── 3. Decrypt / refresh the token and build the Drive client ──────────
-      // Pass the token row directly — the JOIN already fetched everything
-      // getValidAccessToken needs, so no second DB query is required.
-      const accessToken = await getValidAccessToken(row);
-      const driveClient = buildDriveClient(accessToken);
-
-      // ── 4. Get or create the event folder (cached after first upload) ──────
-      const event = {
-        id: row.event_id,
-        name: row.event_name,
-        drive_folder_id: row.drive_folder_id,
-      };
-      const folderId = await getOrCreateEventFolder(driveClient, event);
-
-      // ── 5. Build the filename and upload ───────────────────────────────────
-      const ext = extForMime(req.file.mimetype);
+      const ext      = extForMime(req.file.mimetype);
       const filename = `${guestName}_${safeTimestamp()}${ext}`;
 
-      const uploaded = await uploadFile(
-        driveClient,
-        req.file.buffer,
-        filename,
-        req.file.mimetype,
-        folderId,
-      );
+      let fileId, thumbUrl;
 
-      // Make the file publicly readable so the photo wall can display it
-      // without a server-side proxy. Best-effort — never fails the upload.
-      try {
-        await makeFilePublic(driveClient, uploaded.id);
-      } catch (e) {
-        console.warn('makeFilePublic failed (non-fatal):', e.message);
+      if (row.provider === 'google_drive') {
+        ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaGoogleDrive(
+          row, req.file.buffer, filename, req.file.mimetype,
+        ));
+      } else if (row.provider === 'dropbox') {
+        ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaDropbox(
+          row, req.file.buffer, filename,
+        ));
+      } else {
+        throw new Error(`Unsupported storage provider: ${row.provider}`);
       }
 
-      const thumb = thumbnailUrl(uploaded.id);
-
-      // Write photo metadata to Supabase so Realtime can push it to the wall.
       await pool.query(
         `INSERT INTO photos (event_id, guest_name, drive_file_id, thumbnail_url)
          VALUES ($1, $2, $3, $4)`,
-        [row.event_id, guestName, uploaded.id, thumb],
+        [row.event_id, guestName, fileId, thumbUrl],
       );
 
       res.status(201).json({
         success: true,
-        file: {
-          name: uploaded.name,
-          driveFileId: uploaded.id,
-          viewLink: uploaded.webViewLink,
-          thumbnailUrl: thumb,
-        },
+        file: { name: filename, fileId, thumbnailUrl: thumbUrl },
       });
     } catch (err) {
       next(err);

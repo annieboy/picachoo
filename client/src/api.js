@@ -44,3 +44,8 @@ export async function getHost(hostId) {
 export function googleAuthUrl({ hostId, eventId }) {
   return `${API_BASE}/api/auth/google?hostId=${hostId}&eventId=${eventId}`;
 }
+
+// Returns the Dropbox OAuth URL for linking Dropbox to an event.
+export function dropboxAuthUrl({ hostId, eventId }) {
+  return `${API_BASE}/api/auth/dropbox?hostId=${hostId}&eventId=${eventId}`;
+}
