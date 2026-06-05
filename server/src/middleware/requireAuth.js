@@ -1,54 +1,42 @@
 /**
- * Verifies a Supabase-issued JWT using the project's JWT secret.
- * No extra dependencies — uses Node's built-in crypto module.
- *
- * Sets req.user = { authId, email, name, provider } on success.
+ * Verifies a Supabase JWT by calling supabase.auth.getUser().
+ * Works with all signing algorithms (HS256 legacy AND ECC P-256 current).
+ * Requires SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY env vars.
  */
-const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 
-function verifyJWT(token) {
-  const parts = token.split('.');
-  if (parts.length !== 3) throw new Error('Malformed JWT');
-
-  const [headerB64, payloadB64, sigB64] = parts;
-
-  // Verify signature
-  const expected = crypto
-    .createHmac('sha256', process.env.SUPABASE_JWT_SECRET)
-    .update(`${headerB64}.${payloadB64}`)
-    .digest('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
-
-  if (expected !== sigB64) throw new Error('Invalid JWT signature');
-
-  const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
-
-  if (payload.exp && payload.exp * 1000 < Date.now()) throw new Error('JWT expired');
-
-  return payload;
+let _supabase = null;
+function getSupabase() {
+  if (!_supabase) {
+    _supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+  }
+  return _supabase;
 }
 
-module.exports = function requireAuth(req, res, next) {
+module.exports = async function requireAuth(req, res, next) {
   const header = req.headers.authorization ?? '';
-  // Also accept token as a query param for browser-redirect OAuth initiates
   const raw = header.startsWith('Bearer ')
     ? header.slice(7)
     : (req.query.token ?? '');
 
-  if (!raw) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
+  if (!raw) return res.status(401).json({ error: 'Authentication required' });
 
   try {
-    const payload = verifyJWT(raw);
+    const { data: { user }, error } = await getSupabase().auth.getUser(raw);
+
+    if (error || !user) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }
 
     req.user = {
-      authId:   payload.sub,
-      email:    payload.email ?? '',
-      name:     payload.user_metadata?.full_name ?? payload.user_metadata?.name ?? '',
-      provider: payload.app_metadata?.provider ?? 'email',
+      authId:   user.id,
+      email:    user.email ?? '',
+      name:     user.user_metadata?.full_name ?? user.user_metadata?.name ?? '',
+      provider: user.app_metadata?.provider ?? 'email',
     };
 
     next();
