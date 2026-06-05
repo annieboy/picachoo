@@ -49,3 +49,8 @@ export function googleAuthUrl({ hostId, eventId }) {
 export function dropboxAuthUrl({ hostId, eventId }) {
   return `${API_BASE}/api/auth/dropbox?hostId=${hostId}&eventId=${eventId}`;
 }
+
+// Returns the OneDrive OAuth URL for linking OneDrive to an event.
+export function oneDriveAuthUrl({ hostId, eventId }) {
+  return `${API_BASE}/api/auth/onedrive?hostId=${hostId}&eventId=${eventId}`;
+}

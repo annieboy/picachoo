@@ -10,7 +10,11 @@ const { buildDriveClient, getOrCreateEventFolder: getDriveFolder, uploadFile: up
 
 // Dropbox
 const { getValidDropboxToken } = require('../services/dropboxTokenService');
-const { getOrCreateEventFolder: getDropboxFolder, uploadFile: uploadToDropbox, getPublicThumbnailUrl } = require('../services/dropboxService');
+const { getOrCreateEventFolder: getDropboxFolder, uploadFile: uploadToDropbox, getPublicThumbnailUrl: dropboxThumb } = require('../services/dropboxService');
+
+// OneDrive
+const { getValidOneDriveToken } = require('../services/oneDriveTokenService');
+const { getOrCreateEventFolder: getOneDriveFolder, uploadFile: uploadToOneDrive, getPublicThumbnailUrl: oneDriveThumb } = require('../services/oneDriveService');
 
 const uploadRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -70,7 +74,19 @@ async function uploadViaDropbox(row, buffer, filename) {
   const folderPath = await getDropboxFolder(token, event);
 
   const uploaded = await uploadToDropbox(token, buffer, filename, null, folderPath);
-  const thumbUrl  = await getPublicThumbnailUrl(token, uploaded.path_display);
+  const thumbUrl  = await dropboxThumb(token, uploaded.path_display);
+
+  return { fileId: uploaded.id, thumbnailUrl: thumbUrl };
+}
+
+async function uploadViaOneDrive(row, buffer, filename, mimeType) {
+  const token = await getValidOneDriveToken(row);
+
+  const event    = { id: row.event_id, name: row.event_name, drive_folder_id: row.drive_folder_id };
+  const folderId = await getOneDriveFolder(token, event);
+
+  const uploaded = await uploadToOneDrive(token, buffer, filename, mimeType, folderId);
+  const thumbUrl = await oneDriveThumb(token, uploaded.id);
 
   return { fileId: uploaded.id, thumbnailUrl: thumbUrl };
 }
@@ -143,6 +159,10 @@ router.post(
       } else if (row.provider === 'dropbox') {
         ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaDropbox(
           row, req.file.buffer, filename,
+        ));
+      } else if (row.provider === 'onedrive') {
+        ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaOneDrive(
+          row, req.file.buffer, filename, req.file.mimetype,
         ));
       } else {
         throw new Error(`Unsupported storage provider: ${row.provider}`);

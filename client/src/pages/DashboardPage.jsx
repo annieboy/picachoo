@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { registerHost, createEvent, getHost, googleAuthUrl, dropboxAuthUrl } from '../api';
+import { registerHost, createEvent, getHost, googleAuthUrl, dropboxAuthUrl, oneDriveAuthUrl } from '../api';
 import QRCard from '../components/QRCard';
 
 const HOST_KEY = 'picachoo_host_id';
@@ -101,9 +101,14 @@ export default function DashboardPage() {
       {linked === 'dropbox' && (
         <div className="banner-success">✓ Dropbox connected successfully!</div>
       )}
+      {linked === 'onedrive' && (
+        <div className="banner-success">✓ OneDrive connected successfully!</div>
+      )}
       {oauthErr && (
         <div className="banner-error">
-          {oauthErr === 'dropbox_auth_denied' ? 'Dropbox authorisation was cancelled.' : 'Google auth failed: ' + oauthErr}
+          {oauthErr === 'dropbox_auth_denied'  ? 'Dropbox authorisation was cancelled.'  :
+           oauthErr === 'onedrive_auth_denied' ? 'OneDrive authorisation was cancelled.' :
+           'Google auth failed: ' + oauthErr}
         </div>
       )}
 
@@ -185,11 +190,20 @@ function EventCard({ event, hostId }) {
 // ── Connected badge ───────────────────────────────────────────────────────────
 
 function LinkedBadge({ provider, account }) {
-  const isDropbox = provider === 'dropbox';
+  const labels = {
+    google_drive: 'Google Drive',
+    dropbox:      'Dropbox',
+    onedrive:     'OneDrive',
+  };
+  const icons = {
+    google_drive: <DriveIcon />,
+    dropbox:      <DropboxIcon />,
+    onedrive:     <OneDriveIcon />,
+  };
   return (
     <p className="drive-linked">
-      {isDropbox ? <DropboxIcon /> : <DriveIcon />}
-      {isDropbox ? 'Dropbox' : 'Google Drive'} connected
+      {icons[provider] ?? <DriveIcon />}
+      {labels[provider] ?? provider} connected
       {account ? ` · ${account}` : ''}
     </p>
   );
@@ -207,6 +221,9 @@ function StoragePicker({ hostId, eventId }) {
         </a>
         <a href={dropboxAuthUrl({ hostId, eventId })} className="btn-dropbox">
           <DropboxIcon /> Dropbox
+        </a>
+        <a href={oneDriveAuthUrl({ hostId, eventId })} className="btn-onedrive">
+          <OneDriveIcon /> OneDrive
         </a>
       </div>
     </div>
@@ -227,6 +244,14 @@ function DropboxIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
       <path d="M6 2L0 6l6 4-6 4 6 4 6-4-6-4 6-4L6 2zm12 0l-6 4 6 4-6 4 6 4 6-4-6-4 6-4-6-4zM6 16.5L12 20l6-3.5-6-4-6 4z"/>
+    </svg>
+  );
+}
+
+function OneDriveIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
+      <path d="M10.5 18H4a3 3 0 0 1-.4-5.97A5 5 0 0 1 13.4 8.1 3.5 3.5 0 0 1 20 11a3 3 0 0 1-.5 5.95L10.5 18z"/>
     </svg>
   );
 }
