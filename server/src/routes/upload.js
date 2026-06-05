@@ -245,18 +245,16 @@ router.post(
            e.status          AS event_status,
            e.drive_folder_id,
            ct.id, ct.provider,
-           ct.access_token_enc, ct.refresh_token_enc, ct.token_expires_at,
-           h.tier            AS host_tier
+           ct.access_token_enc, ct.refresh_token_enc, ct.token_expires_at
          FROM events e
          JOIN cloud_tokens ct ON ct.event_id = e.id
-         JOIN hosts h         ON h.id        = e.host_id
          WHERE e.join_code = $1
          ORDER BY ct.updated_at DESC
          LIMIT 1`,
         [eventCode.toUpperCase()],
       );
 
-      // No storage linked or event not found → fall back to compressed upload
+      // No storage linked or event not found → fall back to server-side upload
       if (!rows.length) return res.json({ direct: false });
 
       const row = rows[0];
@@ -267,8 +265,8 @@ router.post(
         return next(err);
       }
 
-      // Free tier or Dropbox → instruct client to use compressed upload path
-      if (row.host_tier !== 'pro' || row.provider === 'dropbox') {
+      // Dropbox has no presigned-URL equivalent — fall back to server-side upload
+      if (row.provider === 'dropbox') {
         return res.json({ direct: false });
       }
 

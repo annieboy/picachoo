@@ -5,31 +5,58 @@ const API_BASE      = import.meta.env.VITE_API_BASE ?? '';
 const MAX_SIZE_MB   = 2.5;
 const MAX_DIMENSION = 2048;
 
-async function compressIfNeeded(blob, onProgress) {
-  const sizeMB = blob.size / 1024 / 1024;
-  if (sizeMB <= MAX_SIZE_MB) {
-    return blob instanceof File ? blob : new File([blob], `photo_${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
-  }
-  const file = blob instanceof File ? blob : new File([blob], `photo_${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
-  const compressed = await imageCompression(file, {
+async function compress(blob, onProgress) {
+  const file = blob instanceof File
+    ? blob
+    : new File([blob], `photo_${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
+
+  if (file.size / 1024 / 1024 <= MAX_SIZE_MB) return file;
+
+  const out = await imageCompression(file, {
     maxSizeMB: MAX_SIZE_MB, maxWidthOrHeight: MAX_DIMENSION,
     useWebWorker: true, fileType: 'image/jpeg', onProgress,
   });
-  return new File([compressed], compressed.name, { type: 'image/jpeg' });
+  return new File([out], out.name, { type: 'image/jpeg' });
 }
 
 function formatBytes(b) {
   if (b >= 1e9) return `${(b / 1e9).toFixed(1)} GB`;
   if (b >= 1e6) return `${(b / 1e6).toFixed(1)} MB`;
-  if (b >= 1e3) return `${Math.round(b / 1e3)} KB`;
-  return `${b} B`;
+  return `${Math.round(b / 1e3)} KB`;
 }
 
-export default function UploadScreen({ blob, guestName, eventCode, eventName, onSuccess, onError, onRetake }) {
-  const [phase,    setPhase]    = useState('init');    // init|compressing|uploading|recording|done
+// XHR PUT with real upload progress; returns parsed JSON response body
+function xhrPut(url, blob, headers = {}, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    });
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        resolve(JSON.parse(xhr.responseText || '{}'));
+      } else {
+        reject(Object.assign(new Error(`Upload failed (${xhr.status})`), { xhr }));
+      }
+    });
+    xhr.addEventListener('error', () => reject(new Error('Network error')));
+    xhr.addEventListener('abort', () => reject(new Error('Upload cancelled')));
+    xhr.open('PUT', url);
+    Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+    xhr.send(blob);
+    return xhr; // returned for abort (but we can't use it from here — see xhrRef pattern)
+  });
+}
+
+export default function UploadScreen({
+  blob, guestName, eventCode, eventName,
+  hostTier = 'free',   // 'free' | 'pro' — controls whether to compress
+  onSuccess, onError, onRetake,
+}) {
+  const [phase,    setPhase]    = useState('init');
   const [progress, setProgress] = useState(0);
-  const [label,    setLabel]    = useState('');        // step sub-label
-  const [isDirect, setIsDirect] = useState(false);     // true = pro direct upload
+  const [subLabel, setSubLabel] = useState('');
+  const [isDirect, setIsDirect] = useState(false);
 
   const abortRef   = useRef(false);
   const xhrRef     = useRef(null);
@@ -40,11 +67,13 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
     abortRef.current = false;
 
     async function run() {
-      // ── Step 1: check for a direct upload session (pro tier) ──────────────
+      // ── 1. Get a direct upload session from the server ─────────────────
+      // Drive & OneDrive always return a session; Dropbox returns direct:false.
       setPhase('init');
+
       let session = null;
       try {
-        const res  = await fetch(`${API_BASE}/api/events/${eventCode}/upload-session`, {
+        const res = await fetch(`${API_BASE}/api/events/${eventCode}/upload-session`, {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body:    JSON.stringify({ guestName, mimeType: blob.type || 'image/jpeg' }),
@@ -53,7 +82,7 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
           const data = await res.json().catch(() => ({}));
           if (data?.direct && data.uploadUrl) session = data;
         }
-      } catch { /* network error — fall back */ }
+      } catch { /* network hiccup — fall through to server-side path */ }
 
       if (abortRef.current) return;
 
@@ -61,83 +90,124 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
         setIsDirect(true);
         await runDirect(session);
       } else {
-        await runCompressed();
+        await runServerSide(); // Dropbox or session-creation failure
       }
     }
 
-    // ── Direct upload (pro tier: Drive or OneDrive) ────────────────────────
+    // ── Direct-to-cloud path (Drive + OneDrive) ──────────────────────────
+    // Free: compress first (quality tier)  |  Pro: raw original
     async function runDirect(session) {
-      setPhase('uploading');
-      setLabel(`${formatBytes(blob.size)} · Full quality`);
+      const isPro = hostTier === 'pro';
+      let payload = blob; // start with original
 
-      const fileId = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhrRef.current = xhr;
-
-        xhr.upload.addEventListener('progress', e => {
-          if (e.lengthComputable && !abortRef.current) {
-            setProgress(Math.round((e.loaded / e.total) * 90));
+      if (!isPro) {
+        // Free tier — compress in browser before sending
+        setPhase('compressing');
+        setSubLabel('Optimising quality…');
+        try {
+          const origMB = (blob.size / 1024 / 1024).toFixed(1);
+          payload = await compress(blob, pct => {
+            if (!abortRef.current) setProgress(Math.round(pct * 0.3)); // 0–30%
+          });
+          if (abortRef.current) return;
+          const compMB = (payload.size / 1024 / 1024).toFixed(1);
+          if (parseFloat(origMB) > parseFloat(compMB)) {
+            setSubLabel(`${origMB} MB → ${compMB} MB`);
           }
-        });
-
-        xhr.addEventListener('load', () => {
-          xhrRef.current = null;
-          if (xhr.status >= 200 && xhr.status < 300) {
-            try {
-              const data = JSON.parse(xhr.responseText || '{}');
-              resolve(data.id ?? null);
-            } catch { resolve(null); }
-          } else {
-            reject(new Error(`Upload failed (${xhr.status})`));
-          }
-        });
-
-        xhr.addEventListener('error',  () => { xhrRef.current = null; reject(new Error('Network error during upload')); });
-        xhr.addEventListener('abort',  () => { xhrRef.current = null; reject(new Error('Upload cancelled')); });
-
-        xhr.open('PUT', session.uploadUrl);
-
-        // OneDrive upload sessions require Content-Range for the first (and only) chunk
-        if (session.provider === 'onedrive') {
-          xhr.setRequestHeader('Content-Range', `bytes 0-${blob.size - 1}/${blob.size}`);
+        } catch (err) {
+          if (!abortRef.current) onError(`Compression failed: ${err.message}`);
+          return;
         }
-        xhr.setRequestHeader('Content-Type', blob.type || 'image/jpeg');
-        xhr.send(blob);
-      });
+      }
 
       if (abortRef.current) return;
-      setProgress(95);
-      setPhase('recording');
-      setLabel('Saving…');
 
+      // Upload directly to Drive / OneDrive
+      setPhase('uploading');
+      setSubLabel(isPro
+        ? `${formatBytes(blob.size)} · Full quality`
+        : `${formatBytes(payload.size)} · Standard quality`,
+      );
+
+      const headers = { 'Content-Type': payload.type || 'image/jpeg' };
+      if (session.provider === 'onedrive') {
+        // OneDrive upload sessions require Content-Range for the PUT
+        headers['Content-Range'] = `bytes 0-${payload.size - 1}/${payload.size}`;
+      }
+
+      let responseData;
+      try {
+        const startPct = isPro ? 0 : 30; // account for compression phase
+        responseData = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhrRef.current = xhr;
+
+          xhr.upload.addEventListener('progress', e => {
+            if (e.lengthComputable && !abortRef.current) {
+              const raw = (e.loaded / e.total) * (isPro ? 90 : 60);
+              setProgress(startPct + Math.round(raw));
+            }
+          });
+
+          xhr.addEventListener('load', () => {
+            xhrRef.current = null;
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve(JSON.parse(xhr.responseText || '{}'));
+            } else {
+              reject(new Error(`Upload failed (${xhr.status})`));
+            }
+          });
+          xhr.addEventListener('error', () => { xhrRef.current = null; reject(new Error('Network error')); });
+          xhr.addEventListener('abort', () => { xhrRef.current = null; reject(new Error('Upload cancelled')); });
+
+          xhr.open('PUT', session.uploadUrl);
+          Object.entries(headers).forEach(([k, v]) => xhr.setRequestHeader(k, v));
+          xhr.send(payload);
+        });
+      } catch (err) {
+        if (!abortRef.current) onError(err.message);
+        return;
+      }
+
+      if (abortRef.current) return;
+
+      // Finalise: make public + write photos row
+      setPhase('recording');
+      setSubLabel('Saving…');
+      setProgress(95);
+
+      const fileId = responseData?.id;
       const recRes = await fetch(`${API_BASE}/api/events/${eventCode}/record-upload`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ fileId, filename: session.filename, guestName }),
       });
       const recBody = await recRes.json().catch(() => ({}));
-      if (!recRes.ok) throw new Error(recBody.error ?? 'Failed to save photo');
+      if (!recRes.ok) {
+        if (!abortRef.current) onError(recBody.error ?? 'Failed to save photo');
+        return;
+      }
 
       setProgress(100);
       setPhase('done');
       setTimeout(onSuccess, 500);
     }
 
-    // ── Compressed upload (free tier or Dropbox) ───────────────────────────
-    async function runCompressed() {
+    // ── Server-side path (Dropbox, or session failure fallback) ──────────
+    async function runServerSide() {
       setPhase('compressing');
-      setLabel('Optimising · Step 1 of 2');
+      setSubLabel('Optimising · Step 1 of 2');
 
       let file;
       try {
         const origMB = (blob.size / 1024 / 1024).toFixed(1);
-        file = await compressIfNeeded(blob, pct => {
+        file = await compress(blob, pct => {
           if (!abortRef.current) setProgress(Math.round(pct * 0.5));
         });
         if (abortRef.current) return;
         const compMB = (file.size / 1024 / 1024).toFixed(1);
         if (parseFloat(origMB) > parseFloat(compMB)) {
-          setLabel(`Compressed: ${origMB} MB → ${compMB} MB`);
+          setSubLabel(`Compressed: ${origMB} MB → ${compMB} MB`);
         }
       } catch (err) {
         if (!abortRef.current) onError(`Compression failed: ${err.message}`);
@@ -147,10 +217,11 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
       if (abortRef.current) return;
       setPhase('uploading');
       setProgress(50);
-      setLabel('Uploading · Step 2 of 2');
+      setSubLabel('Uploading · Step 2 of 2');
 
+      // Fake progress ticker (FormData upload has no progress events via fetch)
       let pct = 50;
-      const timer = setInterval(() => {
+      const ticker = setInterval(() => {
         pct = Math.min(pct + Math.random() * 5, 95);
         if (!abortRef.current) setProgress(Math.round(pct));
       }, 250);
@@ -160,7 +231,7 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
         form.append('photo', file, file.name);
         form.append('guestName', guestName);
         const res  = await fetch(`${API_BASE}/api/events/${eventCode}/upload`, { method: 'POST', body: form });
-        clearInterval(timer);
+        clearInterval(ticker);
         if (abortRef.current) return;
         const body = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(body.error ?? `Upload failed (${res.status})`);
@@ -168,7 +239,7 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
         setPhase('done');
         setTimeout(onSuccess, 500);
       } catch (err) {
-        clearInterval(timer);
+        clearInterval(ticker);
         if (!abortRef.current) onError(err.message);
       }
     }
@@ -181,28 +252,23 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Derived render values ──────────────────────────────────────────────────
+  // ── Render ─────────────────────────────────────────────────────────────────
 
   const isCompressing = phase === 'compressing';
-  const isUploading   = phase === 'uploading';
-  const isRecording   = phase === 'recording';
   const isDone        = phase === 'done';
-  const isInit        = phase === 'init';
+  const isWarm        = phase === 'uploading' || phase === 'recording';
+  const pct           = Math.round(progress);
 
-  const pct = Math.round(progress);
-
-  // Colour: amber = compressing / init; violet = uploading/recording; green = done
-  const ringColor = isCompressing || isInit
+  const ringColor = isCompressing || phase === 'init'
     ? '#f59e0b'
     : isDone ? '#34d399' : '#7c3aed';
 
   const statusText =
-    isInit        ? 'Preparing…'
-    : isCompressing ? 'Preparing your photo…'
-    : isUploading && isDirect ? 'Uploading full quality…'
-    : isUploading   ? 'Uploading to cloud…'
-    : isRecording   ? 'Saving…'
-    : isDone        ? 'All done!'
+    phase === 'init'        ? 'Preparing…'
+    : isCompressing          ? 'Preparing your photo…'
+    : phase === 'uploading'  ? 'Uploading…'
+    : phase === 'recording'  ? 'Saving…'
+    : isDone                 ? 'All done!'
     : '…';
 
   const RADIUS = 54;
@@ -218,7 +284,7 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
         </p>
       )}
 
-      {/* Circular progress + thumbnail */}
+      {/* Ring + thumbnail */}
       <div className="relative flex items-center justify-center">
         <div className="w-40 h-40 rounded-full overflow-hidden ring-1 ring-white/10">
           <img src={previewUrl.current} alt="Your photo" className="w-full h-full object-cover" />
@@ -248,24 +314,35 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
 
       {/* Percentage */}
       {!isDone && (
-        <div className="text-center -mt-2">
-          <p className="text-5xl font-bold tabular-nums tracking-tight"
-             style={{ color: ringColor }}>
-            {pct}%
-          </p>
-        </div>
+        <p className="text-5xl font-bold tabular-nums tracking-tight -mt-2"
+           style={{ color: ringColor }}>
+          {pct}%
+        </p>
       )}
 
-      {/* Status + quality badge */}
+      {/* Status */}
       <div className="text-center space-y-1.5 -mt-2">
         <p className="text-white text-lg font-semibold">{statusText}</p>
-        {label && !isDone && (
-          <p className="text-zinc-600 text-xs tracking-wide">{label}</p>
+
+        {subLabel && !isDone && (
+          <p className="text-zinc-600 text-xs tracking-wide">{subLabel}</p>
         )}
-        {isDirect && !isDone && (isUploading || isRecording) && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
-                style={{ background: 'rgba(124,58,237,0.15)', color: '#a78bfa', border: '1px solid rgba(124,58,237,0.3)' }}>
-            ✦ Pro · Full resolution
+
+        {/* Quality badge — shown during active direct upload */}
+        {isDirect && isWarm && (
+          <span
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
+            style={{
+              background: hostTier === 'pro'
+                ? 'rgba(124,58,237,0.15)'
+                : 'rgba(245,158,11,0.1)',
+              color:  hostTier === 'pro' ? '#a78bfa' : '#fbbf24',
+              border: hostTier === 'pro'
+                ? '1px solid rgba(124,58,237,0.3)'
+                : '1px solid rgba(245,158,11,0.2)',
+            }}
+          >
+            {hostTier === 'pro' ? '✦ Pro · Full resolution' : '◆ Standard quality'}
           </span>
         )}
       </div>
@@ -276,7 +353,7 @@ export default function UploadScreen({ blob, guestName, eventCode, eventName, on
           <div className="h-full rounded-full transition-all duration-300"
                style={{
                  width:      `${pct}%`,
-                 background: isCompressing || isInit
+                 background: isCompressing || phase === 'init'
                    ? 'linear-gradient(90deg, #d97706, #f59e0b)'
                    : isDone
                    ? 'linear-gradient(90deg, #059669, #34d399)'

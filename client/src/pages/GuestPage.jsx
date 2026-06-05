@@ -130,6 +130,7 @@ export default function GuestPage() {
           guestName={guestName}
           eventCode={eventCode}
           eventName={event?.name}
+          hostTier={event?.host_tier ?? 'free'}
           onSuccess={handleSuccess}
           onError={msg => { setUploadError(msg); setScreen(SCREENS.ERROR); }}
           onRetake={handleRetake}
@@ -142,6 +143,7 @@ export default function GuestPage() {
           guestName={guestName}
           eventCode={eventCode}
           eventName={event?.name}
+          hostTier={event?.host_tier ?? 'free'}
           onSuccess={handleSuccess}
           onError={msg => { setUploadError(msg); setScreen(SCREENS.ERROR); }}
           onCancel={handleRetake}
