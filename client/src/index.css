@@ -1,0 +1,31 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    /* Prevent rubber-band scroll exposing a gap behind the camera on iOS */
+    overscroll-behavior: none;
+    background-color: #000;
+  }
+
+  * {
+    /* Remove the default blue tap highlight on mobile */
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@layer utilities {
+  .video-fill {
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* SVG check-mark stroke animation — dasharray set upfront */
+  .check-path {
+    stroke-dasharray: 60;
+    stroke-dashoffset: 60;
+  }
+}
