@@ -1,7 +1,7 @@
 const multer = require('multer');
 
 const ALLOWED_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']);
-const MAX_FILE_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+const MAX_FILE_SIZE_BYTES = 4 * 1024 * 1024; // 4 MB — Vercel body limit is 4.5 MB
 
 // memoryStorage keeps the buffer in RAM — no temp files written to disk,
 // nothing to clean up. Acceptable because we stream straight to Drive.
