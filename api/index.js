@@ -10,6 +10,8 @@ const { errorHandler, notFound } = require('../server/src/middleware/errorHandle
 // ─── Routes ───────────────────────────────────────────────────────────────────
 const healthRouter = require('../server/src/routes/health');
 const authRouter   = require('../server/src/routes/auth');
+const hostsRouter  = require('../server/src/routes/hosts');
+const eventsRouter = require('../server/src/routes/events');
 const uploadRouter = require('../server/src/routes/upload');
 
 const app = express();
@@ -50,9 +52,11 @@ app.use(rateLimit({
 }));
 
 // ─── Mount routes ─────────────────────────────────────────────────────────────
-app.use('/api', healthRouter);
-app.use('/api/auth', authRouter);
-app.use('/api', uploadRouter);
+app.use('/api',        healthRouter);
+app.use('/api/auth',   authRouter);
+app.use('/api/hosts',  hostsRouter);
+app.use('/api/events', eventsRouter);
+app.use('/api',        uploadRouter);
 
 // ─── 404 + error handler ──────────────────────────────────────────────────────
 app.use(notFound);
