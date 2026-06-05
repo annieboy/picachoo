@@ -1,56 +1,82 @@
-// Central place for all API calls — always points to the live Vercel backend.
-// VITE_API_BASE is set to "" in production (same origin) and can be overridden
-// locally via client/.env if needed.
 export const API_BASE = import.meta.env.VITE_API_BASE ?? '';
 
-export async function registerHost({ email, displayName }) {
-  const res = await fetch(`${API_BASE}/api/hosts/register`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, displayName }),
+// ── Auth header ───────────────────────────────────────────────────────────────
+// Call setAuthToken() with the Supabase access token after sign-in.
+// All authenticated API calls pick it up automatically.
+let _token = null;
+export function setAuthToken(token) { _token = token; }
+
+function authHeaders() {
+  return _token ? { Authorization: `Bearer ${_token}` } : {};
+}
+
+async function apiFetch(path, options = {}) {
+  const res  = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: { ...authHeaders(), ...options.headers },
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Failed to register host');
-  return data.host; // { id, email, display_name }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`);
+  return data;
 }
 
-export async function createEvent({ hostId, name }) {
-  const res = await fetch(`${API_BASE}/api/events/create`, {
-    method: 'POST',
+// ── Host ──────────────────────────────────────────────────────────────────────
+
+/** Creates or fetches the host record that maps to the signed-in Supabase user. */
+export function getOrCreateHost() {
+  return apiFetch('/api/hosts/me');
+}
+
+// ── Events ────────────────────────────────────────────────────────────────────
+
+export function createEvent({ name }) {
+  return apiFetch('/api/events/create', {
+    method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ hostId, name }),
+    body:    JSON.stringify({ name }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Failed to create event');
-  return data.event; // { id, join_code, guestUrl, ... }
 }
 
-export async function getEvent(eventCode) {
-  // Guest-facing lookup by join_code — no auth needed
-  const res = await fetch(`${API_BASE}/api/events/by-code/${eventCode}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Event not found');
-  return data.event; // { id, name, join_code, status }
+export function getEvent(eventCode) {
+  return apiFetch(`/api/events/by-code/${eventCode}`).then(d => d.event);
 }
 
-export async function getHost(hostId) {
-  const res = await fetch(`${API_BASE}/api/hosts/${hostId}`);
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Failed to load host');
-  return data; // { host, events[] }
+// ── Storage OAuth URLs ────────────────────────────────────────────────────────
+// These are browser-redirect URLs — the JWT is NOT sent as a header (it's a
+// navigation, not a fetch). Instead the backend verifies ownership via
+// the Supabase session cookie set by signInWithOAuth.
+// We pass the JWT as a query param on the redirect so the backend can verify.
+
+export function googleAuthUrl({ eventId, loginHint, token }) {
+  const t = token ?? _token ?? '';
+  const params = new URLSearchParams({ eventId });
+  if (loginHint) params.set('loginHint', loginHint);
+  // Embed the JWT so the redirect can be authenticated without a session cookie
+  if (t) params.set('token', t);
+  return `${API_BASE}/api/auth/google?${params}`;
 }
 
-// Returns the Google OAuth URL for linking Drive to an event.
-export function googleAuthUrl({ hostId, eventId }) {
-  return `${API_BASE}/api/auth/google?hostId=${hostId}&eventId=${eventId}`;
+export function dropboxAuthUrl({ eventId, token }) {
+  const t = token ?? _token ?? '';
+  const params = new URLSearchParams({ eventId });
+  if (t) params.set('token', t);
+  return `${API_BASE}/api/auth/dropbox?${params}`;
 }
 
-// Returns the Dropbox OAuth URL for linking Dropbox to an event.
-export function dropboxAuthUrl({ hostId, eventId }) {
-  return `${API_BASE}/api/auth/dropbox?hostId=${hostId}&eventId=${eventId}`;
+export function oneDriveAuthUrl({ eventId, token }) {
+  const t = token ?? _token ?? '';
+  const params = new URLSearchParams({ eventId });
+  if (t) params.set('token', t);
+  return `${API_BASE}/api/auth/onedrive?${params}`;
 }
 
-// Returns the OneDrive OAuth URL for linking OneDrive to an event.
-export function oneDriveAuthUrl({ hostId, eventId }) {
-  return `${API_BASE}/api/auth/onedrive?hostId=${hostId}&eventId=${eventId}`;
+// ── Google Drive auto-link ────────────────────────────────────────────────────
+// Called after creating an event when the host signed in with Google.
+// provider_token comes from the Supabase session (drive.file scope was requested).
+export function linkGoogleDriveFromSession({ eventId, accessToken, refreshToken, expiryDate }) {
+  return apiFetch('/api/auth/google/link-from-session', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ eventId, accessToken, refreshToken, expiryDate }),
+  });
 }

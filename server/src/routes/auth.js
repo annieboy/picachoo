@@ -1,21 +1,20 @@
-const router = require('express').Router();
-const crypto = require('crypto');
+const router      = require('express').Router();
+const crypto      = require('crypto');
 const { oauth2Client, DRIVE_SCOPE } = require('../config/googleOAuth');
-const { encrypt } = require('../config/crypto');
-const pool = require('../config/db');
+const { encrypt, decrypt } = require('../config/crypto');
+const pool        = require('../config/db');
+const requireAuth = require('../middleware/requireAuth');
 const { getCurrentAccountEmail } = require('../services/dropboxService');
 const { getCurrentUserEmail }    = require('../services/oneDriveService');
 
-// In production replace this with a proper session store (e.g. express-session
-// backed by Redis). For now we use a short-lived in-process Map keyed by the
-// CSRF state token, storing the host and event context for the callback.
+// ── CSRF state store ──────────────────────────────────────────────────────────
+// In production swap for Redis / Supabase KV so it survives serverless cold starts.
 const pendingStates = new Map();
-const STATE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const STATE_TTL_MS  = 10 * 60 * 1000;
 
 function createState(payload) {
   const state = crypto.randomBytes(24).toString('hex');
   pendingStates.set(state, { ...payload, createdAt: Date.now() });
-  // Auto-expire to avoid memory growth
   setTimeout(() => pendingStates.delete(state), STATE_TTL_MS);
   return state;
 }
@@ -23,264 +22,203 @@ function createState(payload) {
 function consumeState(state) {
   const payload = pendingStates.get(state);
   pendingStates.delete(state);
-  if (!payload) return null;
-  if (Date.now() - payload.createdAt > STATE_TTL_MS) return null;
+  if (!payload || Date.now() - payload.createdAt > STATE_TTL_MS) return null;
   return payload;
 }
 
-// ─── GET /api/auth/google ──────────────────────────────────────────────────────
-// Initiates the OAuth flow. Expects query params:
-//   hostId  - UUID of the host starting the flow
-//   eventId - UUID of the event they're linking storage to
-//
-// Example: GET /api/auth/google?hostId=<uuid>&eventId=<uuid>
-router.get('/google', (req, res, next) => {
+// ── Ownership guard ───────────────────────────────────────────────────────────
+// Returns hostId (DB UUID) after verifying the JWT user owns the event.
+async function assertEventOwnership(authId, eventId) {
+  const { rows } = await pool.query(
+    `SELECT h.id AS host_id
+       FROM hosts h
+       JOIN events e ON e.host_id = h.id
+      WHERE h.auth_id = $1 AND e.id = $2`,
+    [authId, eventId],
+  );
+  if (!rows.length) throw Object.assign(new Error('Event not found or access denied'), { status: 403 });
+  return rows[0].host_id;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Google Drive
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── GET /api/auth/google ─────────────────────────────────────────────────────
+router.get('/google', requireAuth, async (req, res, next) => {
   try {
-    const { hostId, eventId } = req.query;
+    const { eventId, loginHint } = req.query;
+    if (!eventId) return next(Object.assign(new Error('eventId is required'), { status: 400 }));
 
-    if (!hostId || !eventId) {
-      const err = new Error('hostId and eventId query parameters are required');
-      err.status = 400;
-      return next(err);
-    }
-
-    // CSRF state token ties this redirect to the specific host+event so the
-    // callback cannot be replayed or hijacked with a different context.
-    const state = createState({ hostId, eventId });
+    const hostId = await assertEventOwnership(req.user.authId, eventId);
+    const state  = createState({ hostId, eventId });
 
     const authorizeUrl = oauth2Client.generateAuthUrl({
-      access_type: 'offline',  // request a refresh token
-      scope: DRIVE_SCOPE,
+      access_type: 'offline',
+      scope:       DRIVE_SCOPE,
       state,
-      prompt: 'consent',       // always show consent screen so we always get a refresh token
+      prompt:      'consent',
+      ...(loginHint ? { login_hint: loginHint } : {}),
     });
 
     res.redirect(authorizeUrl);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
-// ─── GET /api/auth/google/callback ────────────────────────────────────────────
-// Google redirects here after the host approves (or denies) access.
+// ─── GET /api/auth/google/callback ───────────────────────────────────────────
 router.get('/google/callback', async (req, res, next) => {
   try {
     const { code, state, error } = req.query;
 
-    // Host denied access on the Google consent screen.
-    if (error) {
-      return res.redirect(
-        `${process.env.CLIENT_ORIGIN}/dashboard?error=google_auth_denied`,
-      );
-    }
+    if (error) return res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?error=google_auth_denied`);
+    if (!code || !state) return next(Object.assign(new Error('Missing code or state'), { status: 400 }));
 
-    if (!code || !state) {
-      const err = new Error('Missing code or state parameter');
-      err.status = 400;
-      return next(err);
-    }
-
-    // Validate CSRF state and recover the host+event context.
     const payload = consumeState(state);
-    if (!payload) {
-      const err = new Error('Invalid or expired state parameter');
-      err.status = 400;
-      return next(err);
-    }
+    if (!payload) return next(Object.assign(new Error('Invalid or expired state'), { status: 400 }));
 
     const { hostId, eventId } = payload;
 
-    // Verify the host and event actually exist and belong together.
-    const eventCheck = await pool.query(
-      `SELECT id FROM events WHERE id = $1 AND host_id = $2`,
-      [eventId, hostId],
-    );
-    if (!eventCheck.rows.length) {
-      const err = new Error('Event not found or does not belong to this host');
-      err.status = 403;
-      return next(err);
-    }
+    const { tokens }   = await oauth2Client.getToken(code);
+    if (!tokens.access_token) throw new Error('Google did not return an access token');
 
-    // Exchange the one-time authorization code for access + refresh tokens.
-    const { tokens } = await oauth2Client.getToken(code);
-
-    if (!tokens.access_token) {
-      throw new Error('Google did not return an access token');
-    }
-
-    // Fetch the Google account info for display purposes (email, account id).
     oauth2Client.setCredentials(tokens);
     const tokenInfo = await oauth2Client.getTokenInfo(tokens.access_token);
 
-    // Encrypt both tokens before touching the database.
-    const accessTokenEnc = encrypt(tokens.access_token);
-    const refreshTokenEnc = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
-    const expiresAt = tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null;
-
-    // Upsert: if the host re-authorizes the same event we replace the old row.
     await pool.query(
       `INSERT INTO cloud_tokens
-         (host_id, event_id, provider,
-          access_token_enc, refresh_token_enc, token_expires_at,
-          provider_account_email)
+         (host_id, event_id, provider, access_token_enc, refresh_token_enc,
+          token_expires_at, provider_account_email)
        VALUES ($1, $2, 'google_drive', $3, $4, $5, $6)
-       ON CONFLICT (event_id, provider)
-       DO UPDATE SET
-         access_token_enc     = EXCLUDED.access_token_enc,
-         refresh_token_enc    = COALESCE(EXCLUDED.refresh_token_enc, cloud_tokens.refresh_token_enc),
-         token_expires_at     = EXCLUDED.token_expires_at,
+       ON CONFLICT (event_id, provider) DO UPDATE SET
+         access_token_enc       = EXCLUDED.access_token_enc,
+         refresh_token_enc      = COALESCE(EXCLUDED.refresh_token_enc, cloud_tokens.refresh_token_enc),
+         token_expires_at       = EXCLUDED.token_expires_at,
          provider_account_email = EXCLUDED.provider_account_email,
-         updated_at           = NOW()`,
-      [
-        hostId,
-        eventId,
-        accessTokenEnc,
-        refreshTokenEnc,
-        expiresAt,
-        tokenInfo.email ?? null,
-      ],
+         updated_at             = NOW()`,
+      [hostId, eventId, encrypt(tokens.access_token),
+       tokens.refresh_token ? encrypt(tokens.refresh_token) : null,
+       tokens.expiry_date ? new Date(tokens.expiry_date).toISOString() : null,
+       tokenInfo.email ?? null],
     );
 
-    // Return the host to their dashboard. The frontend can detect success via
-    // the `linked=google` query param and show a confirmation toast.
-    res.redirect(
-      `${process.env.CLIENT_ORIGIN}/dashboard?linked=google&eventId=${eventId}`,
-    );
-  } catch (err) {
-    next(err);
-  }
+    res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?linked=google&eventId=${eventId}`);
+  } catch (err) { next(err); }
 });
 
-// ─── DELETE /api/auth/google ───────────────────────────────────────────────────
-// Lets a host revoke and remove their Google Drive link for an event.
-// Body: { hostId, eventId }
-router.delete('/google', async (req, res, next) => {
+// ─── POST /api/auth/google/link-from-session ──────────────────────────────────
+// Auto-links Google Drive using the provider tokens Supabase captures during
+// Google sign-in (when drive.file scope is requested). Called by the frontend
+// immediately after creating an event.
+router.post('/google/link-from-session', requireAuth, async (req, res, next) => {
   try {
-    const { hostId, eventId } = req.body;
+    const { eventId, accessToken, refreshToken, expiryDate } = req.body;
 
-    if (!hostId || !eventId) {
-      const err = new Error('hostId and eventId are required');
-      err.status = 400;
-      return next(err);
+    if (!eventId || !accessToken) {
+      return next(Object.assign(new Error('eventId and accessToken are required'), { status: 400 }));
     }
+
+    const hostId = await assertEventOwnership(req.user.authId, eventId);
+
+    // Fetch the Google account email for display
+    let accountEmail = null;
+    try {
+      oauth2Client.setCredentials({ access_token: accessToken });
+      const info = await oauth2Client.getTokenInfo(accessToken);
+      accountEmail = info.email ?? null;
+    } catch { /* non-fatal */ }
+
+    const expiresAt = expiryDate ? new Date(expiryDate).toISOString() : null;
+
+    await pool.query(
+      `INSERT INTO cloud_tokens
+         (host_id, event_id, provider, access_token_enc, refresh_token_enc,
+          token_expires_at, provider_account_email)
+       VALUES ($1, $2, 'google_drive', $3, $4, $5, $6)
+       ON CONFLICT (event_id, provider) DO UPDATE SET
+         access_token_enc       = EXCLUDED.access_token_enc,
+         refresh_token_enc      = COALESCE(EXCLUDED.refresh_token_enc, cloud_tokens.refresh_token_enc),
+         token_expires_at       = EXCLUDED.token_expires_at,
+         provider_account_email = EXCLUDED.provider_account_email,
+         updated_at             = NOW()`,
+      [hostId, eventId, encrypt(accessToken),
+       refreshToken ? encrypt(refreshToken) : null,
+       expiresAt, accountEmail],
+    );
+
+    res.json({ success: true, provider: 'google_drive', email: accountEmail });
+  } catch (err) { next(err); }
+});
+
+// ─── DELETE /api/auth/google ──────────────────────────────────────────────────
+router.delete('/google', requireAuth, async (req, res, next) => {
+  try {
+    const { eventId } = req.body;
+    if (!eventId) return next(Object.assign(new Error('eventId is required'), { status: 400 }));
+
+    await assertEventOwnership(req.user.authId, eventId);
 
     const { rows } = await pool.query(
       `DELETE FROM cloud_tokens
-        WHERE event_id = $1 AND host_id = $2 AND provider = 'google_drive'
+        WHERE event_id = $1 AND provider = 'google_drive'
        RETURNING access_token_enc`,
-      [eventId, hostId],
+      [eventId],
     );
+    if (!rows.length) return next(Object.assign(new Error('No Google Drive token found'), { status: 404 }));
 
-    if (!rows.length) {
-      const err = new Error('No Google Drive token found for this event');
-      err.status = 404;
-      return next(err);
-    }
-
-    // Best-effort: revoke the token at Google so the app disappears from the
-    // host's "Third-party apps" page. Failure here is non-fatal.
-    try {
-      const { decrypt } = require('../config/crypto');
-      await oauth2Client.revokeToken(decrypt(rows[0].access_token_enc));
-    } catch {
-      // Token may already be expired — revocation failure is harmless.
-    }
+    try { await oauth2Client.revokeToken(decrypt(rows[0].access_token_enc)); } catch { /* non-fatal */ }
 
     res.json({ success: true });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Dropbox OAuth
+// Dropbox
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const DROPBOX_AUTH_URL  = 'https://www.dropbox.com/oauth2/authorize';
 const DROPBOX_TOKEN_URL = 'https://api.dropboxapi.com/oauth2/token';
 
 function dropboxRedirectUri() {
-  // Must exactly match the URI registered in the Dropbox App Console.
   return `${process.env.API_BASE_URL ?? process.env.CLIENT_ORIGIN}/api/auth/dropbox/callback`;
 }
 
-// ─── GET /api/auth/dropbox ────────────────────────────────────────────────────
-router.get('/dropbox', (req, res, next) => {
+router.get('/dropbox', requireAuth, async (req, res, next) => {
   try {
-    const { hostId, eventId } = req.query;
-    if (!hostId || !eventId) {
-      const err = new Error('hostId and eventId query parameters are required');
-      err.status = 400;
-      return next(err);
-    }
+    const { eventId } = req.query;
+    if (!eventId) return next(Object.assign(new Error('eventId is required'), { status: 400 }));
 
-    const state = createState({ hostId, eventId, provider: 'dropbox' });
+    const hostId = await assertEventOwnership(req.user.authId, eventId);
+    const state  = createState({ hostId, eventId, provider: 'dropbox' });
+
     const params = new URLSearchParams({
-      client_id:            process.env.DROPBOX_APP_KEY,
-      response_type:        'code',
-      redirect_uri:         dropboxRedirectUri(),
+      client_id:         process.env.DROPBOX_APP_KEY,
+      response_type:     'code',
+      redirect_uri:      dropboxRedirectUri(),
       state,
-      token_access_type:    'offline',  // request a long-lived refresh token
+      token_access_type: 'offline',
     });
 
     res.redirect(`${DROPBOX_AUTH_URL}?${params}`);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
-// ─── GET /api/auth/dropbox/callback ──────────────────────────────────────────
 router.get('/dropbox/callback', async (req, res, next) => {
   try {
     const { code, state, error } = req.query;
 
-    if (error) {
-      return res.redirect(
-        `${process.env.CLIENT_ORIGIN}/dashboard?error=dropbox_auth_denied`,
-      );
-    }
-
-    if (!code || !state) {
-      const err = new Error('Missing code or state parameter');
-      err.status = 400;
-      return next(err);
-    }
+    if (error) return res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?error=dropbox_auth_denied`);
+    if (!code || !state) return next(Object.assign(new Error('Missing code or state'), { status: 400 }));
 
     const payload = consumeState(state);
-    if (!payload) {
-      const err = new Error('Invalid or expired state parameter');
-      err.status = 400;
-      return next(err);
-    }
+    if (!payload) return next(Object.assign(new Error('Invalid or expired state'), { status: 400 }));
 
     const { hostId, eventId } = payload;
 
-    const eventCheck = await pool.query(
-      `SELECT id FROM events WHERE id = $1 AND host_id = $2`,
-      [eventId, hostId],
-    );
-    if (!eventCheck.rows.length) {
-      const err = new Error('Event not found or does not belong to this host');
-      err.status = 403;
-      return next(err);
-    }
-
-    // Exchange code for tokens
-    const creds = Buffer.from(
-      `${process.env.DROPBOX_APP_KEY}:${process.env.DROPBOX_APP_SECRET}`,
-    ).toString('base64');
-
+    const creds = Buffer.from(`${process.env.DROPBOX_APP_KEY}:${process.env.DROPBOX_APP_SECRET}`).toString('base64');
     const tokenRes = await fetch(DROPBOX_TOKEN_URL, {
       method: 'POST',
-      headers: {
-        Authorization: `Basic ${creds}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type:   'authorization_code',
-        code,
-        redirect_uri: dropboxRedirectUri(),
-      }),
+      headers: { Authorization: `Basic ${creds}`, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ grant_type: 'authorization_code', code, redirect_uri: dropboxRedirectUri() }),
     });
 
     const tokens = await tokenRes.json();
@@ -288,71 +226,47 @@ router.get('/dropbox/callback', async (req, res, next) => {
       throw new Error(`Dropbox token exchange failed: ${tokens?.error_description ?? JSON.stringify(tokens)}`);
     }
 
-    // Fetch the linked Dropbox account email
     const accountEmail = await getCurrentAccountEmail(tokens.access_token).catch(() => null);
-
-    const accessTokenEnc  = encrypt(tokens.access_token);
-    const refreshTokenEnc = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
-    // Dropbox short-lived tokens expire in 4 hours
-    const expiresAt = tokens.expires_in
-      ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
-      : null;
+    const expiresAt    = tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null;
 
     await pool.query(
       `INSERT INTO cloud_tokens
-         (host_id, event_id, provider,
-          access_token_enc, refresh_token_enc, token_expires_at,
-          provider_account_email)
+         (host_id, event_id, provider, access_token_enc, refresh_token_enc,
+          token_expires_at, provider_account_email)
        VALUES ($1, $2, 'dropbox', $3, $4, $5, $6)
-       ON CONFLICT (event_id, provider)
-       DO UPDATE SET
+       ON CONFLICT (event_id, provider) DO UPDATE SET
          access_token_enc       = EXCLUDED.access_token_enc,
          refresh_token_enc      = COALESCE(EXCLUDED.refresh_token_enc, cloud_tokens.refresh_token_enc),
          token_expires_at       = EXCLUDED.token_expires_at,
          provider_account_email = EXCLUDED.provider_account_email,
          updated_at             = NOW()`,
-      [hostId, eventId, accessTokenEnc, refreshTokenEnc, expiresAt, accountEmail],
+      [hostId, eventId, encrypt(tokens.access_token),
+       tokens.refresh_token ? encrypt(tokens.refresh_token) : null,
+       expiresAt, accountEmail],
     );
 
-    res.redirect(
-      `${process.env.CLIENT_ORIGIN}/dashboard?linked=dropbox&eventId=${eventId}`,
-    );
-  } catch (err) {
-    next(err);
-  }
+    res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?linked=dropbox&eventId=${eventId}`);
+  } catch (err) { next(err); }
 });
 
-// ─── DELETE /api/auth/dropbox ─────────────────────────────────────────────────
-router.delete('/dropbox', async (req, res, next) => {
+router.delete('/dropbox', requireAuth, async (req, res, next) => {
   try {
-    const { hostId, eventId } = req.body;
-    if (!hostId || !eventId) {
-      const err = new Error('hostId and eventId are required');
-      err.status = 400;
-      return next(err);
-    }
+    const { eventId } = req.body;
+    if (!eventId) return next(Object.assign(new Error('eventId is required'), { status: 400 }));
+    await assertEventOwnership(req.user.authId, eventId);
 
     const { rows } = await pool.query(
-      `DELETE FROM cloud_tokens
-        WHERE event_id = $1 AND host_id = $2 AND provider = 'dropbox'
-       RETURNING id`,
-      [eventId, hostId],
+      `DELETE FROM cloud_tokens WHERE event_id = $1 AND provider = 'dropbox' RETURNING id`,
+      [eventId],
     );
-
-    if (!rows.length) {
-      const err = new Error('No Dropbox token found for this event');
-      err.status = 404;
-      return next(err);
-    }
+    if (!rows.length) return next(Object.assign(new Error('No Dropbox token found'), { status: 404 }));
 
     res.json({ success: true });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// OneDrive OAuth  (Microsoft Identity Platform v2)
+// OneDrive
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const ONEDRIVE_AUTH_URL  = 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
@@ -363,17 +277,14 @@ function oneDriveRedirectUri() {
   return `${process.env.API_BASE_URL ?? process.env.CLIENT_ORIGIN}/api/auth/onedrive/callback`;
 }
 
-// ─── GET /api/auth/onedrive ───────────────────────────────────────────────────
-router.get('/onedrive', (req, res, next) => {
+router.get('/onedrive', requireAuth, async (req, res, next) => {
   try {
-    const { hostId, eventId } = req.query;
-    if (!hostId || !eventId) {
-      const err = new Error('hostId and eventId query parameters are required');
-      err.status = 400;
-      return next(err);
-    }
+    const { eventId } = req.query;
+    if (!eventId) return next(Object.assign(new Error('eventId is required'), { status: 400 }));
 
+    const hostId = await assertEventOwnership(req.user.authId, eventId);
     const state  = createState({ hostId, eventId, provider: 'onedrive' });
+
     const params = new URLSearchParams({
       client_id:     process.env.ONEDRIVE_CLIENT_ID,
       response_type: 'code',
@@ -381,52 +292,25 @@ router.get('/onedrive', (req, res, next) => {
       scope:         ONEDRIVE_SCOPE,
       state,
       response_mode: 'query',
-      prompt:        'consent', // always get a refresh token
+      prompt:        'consent',
     });
 
     res.redirect(`${ONEDRIVE_AUTH_URL}?${params}`);
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
-// ─── GET /api/auth/onedrive/callback ─────────────────────────────────────────
 router.get('/onedrive/callback', async (req, res, next) => {
   try {
     const { code, state, error } = req.query;
 
-    if (error) {
-      return res.redirect(
-        `${process.env.CLIENT_ORIGIN}/dashboard?error=onedrive_auth_denied`,
-      );
-    }
-
-    if (!code || !state) {
-      const err = new Error('Missing code or state parameter');
-      err.status = 400;
-      return next(err);
-    }
+    if (error) return res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?error=onedrive_auth_denied`);
+    if (!code || !state) return next(Object.assign(new Error('Missing code or state'), { status: 400 }));
 
     const payload = consumeState(state);
-    if (!payload) {
-      const err = new Error('Invalid or expired state parameter');
-      err.status = 400;
-      return next(err);
-    }
+    if (!payload) return next(Object.assign(new Error('Invalid or expired state'), { status: 400 }));
 
     const { hostId, eventId } = payload;
 
-    const eventCheck = await pool.query(
-      `SELECT id FROM events WHERE id = $1 AND host_id = $2`,
-      [eventId, hostId],
-    );
-    if (!eventCheck.rows.length) {
-      const err = new Error('Event not found or does not belong to this host');
-      err.status = 403;
-      return next(err);
-    }
-
-    // Exchange code for tokens
     const tokenRes = await fetch(ONEDRIVE_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -446,64 +330,42 @@ router.get('/onedrive/callback', async (req, res, next) => {
     }
 
     const accountEmail = await getCurrentUserEmail(tokens.access_token).catch(() => null);
-
-    const accessTokenEnc  = encrypt(tokens.access_token);
-    const refreshTokenEnc = tokens.refresh_token ? encrypt(tokens.refresh_token) : null;
-    const expiresAt = tokens.expires_in
-      ? new Date(Date.now() + tokens.expires_in * 1000).toISOString()
-      : null;
+    const expiresAt    = tokens.expires_in ? new Date(Date.now() + tokens.expires_in * 1000).toISOString() : null;
 
     await pool.query(
       `INSERT INTO cloud_tokens
-         (host_id, event_id, provider,
-          access_token_enc, refresh_token_enc, token_expires_at,
-          provider_account_email)
+         (host_id, event_id, provider, access_token_enc, refresh_token_enc,
+          token_expires_at, provider_account_email)
        VALUES ($1, $2, 'onedrive', $3, $4, $5, $6)
-       ON CONFLICT (event_id, provider)
-       DO UPDATE SET
+       ON CONFLICT (event_id, provider) DO UPDATE SET
          access_token_enc       = EXCLUDED.access_token_enc,
          refresh_token_enc      = COALESCE(EXCLUDED.refresh_token_enc, cloud_tokens.refresh_token_enc),
          token_expires_at       = EXCLUDED.token_expires_at,
          provider_account_email = EXCLUDED.provider_account_email,
          updated_at             = NOW()`,
-      [hostId, eventId, accessTokenEnc, refreshTokenEnc, expiresAt, accountEmail],
+      [hostId, eventId, encrypt(tokens.access_token),
+       tokens.refresh_token ? encrypt(tokens.refresh_token) : null,
+       expiresAt, accountEmail],
     );
 
-    res.redirect(
-      `${process.env.CLIENT_ORIGIN}/dashboard?linked=onedrive&eventId=${eventId}`,
-    );
-  } catch (err) {
-    next(err);
-  }
+    res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?linked=onedrive&eventId=${eventId}`);
+  } catch (err) { next(err); }
 });
 
-// ─── DELETE /api/auth/onedrive ────────────────────────────────────────────────
-router.delete('/onedrive', async (req, res, next) => {
+router.delete('/onedrive', requireAuth, async (req, res, next) => {
   try {
-    const { hostId, eventId } = req.body;
-    if (!hostId || !eventId) {
-      const err = new Error('hostId and eventId are required');
-      err.status = 400;
-      return next(err);
-    }
+    const { eventId } = req.body;
+    if (!eventId) return next(Object.assign(new Error('eventId is required'), { status: 400 }));
+    await assertEventOwnership(req.user.authId, eventId);
 
     const { rows } = await pool.query(
-      `DELETE FROM cloud_tokens
-        WHERE event_id = $1 AND host_id = $2 AND provider = 'onedrive'
-       RETURNING id`,
-      [eventId, hostId],
+      `DELETE FROM cloud_tokens WHERE event_id = $1 AND provider = 'onedrive' RETURNING id`,
+      [eventId],
     );
-
-    if (!rows.length) {
-      const err = new Error('No OneDrive token found for this event');
-      err.status = 404;
-      return next(err);
-    }
+    if (!rows.length) return next(Object.assign(new Error('No OneDrive token found'), { status: 404 }));
 
     res.json({ success: true });
-  } catch (err) {
-    next(err);
-  }
+  } catch (err) { next(err); }
 });
 
 module.exports = router;

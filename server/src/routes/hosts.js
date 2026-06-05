@@ -1,75 +1,75 @@
-const router = require('express').Router();
-const pool = require('../config/db');
+const router     = require('express').Router();
+const pool       = require('../config/db');
+const requireAuth = require('../middleware/requireAuth');
 
-// ─── POST /api/hosts/register ─────────────────────────────────────────────────
-// Creates a new host account or returns the existing one for that email.
-// Body: { email, displayName }
-router.post('/register', async (req, res, next) => {
+// ─── GET /api/hosts/me ────────────────────────────────────────────────────────
+// Called immediately after sign-in. Upserts the host row from the JWT claims,
+// then returns the host + their events in a single response.
+router.get('/me', requireAuth, async (req, res, next) => {
   try {
-    const { email, displayName } = req.body;
+    const { authId, email, name } = req.user;
 
-    if (!email || !displayName) {
-      const err = new Error('email and displayName are required');
-      err.status = 400;
-      return next(err);
-    }
-
-    const emailClean = email.trim().toLowerCase();
-    const nameClean  = displayName.trim();
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailClean)) {
-      const err = new Error('Invalid email address');
-      err.status = 400;
-      return next(err);
-    }
-
-    // Upsert: if host already exists return their record without error.
     const { rows } = await pool.query(
-      `INSERT INTO hosts (email, display_name)
-       VALUES ($1, $2)
-       ON CONFLICT (email)
-       DO UPDATE SET display_name = EXCLUDED.display_name, updated_at = NOW()
+      `INSERT INTO hosts (auth_id, email, display_name)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (auth_id)
+       DO UPDATE SET
+         email        = EXCLUDED.email,
+         display_name = COALESCE(NULLIF(EXCLUDED.display_name, ''), hosts.display_name),
+         updated_at   = NOW()
        RETURNING id, email, display_name, created_at`,
-      [emailClean, nameClean],
+      [authId, email.toLowerCase(), name || email.split('@')[0]],
     );
 
-    res.status(201).json({ host: rows[0] });
+    const host = rows[0];
+
+    const eventsResult = await pool.query(
+      `SELECT
+         e.id, e.name, e.join_code, e.status, e.created_at,
+         ct.provider              AS linked_provider,
+         ct.provider_account_email AS linked_account
+       FROM events e
+       LEFT JOIN cloud_tokens ct ON ct.event_id = e.id
+       WHERE e.host_id = $1
+       ORDER BY e.created_at DESC`,
+      [host.id],
+    );
+
+    res.json({ host, events: eventsResult.rows });
   } catch (err) {
     next(err);
   }
 });
 
 // ─── GET /api/hosts/:hostId ───────────────────────────────────────────────────
-// Returns a host and their events.
-router.get('/:hostId', async (req, res, next) => {
+// Kept for any internal calls that look up a host by DB UUID.
+router.get('/:hostId', requireAuth, async (req, res, next) => {
   try {
-    const { hostId } = req.params;
-
-    const hostResult = await pool.query(
-      `SELECT id, email, display_name, created_at FROM hosts WHERE id = $1`,
-      [hostId],
+    const { rows: hostRows } = await pool.query(
+      `SELECT id, email, display_name, created_at
+         FROM hosts WHERE id = $1 AND auth_id = $2`,
+      [req.params.hostId, req.user.authId],
     );
 
-    if (!hostResult.rows.length) {
+    if (!hostRows.length) {
       const err = new Error('Host not found');
       err.status = 404;
       return next(err);
     }
 
-    const eventsResult = await pool.query(
+    const { rows: eventRows } = await pool.query(
       `SELECT
-         e.id, e.name, e.description, e.join_code, e.status,
-         e.starts_at, e.ends_at, e.created_at,
-         ct.provider AS linked_provider,
+         e.id, e.name, e.join_code, e.status, e.created_at,
+         ct.provider              AS linked_provider,
          ct.provider_account_email AS linked_account
        FROM events e
        LEFT JOIN cloud_tokens ct ON ct.event_id = e.id
        WHERE e.host_id = $1
        ORDER BY e.created_at DESC`,
-      [hostId],
+      [hostRows[0].id],
     );
 
-    res.json({ host: hostResult.rows[0], events: eventsResult.rows });
+    res.json({ host: hostRows[0], events: eventRows });
   } catch (err) {
     next(err);
   }
