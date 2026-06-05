@@ -46,10 +46,21 @@ async function getValidAccessToken(tokenRow) {
   );
   client.setCredentials({ refresh_token: refreshToken });
 
-  const { credentials } = await client.refreshAccessToken();
+  let credentials;
+  try {
+    ({ credentials } = await client.refreshAccessToken());
+  } catch (refreshErr) {
+    const e = new Error(
+      'Google Drive authorization has expired. The host must reconnect their Google Drive.',
+    );
+    e.status = 401;
+    throw e;
+  }
 
   if (!credentials.access_token) {
-    throw new Error('Google did not return a new access token during refresh.');
+    const e = new Error('Google Drive authorization has expired. The host must reconnect their Google Drive.');
+    e.status = 401;
+    throw e;
   }
 
   const newAccessTokenEnc = encrypt(credentials.access_token);

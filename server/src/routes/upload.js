@@ -182,6 +182,9 @@ router.post(
           throw new Error(`Unsupported storage provider: ${row.provider}`);
         }
       } catch (uploadErr) {
+        // Log the raw provider error so it appears in Vercel function logs
+        console.error('[upload] provider error:', uploadErr.message, uploadErr.stack);
+
         if (isQuotaError(uploadErr)) {
           const err = new Error(
             'The cloud storage is full. Photos cannot be saved until the owner frees up space.'
@@ -189,6 +192,19 @@ router.post(
           err.status = 507;
           return next(err);
         }
+
+        // Map provider auth errors (Drive/Dropbox/OneDrive return 401/403) to a
+        // clear 403 so guests see an actionable message instead of a generic 500.
+        const providerStatus = uploadErr.status ?? uploadErr.response?.status ?? uploadErr.code;
+        if (providerStatus === 401 || providerStatus === 403 ||
+            providerStatus === '401' || providerStatus === '403') {
+          const err = new Error(
+            'The event storage is not properly connected. Please ask the host to reconnect their cloud storage.'
+          );
+          err.status = 403;
+          return next(err);
+        }
+
         throw uploadErr;
       }
 

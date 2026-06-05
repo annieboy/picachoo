@@ -1,10 +1,15 @@
 function errorHandler(err, req, res, next) {
-  const status = err.status || 500;
-  const message = status < 500 ? err.message : 'Internal server error';
+  // Normalise status — GaxiosError (Google API) sets .status; pg errors don't
+  const status = err.status ?? err.response?.status ?? 500;
 
+  // Always log 500s with the full stack for debugging
   if (status >= 500) {
-    console.error(err);
+    console.error('[500]', req.method, req.path, err.message, err.stack);
   }
+
+  // In development surface the raw message; in production mask 5xx but keep 4xx
+  const isProd   = process.env.NODE_ENV === 'production';
+  const message  = (isProd && status >= 500) ? 'Internal server error' : err.message;
 
   res.status(status).json({ error: message });
 }
