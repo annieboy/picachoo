@@ -151,11 +151,12 @@ function PaymentForm({ plan, type }) {
   const navigate = useNavigate();
 
   const [processing, setProcessing] = useState(false);
+  const [ready,      setReady]      = useState(false);
   const [error,      setError]      = useState('');
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || !ready) return;
     setProcessing(true);
     setError('');
 
@@ -179,7 +180,14 @@ function PaymentForm({ plan, type }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      <PaymentElement options={{ layout: 'tabs' }} />
+      {!ready && (
+        <div className="space-y-3">
+          <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+          <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+          <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
+        </div>
+      )}
+      <PaymentElement options={{ layout: 'tabs' }} onReady={() => setReady(true)} />
 
       {error && (
         <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm">
@@ -189,7 +197,7 @@ function PaymentForm({ plan, type }) {
 
       <button
         type="submit"
-        disabled={!stripe || processing}
+        disabled={!stripe || !ready || processing}
         className="w-full py-4 rounded-2xl font-bold text-white text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         style={{ background: 'linear-gradient(135deg, #5B52E8 0%, #29BFBF 100%)' }}
       >
