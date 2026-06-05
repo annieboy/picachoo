@@ -8,7 +8,8 @@ import AboutPage     from './pages/AboutPage';
 import ContactPage   from './pages/ContactPage';
 import TermsPage     from './pages/TermsPage';
 import PrivacyPage   from './pages/PrivacyPage';
-import UpgradePage   from './pages/UpgradePage';
+import UpgradePage    from './pages/UpgradePage';
+import CheckoutPage   from './pages/CheckoutPage';
 import './dashboard.css';
 
 export default function App() {
@@ -24,8 +25,9 @@ export default function App() {
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/upgrade" element={<UpgradePage />} />
 
-        {/* Host dashboard */}
+        {/* Host dashboard + checkout */}
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/checkout"  element={<CheckoutPage />} />
 
         {/* Guest camera view */}
         <Route path="/e/:eventCode"      element={<GuestPage />} />

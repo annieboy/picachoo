@@ -1,16 +1,21 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
   setAuthToken, getOrCreateHost, createEvent,
   googleAuthUrl, dropboxAuthUrl, oneDriveAuthUrl,
   disconnectStorage, getStorageInfo,
   updateEvent, deleteEvent,
+  updateHostProfile, deleteAccount,
 } from '../api';
 import QRCard from '../components/QRCard';
+
+const ONBOARDING_KEY = id => `picachoo_onboarded_${id}`;
 
 // ── Auth bootstrap ────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const [authState, setAuthState] = useState('loading'); // loading | unauthenticated | authenticated
   const [session,   setSession]   = useState(null);
   const [host,      setHost]      = useState(null);
@@ -54,16 +59,52 @@ export default function DashboardPage() {
 
   // ── Routing by state ──────────────────────────────────────────────────────
 
+  // After authentication, handle ?intent= (from pricing CTA) and ?checkout= (from Stripe)
+  useEffect(() => {
+    if (authState !== 'authenticated' || !host) return;
+    const params  = new URLSearchParams(window.location.search);
+    const intent  = params.get('intent');
+    const eventId = params.get('eventId');
+    if (!intent) return;
+
+    // Clear the intent param from URL without a navigation flash
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete('intent');
+    clean.searchParams.delete('eventId');
+    window.history.replaceState({}, '', clean.toString());
+
+    // Redirect to checkout
+    const q = new URLSearchParams({ type: intent });
+    if (eventId) q.set('eventId', eventId);
+    navigate(`/checkout?${q}`);
+  }, [authState, host, navigate]);
+
   if (authState === 'loading') return <LoadingScreen />;
 
   if (authState === 'unauthenticated') {
     return <SignInScreen error={authError} onClearError={() => setAuthError('')} />;
   }
 
+  // New user onboarding: show plan picker on first sign-in with no events
+  const isNewUser = events.length === 0 && !localStorage.getItem(ONBOARDING_KEY(host?.id));
+  if (isNewUser && host) {
+    return (
+      <OnboardingScreen
+        host={host}
+        onContinueFree={() => {
+          localStorage.setItem(ONBOARDING_KEY(host.id), '1');
+          // force re-render without onboarding
+          setHost(h => ({ ...h }));
+        }}
+      />
+    );
+  }
+
   return (
     <Dashboard
       session={session}
       host={host}
+      setHost={setHost}
       events={events}
       setEvents={setEvents}
       signOut={signOut}
@@ -110,8 +151,8 @@ function SignInScreen({ error, onClearError }) {
     <Shell>
       <div className="auth-card">
         <div className="auth-logo">pica<span>choo</span></div>
-        <h1>Welcome</h1>
-        <p className="auth-sub">Sign in to create events and receive photos in your cloud storage.</p>
+        <h1>Sign in or create your account</h1>
+        <p className="auth-sub">Create events, share a QR code, and receive photos directly in your cloud storage — no app needed for your guests.</p>
 
         {(error || oauthErr || localErr) && (
           <p className="msg-error">
@@ -150,7 +191,7 @@ function SignInScreen({ error, onClearError }) {
                 />
               </label>
               <button type="submit" className="btn-primary" disabled={loading || !email.trim()}>
-                {loading ? 'Sending…' : 'Send sign-in link'}
+                {loading ? 'Sending…' : 'Continue with email'}
               </button>
             </form>
           </>
@@ -162,14 +203,34 @@ function SignInScreen({ error, onClearError }) {
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 
-function Dashboard({ session, host, events, setEvents, signOut }) {
+const TIER_LABEL = {
+  free:             { label: 'Free',             cls: 'tier-free' },
+  pro:              { label: 'Pro',              cls: 'tier-pro'  },
+  pro_annual:       { label: 'Pro Annual',       cls: 'tier-pro'  },
+  business_annual:  { label: 'Business Annual',  cls: 'tier-pro'  },
+};
+
+function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
+  const navigate    = useNavigate();
+  const [tab,       setTab]      = useState('events'); // 'events' | 'account'
   const [eventName, setEventName] = useState('');
   const [creating,  setCreating]  = useState(false);
   const [error,     setError]     = useState('');
 
-  const params   = new URLSearchParams(window.location.search);
-  const linked   = params.get('linked');
-  const oauthErr = params.get('error');
+  const params        = new URLSearchParams(window.location.search);
+  const linked        = params.get('linked');
+  const oauthErr      = params.get('error');
+  const checkoutOk    = params.get('checkout') === 'success';
+  const checkoutType  = params.get('type'); // 'pass' | 'subscription'
+
+  // Clear checkout params from URL after showing banner
+  useEffect(() => {
+    if (!checkoutOk) return;
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete('checkout');
+    clean.searchParams.delete('type');
+    window.history.replaceState({}, '', clean.toString());
+  }, [checkoutOk]);
 
   async function handleCreateEvent(e) {
     e.preventDefault();
@@ -192,31 +253,51 @@ function Dashboard({ session, host, events, setEvents, signOut }) {
     setEvents(prev => prev.filter(e => e.id !== eventId));
   }
 
+  const tier = host?.tier ?? 'free';
+  const tierMeta = TIER_LABEL[tier] ?? TIER_LABEL.free;
+  const isPro = tier !== 'free';
+
   return (
     <Shell>
+      {/* Top bar */}
       <div className="dash-topbar">
         <div>
           <p className="dash-welcome">
             Welcome back, <strong>{host?.display_name}</strong>
-            {host?.tier === 'pro'
-              ? <span className="tier-badge tier-pro">Pro</span>
-              : <span className="tier-badge tier-free">Free</span>}
+            <span className={`tier-badge ${tierMeta.cls}`}>{tierMeta.label}</span>
           </p>
           <p className="dash-email">{host?.email}</p>
         </div>
-        <button className="btn-ghost" onClick={signOut}>Sign out</button>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <button
+            className={`btn-ghost btn-sm${tab === 'account' ? ' btn-ghost-active' : ''}`}
+            onClick={() => setTab(t => t === 'account' ? 'events' : 'account')}
+          >
+            Account
+          </button>
+          <button className="btn-ghost" onClick={signOut}>Sign out</button>
+        </div>
       </div>
 
-      {host?.tier === 'free' && (
-        <div className="upgrade-banner">
-          <div className="upgrade-banner-text">
-            <strong>Upgrade to Pro</strong> — unlock full-resolution uploads (no 4.5 MB limit),
-            direct-to-cloud delivery, and priority support.
-          </div>
-          <a href="/upgrade" className="upgrade-banner-btn">Upgrade</a>
+      {/* Banners */}
+      {checkoutOk && (
+        <div className="banner-success">
+          {checkoutType === 'pass'
+            ? '✓ Pro Event Pass activated! Full-resolution uploads are unlocked for this event.'
+            : '✓ Subscription activated! Full-resolution uploads are now unlocked across all your events.'}
         </div>
       )}
-
+      {!isPro && (
+        <div className="upgrade-banner">
+          <div className="upgrade-banner-text">
+            <strong>Unlock full resolution</strong> — upgrade to Pro for uncompressed original uploads,
+            direct-to-cloud delivery, and priority support.
+          </div>
+          <button className="upgrade-banner-btn" onClick={() => navigate('/pricing')}>
+            View plans
+          </button>
+        </div>
+      )}
       {linked === 'google'   && <div className="banner-success">✓ Google Drive connected!</div>}
       {linked === 'dropbox'  && <div className="banner-success">✓ Dropbox connected!</div>}
       {linked === 'onedrive' && <div className="banner-success">✓ OneDrive connected!</div>}
@@ -228,40 +309,320 @@ function Dashboard({ session, host, events, setEvents, signOut }) {
         </div>
       )}
 
-      <section className="dash-section">
-        <h2>New event</h2>
-        <form className="create-form" onSubmit={handleCreateEvent}>
-          <input
-            type="text"
-            placeholder="e.g. Sarah & Tom's Wedding"
-            value={eventName}
-            onChange={e => setEventName(e.target.value)}
-            required
-          />
-          <button type="submit" className="btn-primary" disabled={creating || !eventName.trim()}>
-            {creating ? 'Creating…' : 'Create'}
-          </button>
-        </form>
-        {error && <p className="msg-error">{error}</p>}
-      </section>
+      {/* Account tab */}
+      {tab === 'account' && (
+        <AccountPanel host={host} setHost={setHost} signOut={signOut} />
+      )}
 
-      <section className="dash-section">
-        <h2>Your events {events.length > 0 && <span className="badge">{events.length}</span>}</h2>
-        {events.length === 0
-          ? <p className="empty-state">Create your first event above to get started.</p>
-          : events.map(ev => (
-            <EventCard
-              key={ev.id}
-              event={ev}
-              token={session?.access_token}
-              loginHint={session?.user?.app_metadata?.provider === 'google' ? session?.user?.email : undefined}
-              onUpdate={handleEventUpdate}
-              onDelete={handleEventDelete}
-            />
-          ))
-        }
-      </section>
+      {/* Events tab */}
+      {tab === 'events' && (
+        <>
+          <section className="dash-section">
+            <h2>New event</h2>
+            <form className="create-form" onSubmit={handleCreateEvent}>
+              <input
+                type="text"
+                placeholder="e.g. Sarah & Tom's Wedding"
+                value={eventName}
+                onChange={e => setEventName(e.target.value)}
+                required
+              />
+              <button type="submit" className="btn-primary" disabled={creating || !eventName.trim()}>
+                {creating ? 'Creating…' : 'Create'}
+              </button>
+            </form>
+            {error && <p className="msg-error">{error}</p>}
+          </section>
+
+          <section className="dash-section">
+            <h2>Your events {events.length > 0 && <span className="badge">{events.length}</span>}</h2>
+            {events.length === 0
+              ? <p className="empty-state">Create your first event above to get started.</p>
+              : events.map(ev => (
+                <EventCard
+                  key={ev.id}
+                  event={ev}
+                  token={session?.access_token}
+                  loginHint={session?.user?.app_metadata?.provider === 'google' ? session?.user?.email : undefined}
+                  onUpdate={handleEventUpdate}
+                  onDelete={handleEventDelete}
+                />
+              ))
+            }
+          </section>
+        </>
+      )}
     </Shell>
+  );
+}
+
+// ── Onboarding screen (first sign-in) ─────────────────────────────────────────
+
+function OnboardingScreen({ host, onContinueFree }) {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(null);
+
+  async function handlePlan(type) {
+    localStorage.setItem(ONBOARDING_KEY(host.id), '1');
+    if (type === 'free') { onContinueFree(); return; }
+    setLoading(type);
+    const q = new URLSearchParams({ type });
+    navigate(`/checkout?${q}`);
+  }
+
+  const plans = [
+    {
+      type:        'free',
+      name:        'Standard',
+      price:       'Free',
+      note:        'Always free',
+      description: 'Perfect for getting started. Unlimited events and guests, photos compressed to 2 MB.',
+      cta:         'Continue for free',
+      popular:     false,
+    },
+    {
+      type:        'one_time_pass',
+      name:        'Pro Event Pass',
+      price:       '£19',
+      note:        'One-time · per event',
+      description: 'Full-resolution originals for one specific event. Valid 30 days from purchase.',
+      cta:         'Buy Event Pass',
+      popular:     true,
+      badge:       'Best for Weddings & Galas',
+    },
+    {
+      type:        'pro_annual',
+      name:        'Pro Annual',
+      price:       '£9',
+      note:        '/mo · £108 billed annually',
+      description: 'Full-resolution across all your events. Unlimited events, priority support.',
+      cta:         'Get Pro Annual',
+      popular:     false,
+    },
+  ];
+
+  return (
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%)' }}>
+      <header className="px-6 pt-8 pb-0 flex items-center justify-between">
+        <span className="font-black text-2xl text-white tracking-tight">
+          pica<span style={{ color: '#c4b5fd' }}>choo</span>
+        </span>
+        <button onClick={onContinueFree} className="text-white/60 text-sm hover:text-white transition-colors">
+          Skip for now →
+        </button>
+      </header>
+
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        <div className="text-center mb-10">
+          <div className="text-4xl mb-4">🎉</div>
+          <h1 className="text-white text-3xl font-black tracking-tight mb-2">
+            Welcome, {host.display_name?.split(' ')[0]}!
+          </h1>
+          <p className="text-white/70 text-base max-w-md mx-auto">
+            You're all set. Choose how you'd like to get started — you can always upgrade later.
+          </p>
+        </div>
+
+        <div className="w-full max-w-4xl grid md:grid-cols-3 gap-5">
+          {plans.map(plan => (
+            <div key={plan.type}
+                 className={`rounded-2xl p-6 flex flex-col gap-4 relative ${
+                   plan.popular
+                     ? 'bg-white text-gray-900'
+                     : 'text-white'
+                 }`}
+                 style={plan.popular ? {} : { background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)' }}>
+
+              {plan.badge && (
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
+                  <span className="px-3 py-1 rounded-full text-xs font-bold bg-violet-600 text-white whitespace-nowrap">
+                    {plan.badge}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <p className={`text-xs font-bold uppercase tracking-widest ${plan.popular ? 'text-violet-400' : 'text-white/50'}`}>
+                  {plan.name}
+                </p>
+                <p className={`text-4xl font-black mt-1 ${plan.popular ? 'text-gray-900' : 'text-white'}`}>
+                  {plan.price}
+                </p>
+                <p className={`text-xs mt-1 font-medium ${plan.popular ? 'text-violet-600' : 'text-white/60'}`}>
+                  {plan.note}
+                </p>
+              </div>
+
+              <p className={`text-sm flex-1 ${plan.popular ? 'text-gray-500' : 'text-white/70'}`}>
+                {plan.description}
+              </p>
+
+              <button
+                onClick={() => handlePlan(plan.type)}
+                disabled={loading === plan.type}
+                className={`w-full py-3 rounded-full font-semibold text-sm transition-all disabled:opacity-60 ${
+                  plan.popular
+                    ? 'text-white'
+                    : 'text-white border border-white/40 hover:bg-white/10'
+                }`}
+                style={plan.popular ? { background: 'linear-gradient(135deg, #5B52E8, #29BFBF)' } : {}}
+              >
+                {loading === plan.type ? 'Redirecting…' : plan.cta}
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Account panel ─────────────────────────────────────────────────────────────
+
+function AccountPanel({ host, setHost, signOut }) {
+  const navigate      = useNavigate();
+  const [name,        setName]        = useState(host?.display_name ?? '');
+  const [savingName,  setSavingName]  = useState(false);
+  const [nameMsg,     setNameMsg]     = useState('');
+  const [showDelete,  setShowDelete]  = useState(false);
+  const [deleting,    setDeleting]    = useState(false);
+  const [deleteErr,   setDeleteErr]   = useState('');
+  const [deleteInput, setDeleteInput] = useState('');
+
+  const tier     = host?.tier ?? 'free';
+  const tierMeta = TIER_LABEL[tier] ?? TIER_LABEL.free;
+  const isPro    = tier !== 'free';
+
+  async function handleSaveName(e) {
+    e.preventDefault();
+    if (!name.trim() || name.trim() === host?.display_name) return;
+    setSavingName(true); setNameMsg('');
+    try {
+      const { host: updated } = await updateHostProfile({ displayName: name.trim() });
+      setHost(h => ({ ...h, ...updated }));
+      setNameMsg('✓ Name updated');
+      setTimeout(() => setNameMsg(''), 3000);
+    } catch (err) {
+      setNameMsg(err.message ?? 'Update failed');
+    } finally {
+      setSavingName(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteInput !== 'DELETE') return;
+    setDeleting(true); setDeleteErr('');
+    try {
+      await deleteAccount();
+      await supabase.auth.signOut();
+      navigate('/');
+    } catch (err) {
+      setDeleteErr(err.message ?? 'Delete failed. Please try again.');
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="dash-section" style={{ maxWidth: '560px' }}>
+      <h2 style={{ marginBottom: '20px' }}>Account settings</h2>
+
+      {/* Profile */}
+      <div className="event-card" style={{ marginBottom: '16px' }}>
+        <h3 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>Profile</h3>
+        <form onSubmit={handleSaveName} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <label style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-muted)' }}>
+            Display name
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              style={{ display: 'block', marginTop: '4px', width: '100%' }}
+            />
+          </label>
+          <label style={{ fontSize: '12px', fontWeight: '500', color: 'var(--text-muted)' }}>
+            Email address
+            <input
+              type="email"
+              value={host?.email ?? ''}
+              disabled
+              style={{ display: 'block', marginTop: '4px', width: '100%', opacity: 0.6 }}
+            />
+          </label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button type="submit" className="btn-primary" disabled={savingName || !name.trim() || name.trim() === host?.display_name}>
+              {savingName ? 'Saving…' : 'Save changes'}
+            </button>
+            {nameMsg && (
+              <span style={{ fontSize: '12px', color: nameMsg.startsWith('✓') ? '#059669' : '#dc2626' }}>
+                {nameMsg}
+              </span>
+            )}
+          </div>
+        </form>
+      </div>
+
+      {/* Plan */}
+      <div className="event-card" style={{ marginBottom: '16px' }}>
+        <h3 style={{ marginBottom: '12px', fontSize: '14px', fontWeight: '600' }}>Subscription plan</h3>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <span className={`tier-badge ${tierMeta.cls}`}>{tierMeta.label}</span>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '6px' }}>
+              {isPro
+                ? 'Full-resolution uploads unlocked across all your events.'
+                : 'Photos compressed to 2 MB per upload. Upgrade to unlock originals.'}
+            </p>
+          </div>
+          {!isPro && (
+            <button className="btn-primary" onClick={() => navigate('/pricing')} style={{ flexShrink: 0, marginLeft: '16px' }}>
+              Upgrade
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Danger zone */}
+      <div className="event-card" style={{ borderColor: '#fee2e2' }}>
+        <h3 style={{ marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#dc2626' }}>Danger zone</h3>
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+          Permanently delete your account and all associated events and photo records.
+          Files in your cloud storage are not deleted.
+        </p>
+
+        {!showDelete ? (
+          <button onClick={() => setShowDelete(true)}
+                  style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '999px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+            Delete my account
+          </button>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <p style={{ fontSize: '12px', color: '#dc2626', fontWeight: '500' }}>
+              Type <strong>DELETE</strong> to confirm:
+            </p>
+            <input
+              type="text"
+              value={deleteInput}
+              onChange={e => setDeleteInput(e.target.value)}
+              placeholder="DELETE"
+              style={{ fontFamily: 'monospace', letterSpacing: '0.1em' }}
+            />
+            {deleteErr && <p className="msg-error">{deleteErr}</p>}
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button className="btn-ghost btn-sm" onClick={() => { setShowDelete(false); setDeleteInput(''); }}>
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteInput !== 'DELETE' || deleting}
+                style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '999px', padding: '8px 16px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', opacity: deleteInput !== 'DELETE' ? 0.4 : 1 }}
+              >
+                {deleting ? 'Deleting…' : 'Permanently delete account'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
   );
 }
 

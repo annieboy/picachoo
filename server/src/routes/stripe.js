@@ -1,17 +1,29 @@
 const express = require('express');
 const router  = express.Router();
-const pool       = require('../config/db');
+const pool        = require('../config/db');
 const requireAuth = require('../middleware/requireAuth');
 
 function getStripe() {
-  // Lazy-load so the module doesn't crash if STRIPE_SECRET_KEY is unset during tests
   return require('stripe')(process.env.STRIPE_SECRET_KEY);
 }
 
+// ── Helper: get or create Stripe customer ─────────────────────────────────────
+async function resolveCustomer(stripe, host, email) {
+  if (host.stripe_customer_id) return host.stripe_customer_id;
+  const customer = await stripe.customers.create({
+    email,
+    metadata: { hostId: host.id },
+  });
+  await pool.query(
+    `UPDATE hosts SET stripe_customer_id = $1 WHERE id = $2`,
+    [customer.id, host.id],
+  );
+  return customer.id;
+}
+
 // ─── POST /api/stripe/checkout ────────────────────────────────────────────────
-// Creates a Stripe Checkout session.
+// Returns { clientSecret } for Stripe Elements — NOT a hosted redirect.
 // body: { type: 'one_time_pass' | 'pro_annual' | 'business_annual', eventId? }
-// Returns { url } — the client should redirect to it.
 router.post('/checkout', requireAuth, async (req, res, next) => {
   try {
     const stripe = getStripe();
@@ -23,52 +35,35 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid checkout type' });
     }
 
-    // Resolve host row
     const { rows } = await pool.query(
       `SELECT id, stripe_customer_id FROM hosts WHERE auth_id = $1`,
       [authId],
     );
     if (!rows.length) return res.status(404).json({ error: 'Host profile not found' });
     const host = rows[0];
+    const customerId = await resolveCustomer(stripe, host, email);
 
-    // Get or create Stripe customer
-    let customerId = host.stripe_customer_id;
-    if (!customerId) {
-      const customer = await stripe.customers.create({
-        email,
-        metadata: { hostId: host.id, authId },
-      });
-      customerId = customer.id;
-      await pool.query(
-        `UPDATE hosts SET stripe_customer_id = $1 WHERE id = $2`,
-        [customerId, host.id],
-      );
-    }
-
-    const origin = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173';
-
-    // ── One-time event pass ───────────────────────────────────────────────────
+    // ── One-time event pass (PaymentIntent) ───────────────────────────────────
     if (type === 'one_time_pass') {
       if (!eventId) return res.status(400).json({ error: 'eventId required for one_time_pass' });
-
       const { rows: evRows } = await pool.query(
         `SELECT id FROM events WHERE id = $1 AND host_id = $2`,
         [eventId, host.id],
       );
       if (!evRows.length) return res.status(404).json({ error: 'Event not found or not yours' });
 
-      const session = await stripe.checkout.sessions.create({
-        customer:  customerId,
-        mode:      'payment',
-        line_items: [{ price: process.env.STRIPE_PRICE_ONE_TIME_PASS, quantity: 1 }],
-        metadata:  { hostId: host.id, eventId, type: 'one_time_pass' },
-        success_url: `${origin}/dashboard?checkout=success&type=pass`,
-        cancel_url:  `${origin}/pricing`,
+      const pi = await stripe.paymentIntents.create({
+        amount:      1900,
+        currency:    'gbp',
+        customer:    customerId,
+        description: 'Picachoo Pro Event Pass',
+        metadata:    { hostId: host.id, eventId, type: 'one_time_pass' },
+        automatic_payment_methods: { enabled: true },
       });
-      return res.json({ url: session.url });
+      return res.json({ clientSecret: pi.client_secret });
     }
 
-    // ── Annual subscriptions ─────────────────────────────────────────────────
+    // ── Annual subscriptions (Subscription + expand payment intent) ───────────
     const priceId = type === 'pro_annual'
       ? process.env.STRIPE_PRICE_PRO_ANNUAL
       : process.env.STRIPE_PRICE_BUSINESS_ANNUAL;
@@ -77,23 +72,26 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
       return res.status(500).json({ error: 'Stripe price not configured for this plan' });
     }
 
-    const session = await stripe.checkout.sessions.create({
-      customer:  customerId,
-      mode:      'subscription',
-      line_items: [{ price: priceId, quantity: 1 }],
-      metadata:  { hostId: host.id, type },
-      success_url: `${origin}/dashboard?checkout=success&type=subscription`,
-      cancel_url:  `${origin}/pricing`,
+    const subscription = await stripe.subscriptions.create({
+      customer:         customerId,
+      items:            [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand:           ['latest_invoice.payment_intent'],
+      metadata:         { hostId: host.id, type },
     });
-    return res.json({ url: session.url });
+
+    const clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
+    if (!clientSecret) {
+      return res.status(500).json({ error: 'Could not initialise subscription payment' });
+    }
+    return res.json({ clientSecret, subscriptionId: subscription.id });
   } catch (err) {
     next(err);
   }
 });
 
 // ─── POST /api/stripe/webhook ─────────────────────────────────────────────────
-// Stripe sends raw bytes; body has already been captured into req.rawBody
-// by the express.json verify function in index.js.
 router.post('/webhook', async (req, res) => {
   const stripe = getStripe();
   const sig    = req.headers['stripe-signature'];
@@ -111,46 +109,46 @@ router.post('/webhook', async (req, res) => {
   }
 
   try {
-    if (event.type === 'checkout.session.completed') {
-      const session  = event.data.object;
-      const { hostId, eventId, type } = session.metadata ?? {};
-
+    // One-time pass: PaymentIntent succeeded
+    if (event.type === 'payment_intent.succeeded') {
+      const pi = event.data.object;
+      const { eventId, type } = pi.metadata ?? {};
       if (type === 'one_time_pass' && eventId) {
         const passExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         await pool.query(
           `UPDATE events SET is_premium_pass = TRUE, pass_expires_at = $1 WHERE id = $2`,
           [passExpires.toISOString(), eventId],
         );
-        console.log(`[stripe] one_time_pass activated for event ${eventId}, expires ${passExpires.toISOString()}`);
+        console.log(`[stripe] one_time_pass activated for event ${eventId}`);
       }
+    }
 
-      if (type === 'pro_annual' || type === 'business_annual') {
+    // Subscription activated: invoice paid
+    if (event.type === 'invoice.payment_succeeded') {
+      const invoice = event.data.object;
+      if (!invoice.subscription) return res.json({ received: true });
+      const sub = await stripe.subscriptions.retrieve(invoice.subscription);
+      const { hostId, type } = sub.metadata ?? {};
+      if (hostId && (type === 'pro_annual' || type === 'business_annual')) {
         await pool.query(
-          `UPDATE hosts SET tier = $1 WHERE id = $2`,
-          [type, hostId],
+          `UPDATE hosts SET tier = $1, stripe_subscription_id = $2 WHERE id = $3`,
+          [type, sub.id, hostId],
         );
-        if (session.subscription) {
-          await pool.query(
-            `UPDATE hosts SET stripe_subscription_id = $1 WHERE id = $2`,
-            [session.subscription, hostId],
-          );
-        }
         console.log(`[stripe] ${type} activated for host ${hostId}`);
       }
     }
 
+    // Subscription cancelled → downgrade to free
     if (event.type === 'customer.subscription.deleted') {
       const sub = event.data.object;
-      const { rowCount } = await pool.query(
+      await pool.query(
         `UPDATE hosts SET tier = 'free', stripe_subscription_id = NULL
          WHERE stripe_subscription_id = $1`,
         [sub.id],
       );
-      if (rowCount) console.log(`[stripe] subscription ${sub.id} cancelled → tier reset to free`);
     }
   } catch (err) {
     console.error('[stripe webhook] DB error:', err.message);
-    // Still return 200 so Stripe doesn't retry indefinitely
   }
 
   res.json({ received: true });

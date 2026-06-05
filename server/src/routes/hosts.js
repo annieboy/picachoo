@@ -1,6 +1,15 @@
 const router     = require('express').Router();
 const pool       = require('../config/db');
 const requireAuth = require('../middleware/requireAuth');
+const { createClient } = require('@supabase/supabase-js');
+
+function getSupabaseAdmin() {
+  return createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+    { auth: { autoRefreshToken: false, persistSession: false } },
+  );
+}
 
 // ─── GET /api/hosts/me ────────────────────────────────────────────────────────
 // Called immediately after sign-in. Upserts the host row from the JWT claims,
@@ -40,6 +49,58 @@ router.get('/me', requireAuth, async (req, res, next) => {
     );
 
     res.json({ host, events: eventsResult.rows });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── PATCH /api/hosts/me ─────────────────────────────────────────────────────
+router.patch('/me', requireAuth, async (req, res, next) => {
+  try {
+    const { displayName } = req.body ?? {};
+    if (!displayName?.trim()) {
+      return res.status(400).json({ error: 'displayName is required' });
+    }
+    const { rows } = await pool.query(
+      `UPDATE hosts SET display_name = $1, updated_at = NOW()
+       WHERE auth_id = $2
+       RETURNING id, email, display_name, tier`,
+      [displayName.trim(), req.user.authId],
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Host not found' });
+    res.json({ host: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── DELETE /api/hosts/me ─────────────────────────────────────────────────────
+router.delete('/me', requireAuth, async (req, res, next) => {
+  try {
+    const { authId } = req.user;
+
+    const { rows } = await pool.query(
+      `SELECT id FROM hosts WHERE auth_id = $1`,
+      [authId],
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Host not found' });
+    const hostId = rows[0].id;
+
+    // Delete data in FK order
+    await pool.query(
+      `DELETE FROM photos WHERE event_id IN (SELECT id FROM events WHERE host_id = $1)`,
+      [hostId],
+    );
+    await pool.query(`DELETE FROM cloud_tokens WHERE host_id = $1`, [hostId]);
+    await pool.query(`DELETE FROM events WHERE host_id = $1`,       [hostId]);
+    await pool.query(`DELETE FROM hosts WHERE id = $1`,             [hostId]);
+
+    // Remove from Supabase Auth
+    const admin = getSupabaseAdmin();
+    const { error } = await admin.auth.admin.deleteUser(authId);
+    if (error) console.warn('[delete account] Supabase auth delete failed:', error.message);
+
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { setAuthToken, createCheckoutSession } from '../api';
 import MarketingLayout from '../components/MarketingLayout';
 
 // ── Billing toggle ────────────────────────────────────────────────────────────
@@ -27,32 +26,28 @@ function BillingToggle({ value, onChange }) {
 }
 
 // ── Checkout helper ───────────────────────────────────────────────────────────
+// Route to /checkout (our custom page) or /dashboard?intent= if not logged in
 
 function useCheckout() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(null); // tracks which type is loading
-  const [error,   setError]   = useState('');
+  const [loading, setLoading] = useState(null);
 
   async function startCheckout(type, eventId) {
-    setError('');
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
-      // Not logged in — redirect to dashboard which will prompt sign-in
-      navigate(`/dashboard?intent=${type}${eventId ? `&eventId=${eventId}` : ''}`);
+      const q = new URLSearchParams({ intent: type });
+      if (eventId) q.set('eventId', eventId);
+      navigate(`/dashboard?${q}`);
       return;
     }
-    setAuthToken(session.access_token);
     setLoading(type);
-    try {
-      const { url } = await createCheckoutSession({ type, eventId });
-      window.location.href = url;
-    } catch (err) {
-      setError(err.message ?? 'Checkout failed. Please try again.');
-      setLoading(null);
-    }
+    const q = new URLSearchParams({ type });
+    if (eventId) q.set('eventId', eventId);
+    navigate(`/checkout?${q}`);
+    setLoading(null);
   }
 
-  return { startCheckout, loading, error };
+  return { startCheckout, loading, error: '' };
 }
 
 // ── Event picker modal (for one-time pass) ───────────────────────────────────

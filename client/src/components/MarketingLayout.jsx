@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { supabase } from '../lib/supabase';
 import '../marketing.css';
 
 export default function MarketingLayout({ children, heroNav = false }) {
@@ -23,13 +24,22 @@ export default function MarketingLayout({ children, heroNav = false }) {
 /* ── Nav ─────────────────────────────────────────────────────────────────── */
 
 function Nav({ heroNav }) {
-  const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen]         = useState(false);
+  const [scrolled,  setScrolled]  = useState(false);
+  const [open,      setOpen]      = useState(false);
+  const [loggedIn,  setLoggedIn]  = useState(false);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setLoggedIn(!!session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      setLoggedIn(!!session);
+    });
+    return () => subscription.unsubscribe();
   }, []);
 
   const white = heroNav && !scrolled;   // transparent-on-gradient mode
@@ -71,16 +81,23 @@ function Nav({ heroNav }) {
 
         {/* CTA */}
         <div className="hidden md:flex items-center gap-3">
-          <Link to="/dashboard"
-                className={`text-sm font-medium transition-colors ${
-                  white ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-gray-800'
-                }`}>
-            Sign in
-          </Link>
-          <Link to="/dashboard"
-                className="btn-purple px-5 py-2.5 text-sm">
-            Get started
-          </Link>
+          {loggedIn ? (
+            <Link to="/dashboard" className="btn-purple px-5 py-2.5 text-sm">
+              Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link to="/dashboard"
+                    className={`text-sm font-medium transition-colors ${
+                      white ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-gray-800'
+                    }`}>
+                Sign in / Sign up
+              </Link>
+              <Link to="/dashboard" className="btn-purple px-5 py-2.5 text-sm">
+                Get started free
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile burger */}

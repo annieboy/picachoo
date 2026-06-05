@@ -27,6 +27,20 @@ export function getOrCreateHost() {
   return apiFetch('/api/hosts/me');
 }
 
+/** Update the current host's display name. */
+export function updateHostProfile({ displayName }) {
+  return apiFetch('/api/hosts/me', {
+    method:  'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ displayName }),
+  });
+}
+
+/** Permanently delete the current host's account and all their data. */
+export function deleteAccount() {
+  return apiFetch('/api/hosts/me', { method: 'DELETE' });
+}
+
 // ── Events ────────────────────────────────────────────────────────────────────
 
 export function createEvent({ name }) {
@@ -103,7 +117,11 @@ export function disconnectStorage({ provider, eventId }) {
  *  type: 'one_time_pass' | 'pro_annual' | 'business_annual'
  *  eventId: required for 'one_time_pass'
  */
-export function createCheckoutSession({ type, eventId }) {
+/** Creates a Stripe payment intent / subscription and returns { clientSecret }.
+ *  type: 'one_time_pass' | 'pro_annual' | 'business_annual'
+ *  eventId: required for 'one_time_pass'
+ */
+export function createCheckoutIntent({ type, eventId }) {
   return apiFetch('/api/stripe/checkout', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },

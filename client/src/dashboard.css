@@ -138,7 +138,8 @@ input::placeholder { color: #d1d5db; }
   cursor: pointer;
   transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-.btn-ghost:hover { border-color: rgba(107,92,231,0.35); color: var(--brand); background: rgba(107,92,231,0.05); }
+.btn-ghost:hover      { border-color: rgba(107,92,231,0.35); color: var(--brand); background: rgba(107,92,231,0.05); }
+.btn-ghost-active     { border-color: rgba(107,92,231,0.5) !important; color: var(--brand) !important; background: rgba(107,92,231,0.08) !important; }
 .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
 
 .btn-secondary {
