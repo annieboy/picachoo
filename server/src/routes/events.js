@@ -11,10 +11,10 @@ function generateJoinCode(length = 6) {
   return code;
 }
 
-// ─── POST /api/events ─────────────────────────────────────────────────────────
+// ─── POST /api/events  (also aliased as /api/events/create) ──────────────────
 // Creates a new event for a host.
 // Body: { hostId, name, description?, startsAt?, endsAt? }
-router.post('/', async (req, res, next) => {
+async function createEvent(req, res, next) {
   try {
     const { hostId, name, description, startsAt, endsAt } = req.body;
 
@@ -70,7 +70,10 @@ router.post('/', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
+}
+
+router.post('/',        createEvent);
+router.post('/create',  createEvent); // alias
 
 // ─── GET /api/events/:eventId ─────────────────────────────────────────────────
 // Returns full event details including linked Drive status.
