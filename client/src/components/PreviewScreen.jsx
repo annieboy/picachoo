@@ -1,8 +1,14 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 export default function PreviewScreen({ blob, onUpload, onRetake }) {
   const objectUrl = useRef(URL.createObjectURL(blob));
+  const [dims, setDims] = useState(null);
   useEffect(() => () => URL.revokeObjectURL(objectUrl.current), []);
+
+  // Read actual pixel dimensions once the img element loads
+  function handleImgLoad(e) {
+    setDims({ w: e.target.naturalWidth, h: e.target.naturalHeight });
+  }
 
   return (
     <div className="fixed inset-0 flex flex-col bg-black">
@@ -12,7 +18,14 @@ export default function PreviewScreen({ blob, onUpload, onRetake }) {
           src={objectUrl.current}
           alt="Your photo preview"
           className="absolute inset-0 w-full h-full object-contain"
+          onLoad={handleImgLoad}
         />
+        {/* Resolution badge — confirms full-res capture on supporting devices */}
+        {dims && (
+          <div className="absolute bottom-3 right-3 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-sm text-[10px] font-mono text-white/60 tabular-nums">
+            {dims.w} × {dims.h}
+          </div>
+        )}
       </div>
 
       {/* Bottom panel */}

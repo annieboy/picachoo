@@ -14,6 +14,9 @@ export default function CameraView({ guestName, onCapture }) {
     stopStream,
   } = useCamera();
 
+  // snapPhoto is now async — wrap so onClick doesn't swallow rejections silently
+  const handleSnap = () => { snapPhoto().catch(console.error); };
+
   useEffect(() => {
     startCamera();
     return stopStream;
@@ -24,7 +27,8 @@ export default function CameraView({ guestName, onCapture }) {
   }, [capturedBlob, onCapture]);
 
   const needsFallback = cameraState === 'denied' || cameraState === 'unavailable';
-  const isActive = cameraState === 'active';
+  const isActive    = cameraState === 'active';
+  const isCapturing = cameraState === 'capturing';
 
   return (
     <div className="relative flex flex-col h-full bg-black">
@@ -40,9 +44,9 @@ export default function CameraView({ guestName, onCapture }) {
             className="video-fill absolute inset-0"
           />
 
-          {/* Starting spinner overlay */}
-          {cameraState === 'starting' && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/70">
+          {/* Starting / capturing spinner overlay */}
+          {(cameraState === 'starting' || isCapturing) && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40">
               <Spinner />
             </div>
           )}
@@ -89,7 +93,7 @@ export default function CameraView({ guestName, onCapture }) {
           {/* Shutter button */}
           <button
             disabled={!isActive}
-            onClick={snapPhoto}
+            onClick={handleSnap}
             aria-label="Take photo"
             className="
               relative w-[76px] h-[76px] rounded-full
