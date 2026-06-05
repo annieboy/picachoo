@@ -75,6 +75,25 @@ async function createEvent(req, res, next) {
 router.post('/',        createEvent);
 router.post('/create',  createEvent); // alias
 
+// ─── GET /api/events/by-code/:joinCode ───────────────────────────────────────
+// Public guest-facing lookup — returns just enough info to welcome the guest.
+router.get('/by-code/:joinCode', async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT id, name, join_code, status FROM events WHERE join_code = $1`,
+      [req.params.joinCode.toUpperCase()],
+    );
+    if (!rows.length) {
+      const err = new Error('Event not found');
+      err.status = 404;
+      return next(err);
+    }
+    res.json({ event: rows[0] });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── GET /api/events/:eventId ─────────────────────────────────────────────────
 // Returns full event details including linked Drive status.
 router.get('/:eventId', async (req, res, next) => {

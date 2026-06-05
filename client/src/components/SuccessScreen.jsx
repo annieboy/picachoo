@@ -15,7 +15,7 @@ const PIECES = Array.from({ length: 18 }, (_, i) => ({
   shape: i % 2 === 0 ? 'rounded-sm' : 'rounded-full',
 }));
 
-export default function SuccessScreen({ onSnapAnother }) {
+export default function SuccessScreen({ eventName, onSnapAnother }) {
   const headingRef = useRef(null);
 
   // Auto-focus so screen-readers announce the result
@@ -72,7 +72,10 @@ export default function SuccessScreen({ onSnapAnother }) {
           Photo shared!
         </h1>
         <p className="text-zinc-400 text-base leading-snug">
-          It's heading straight to the host's Google Drive. ✨
+          {eventName
+            ? <>Saved to <span className="text-violet-400 font-medium">{eventName}</span> on Google Drive. ✨</>
+            : "It's heading straight to the host's Google Drive. ✨"
+          }
         </p>
       </div>
 

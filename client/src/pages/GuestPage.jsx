@@ -1,32 +1,34 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import NameScreen    from '../components/NameScreen';
 import CameraView    from '../components/CameraView';
 import FilePicker    from '../components/FilePicker';
 import UploadScreen  from '../components/UploadScreen';
 import SuccessScreen from '../components/SuccessScreen';
+import { getEvent }  from '../api';
 
 const NAME_KEY = 'picachoo_guest_name';
 
-const SCREENS = {
-  NAME:    'name',
-  CAMERA:  'camera',
-  GALLERY: 'gallery',
-  UPLOAD:  'upload',
-  SUCCESS: 'success',
-  ERROR:   'error',
-};
+const SCREENS = { NAME:'name', CAMERA:'camera', GALLERY:'gallery', UPLOAD:'upload', SUCCESS:'success', ERROR:'error' };
 
 export default function GuestPage() {
-  // eventCode comes from the URL: /e/:eventCode
   const { eventCode } = useParams();
 
-  const [screen, setScreen]     = useState(() =>
+  const [event, setEvent]           = useState(null);
+  const [eventError, setEventError] = useState('');
+  const [screen, setScreen]         = useState(() =>
     sessionStorage.getItem(NAME_KEY) ? SCREENS.CAMERA : SCREENS.NAME,
   );
-  const [guestName, setGuestName]   = useState(() => sessionStorage.getItem(NAME_KEY) ?? '');
+  const [guestName, setGuestName]     = useState(() => sessionStorage.getItem(NAME_KEY) ?? '');
   const [pendingBlob, setPendingBlob] = useState(null);
   const [uploadError, setUploadError] = useState('');
+
+  // Fetch the event name for the welcome message
+  useEffect(() => {
+    getEvent(eventCode)
+      .then(setEvent)
+      .catch(err => setEventError(err.message));
+  }, [eventCode]);
 
   const handleNameConfirm = useCallback(name => {
     sessionStorage.setItem(NAME_KEY, name);
@@ -50,11 +52,22 @@ export default function GuestPage() {
     setScreen(SCREENS.CAMERA);
   }, []);
 
+  // Show a polished error if the event doesn't exist
+  if (eventError) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center bg-black px-6 gap-4 text-center">
+        <p className="text-5xl">📷</p>
+        <p className="text-white text-xl font-semibold">Event not found</p>
+        <p className="text-zinc-400 text-sm">{eventError}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 flex flex-col overflow-hidden bg-black">
       {screen === SCREENS.NAME && (
         <NameScreen
-          eventName={eventCode}
+          eventName={event?.name ?? eventCode}
           onConfirm={handleNameConfirm}
         />
       )}
@@ -80,6 +93,7 @@ export default function GuestPage() {
           blob={pendingBlob}
           guestName={guestName}
           eventCode={eventCode}
+          eventName={event?.name}
           onSuccess={() => setScreen(SCREENS.SUCCESS)}
           onError={msg => { setUploadError(msg); setScreen(SCREENS.ERROR); }}
           onRetake={handleRetake}
@@ -87,17 +101,25 @@ export default function GuestPage() {
       )}
 
       {screen === SCREENS.SUCCESS && (
-        <SuccessScreen onSnapAnother={() => { setPendingBlob(null); setScreen(SCREENS.CAMERA); }} />
+        <SuccessScreen
+          eventName={event?.name}
+          onSnapAnother={() => { setPendingBlob(null); setScreen(SCREENS.CAMERA); }}
+        />
       )}
 
       {screen === SCREENS.ERROR && (
         <div className="flex flex-col items-center justify-center min-h-full bg-black px-6 gap-6 text-center">
-          <p className="text-white text-lg font-semibold">Something went wrong</p>
-          <p className="text-zinc-400 text-sm">{uploadError}</p>
-          <button
-            onClick={handleRetake}
-            className="w-full max-w-xs rounded-2xl py-4 text-lg font-semibold bg-violet-500 text-white active:scale-95 transition-transform"
-          >
+          <div className="w-16 h-16 rounded-full bg-red-500/15 flex items-center justify-center">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="2" className="w-8 h-8">
+              <circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div className="space-y-1">
+            <p className="text-white text-lg font-semibold">Upload failed</p>
+            <p className="text-zinc-400 text-sm leading-snug">{uploadError}</p>
+          </div>
+          <button onClick={handleRetake}
+            className="w-full max-w-xs rounded-2xl py-4 text-lg font-semibold bg-violet-500 text-white active:scale-95 transition-transform">
             Try again
           </button>
         </div>

@@ -25,6 +25,14 @@ export async function createEvent({ hostId, name }) {
   return data.event; // { id, join_code, guestUrl, ... }
 }
 
+export async function getEvent(eventCode) {
+  // Guest-facing lookup by join_code — no auth needed
+  const res = await fetch(`${API_BASE}/api/events/by-code/${eventCode}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error ?? 'Event not found');
+  return data.event; // { id, name, join_code, status }
+}
+
 export async function getHost(hostId) {
   const res = await fetch(`${API_BASE}/api/hosts/${hostId}`);
   const data = await res.json();

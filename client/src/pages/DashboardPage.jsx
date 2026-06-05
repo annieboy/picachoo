@@ -1,23 +1,19 @@
 import { useState, useEffect } from 'react';
 import { registerHost, createEvent, getHost, googleAuthUrl } from '../api';
+import QRCard from '../components/QRCard';
 
 const HOST_KEY = 'picachoo_host_id';
 
 export default function DashboardPage() {
-  const [hostId, setHostId]     = useState(() => localStorage.getItem(HOST_KEY) ?? '');
-  const [host, setHost]         = useState(null);
-  const [events, setEvents]     = useState([]);
-  const [loading, setLoading]   = useState(false);
-  const [error, setError]       = useState('');
-
-  // Registration form
+  const [hostId, setHostId]   = useState(() => localStorage.getItem(HOST_KEY) ?? '');
+  const [host, setHost]       = useState(null);
+  const [events, setEvents]   = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regName, setRegName]   = useState('');
-
-  // New event form
   const [eventName, setEventName] = useState('');
 
-  // Load host data if we already have an id
   useEffect(() => {
     if (!hostId) return;
     getHost(hostId)
@@ -25,7 +21,6 @@ export default function DashboardPage() {
       .catch(() => { localStorage.removeItem(HOST_KEY); setHostId(''); });
   }, [hostId]);
 
-  // Show success/error from OAuth redirect
   const params   = new URLSearchParams(window.location.search);
   const linked   = params.get('linked');
   const oauthErr = params.get('error');
@@ -36,13 +31,9 @@ export default function DashboardPage() {
     try {
       const h = await registerHost({ email: regEmail, displayName: regName });
       localStorage.setItem(HOST_KEY, h.id);
-      setHostId(h.id);
-      setHost(h);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+      setHostId(h.id); setHost(h);
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   }
 
   async function handleCreateEvent(e) {
@@ -53,33 +44,40 @@ export default function DashboardPage() {
       const ev = await createEvent({ hostId, name: eventName.trim() });
       setEvents(prev => [ev, ...prev]);
       setEventName('');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   }
 
-  // ── Not registered yet ──────────────────────────────────────────────────────
+  function signOut() {
+    localStorage.removeItem(HOST_KEY);
+    setHostId(''); setHost(null); setEvents([]);
+  }
+
+  // ── Registration ────────────────────────────────────────────────────────────
   if (!hostId) {
     return (
       <Shell>
-        <h1>Welcome to Picachoo</h1>
-        <p>Register to create events and link your Google Drive.</p>
-        <form onSubmit={handleRegister}>
-          <label>
-            Email
-            <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)} required />
-          </label>
-          <label>
-            Display name
-            <input type="text" value={regName} onChange={e => setRegName(e.target.value)} required />
-          </label>
-          {error && <p className="error">{error}</p>}
-          <button type="submit" disabled={loading}>
-            {loading ? 'Registering…' : 'Register / Sign in'}
-          </button>
-        </form>
+        <div className="auth-card">
+          <div className="auth-logo">pica<span>choo</span></div>
+          <h1>Welcome</h1>
+          <p className="auth-sub">Create events and receive photos directly to your Google Drive.</p>
+          <form onSubmit={handleRegister}>
+            <label>
+              Email
+              <input type="email" value={regEmail} onChange={e => setRegEmail(e.target.value)}
+                placeholder="you@example.com" required />
+            </label>
+            <label>
+              Your name
+              <input type="text" value={regName} onChange={e => setRegName(e.target.value)}
+                placeholder="Jane Smith" required />
+            </label>
+            {error && <p className="msg-error">{error}</p>}
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'One moment…' : 'Get started →'}
+            </button>
+          </form>
+        </div>
       </Shell>
     );
   }
@@ -87,82 +85,110 @@ export default function DashboardPage() {
   // ── Dashboard ───────────────────────────────────────────────────────────────
   return (
     <Shell>
-      <h1>Dashboard</h1>
-      <p>Signed in as <strong>{host?.email}</strong></p>
-      <button onClick={() => { localStorage.removeItem(HOST_KEY); setHostId(''); setHost(null); setEvents([]); }}>
-        Sign out
-      </button>
+      {/* Top bar */}
+      <div className="dash-topbar">
+        <div>
+          <p className="dash-welcome">Welcome back, <strong>{host?.display_name}</strong></p>
+          <p className="dash-email">{host?.email}</p>
+        </div>
+        <button className="btn-ghost" onClick={signOut}>Sign out</button>
+      </div>
 
-      {linked === 'google' && <p className="success">✓ Google Drive linked successfully!</p>}
-      {oauthErr && <p className="error">Google auth failed: {oauthErr}</p>}
+      {/* OAuth feedback banners */}
+      {linked === 'google' && (
+        <div className="banner-success">✓ Google Drive connected successfully!</div>
+      )}
+      {oauthErr && (
+        <div className="banner-error">Google auth failed: {oauthErr}</div>
+      )}
 
-      {/* ── Create event ── */}
-      <section>
-        <h2>Create a new event</h2>
-        <form onSubmit={handleCreateEvent}>
-          <label>
-            Event name
-            <input
-              type="text"
-              placeholder="e.g. Sarah & Tom's Wedding"
-              value={eventName}
-              onChange={e => setEventName(e.target.value)}
-              required
-            />
-          </label>
-          {error && <p className="error">{error}</p>}
-          <button type="submit" disabled={loading || !eventName.trim()}>
-            {loading ? 'Creating…' : 'Create event'}
+      {/* Create event */}
+      <section className="dash-section">
+        <h2>New event</h2>
+        <form className="create-form" onSubmit={handleCreateEvent}>
+          <input
+            type="text"
+            placeholder="e.g. Sarah & Tom's Wedding"
+            value={eventName}
+            onChange={e => setEventName(e.target.value)}
+            required
+          />
+          <button type="submit" className="btn-primary" disabled={loading || !eventName.trim()}>
+            {loading ? 'Creating…' : 'Create'}
           </button>
         </form>
+        {error && <p className="msg-error">{error}</p>}
       </section>
 
-      {/* ── Events list ── */}
-      <section>
-        <h2>Your events</h2>
-        {events.length === 0 && <p>No events yet.</p>}
-        {events.map(ev => (
-          <EventCard key={ev.id} event={ev} hostId={hostId} />
-        ))}
+      {/* Events */}
+      <section className="dash-section">
+        <h2>Your events {events.length > 0 && <span className="badge">{events.length}</span>}</h2>
+        {events.length === 0
+          ? <p className="empty-state">Create your first event above to get started.</p>
+          : events.map(ev => <EventCard key={ev.id} event={ev} hostId={hostId} />)
+        }
       </section>
     </Shell>
   );
 }
 
 function EventCard({ event, hostId }) {
+  const [showQR, setShowQR] = useState(false);
   const driveLinked = !!event.linked_provider;
-  const guestUrl    = `${window.location.origin}/e/${event.join_code}`;
+
+  const statusColors = {
+    active: 'status-active',
+    draft:  'status-draft',
+    closed: 'status-closed',
+  };
 
   return (
     <div className="event-card">
-      <h3>{event.name}</h3>
-      <p>Code: <strong>{event.join_code}</strong> &nbsp;·&nbsp; Status: {event.status}</p>
-      <p>
-        Guest link:{' '}
-        <a href={guestUrl} target="_blank" rel="noreferrer">{guestUrl}</a>
-      </p>
+      {/* Header row */}
+      <div className="event-card-header">
+        <div>
+          <h3>{event.name}</h3>
+          <span className={`status-pill ${statusColors[event.status] ?? ''}`}>
+            {event.status}
+          </span>
+        </div>
+        <button className="btn-ghost btn-sm" onClick={() => setShowQR(v => !v)}>
+          {showQR ? 'Hide QR' : 'Show QR'}
+        </button>
+      </div>
 
+      {/* Drive status */}
       {driveLinked ? (
-        <p className="success">✓ Google Drive linked ({event.linked_account})</p>
+        <p className="drive-linked">
+          <DriveIcon /> Drive connected · {event.linked_account}
+        </p>
       ) : (
-        <a
-          href={googleAuthUrl({ hostId, eventId: event.id })}
-          className="btn-drive"
-        >
-          Connect Google Drive
+        <a href={googleAuthUrl({ hostId, eventId: event.id })} className="btn-drive">
+          <DriveIcon /> Connect Google Drive
         </a>
       )}
+
+      {/* QR panel */}
+      {showQR && <QRCard event={event} />}
     </div>
+  );
+}
+
+function DriveIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
+      <path d="M6.28 3l5.72 9.9L6.28 21H2l5.72-9.9L2 3h4.28zM22 21h-4.28l-5.72-9.9L17.72 3H22l-5.72 9.9L22 21zm-8.14-9.9L8.14 3h7.72l5.72 9.9-5.72 9.9H8.14l5.72-9.9z"/>
+    </svg>
   );
 }
 
 function Shell({ children }) {
   return (
-    <div className="dashboard-shell">
-      <header>
+    <div className="dash-shell">
+      <header className="dash-header">
         <span className="logo">pica<span>choo</span></span>
       </header>
-      <main>{children}</main>
+      <main className="dash-main">{children}</main>
     </div>
   );
 }
