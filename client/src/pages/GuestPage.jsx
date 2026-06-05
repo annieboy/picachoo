@@ -1,15 +1,21 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import NameScreen    from '../components/NameScreen';
-import CameraView    from '../components/CameraView';
-import FilePicker    from '../components/FilePicker';
-import UploadScreen  from '../components/UploadScreen';
-import SuccessScreen from '../components/SuccessScreen';
-import { getEvent }  from '../api';
+import NameScreen        from '../components/NameScreen';
+import CameraView        from '../components/CameraView';
+import FilePicker        from '../components/FilePicker';
+import PreviewScreen     from '../components/PreviewScreen';
+import UploadScreen      from '../components/UploadScreen';
+import BatchUploadScreen from '../components/BatchUploadScreen';
+import SuccessScreen     from '../components/SuccessScreen';
+import { getEvent }      from '../api';
 
 const NAME_KEY = 'picachoo_guest_name';
 
-const SCREENS = { NAME:'name', CAMERA:'camera', GALLERY:'gallery', UPLOAD:'upload', SUCCESS:'success', ERROR:'error' };
+const SCREENS = {
+  NAME: 'name', CAMERA: 'camera', GALLERY: 'gallery',
+  PREVIEW: 'preview', BATCH: 'batch',
+  UPLOAD: 'upload', SUCCESS: 'success', ERROR: 'error',
+};
 
 export default function GuestPage() {
   const { eventCode } = useParams();
@@ -21,9 +27,9 @@ export default function GuestPage() {
   );
   const [guestName, setGuestName]     = useState(() => sessionStorage.getItem(NAME_KEY) ?? '');
   const [pendingBlob, setPendingBlob] = useState(null);
+  const [pendingFiles, setPendingFiles] = useState(null);
   const [uploadError, setUploadError] = useState('');
 
-  // Fetch the event name for the welcome message
   useEffect(() => {
     getEvent(eventCode)
       .then(setEvent)
@@ -36,23 +42,41 @@ export default function GuestPage() {
     setScreen(SCREENS.CAMERA);
   }, []);
 
+  // Camera captured a single blob → go to preview
   const handleCapture = useCallback(blob => {
     if (!blob) { setScreen(SCREENS.GALLERY); return; }
     setPendingBlob(blob);
-    setScreen(SCREENS.UPLOAD);
+    setScreen(SCREENS.PREVIEW);
   }, []);
 
+  // Gallery picked a single file → preview; multiple → batch
   const handleFileChosen = useCallback(file => {
     setPendingBlob(file);
+    setScreen(SCREENS.PREVIEW);
+  }, []);
+
+  const handleFilesChosen = useCallback(files => {
+    setPendingFiles(files);
+    setScreen(SCREENS.BATCH);
+  }, []);
+
+  // Preview → Upload (confirmed by user or auto-upload countdown)
+  const handlePreviewUpload = useCallback(() => {
     setScreen(SCREENS.UPLOAD);
   }, []);
 
   const handleRetake = useCallback(() => {
     setPendingBlob(null);
+    setPendingFiles(null);
     setScreen(SCREENS.CAMERA);
   }, []);
 
-  // Show a polished error if the event doesn't exist
+  const handleSuccess = useCallback(() => {
+    setPendingBlob(null);
+    setPendingFiles(null);
+    setScreen(SCREENS.SUCCESS);
+  }, []);
+
   if (eventError) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-black px-6 gap-4 text-center">
@@ -78,7 +102,11 @@ export default function GuestPage() {
 
       {screen === SCREENS.GALLERY && (
         <div className="flex flex-col items-center justify-center flex-1 px-6">
-          <FilePicker reason="gallery" onFile={handleFileChosen} />
+          <FilePicker
+            reason="gallery"
+            onFile={handleFileChosen}
+            onFiles={handleFilesChosen}
+          />
           <button
             onClick={() => setScreen(SCREENS.CAMERA)}
             className="mt-6 text-zinc-500 text-sm underline underline-offset-2"
@@ -88,22 +116,42 @@ export default function GuestPage() {
         </div>
       )}
 
+      {screen === SCREENS.PREVIEW && pendingBlob && (
+        <PreviewScreen
+          blob={pendingBlob}
+          onUpload={handlePreviewUpload}
+          onRetake={handleRetake}
+        />
+      )}
+
       {screen === SCREENS.UPLOAD && pendingBlob && (
         <UploadScreen
           blob={pendingBlob}
           guestName={guestName}
           eventCode={eventCode}
           eventName={event?.name}
-          onSuccess={() => setScreen(SCREENS.SUCCESS)}
+          onSuccess={handleSuccess}
           onError={msg => { setUploadError(msg); setScreen(SCREENS.ERROR); }}
           onRetake={handleRetake}
+        />
+      )}
+
+      {screen === SCREENS.BATCH && pendingFiles && (
+        <BatchUploadScreen
+          files={pendingFiles}
+          guestName={guestName}
+          eventCode={eventCode}
+          eventName={event?.name}
+          onSuccess={handleSuccess}
+          onError={msg => { setUploadError(msg); setScreen(SCREENS.ERROR); }}
+          onCancel={handleRetake}
         />
       )}
 
       {screen === SCREENS.SUCCESS && (
         <SuccessScreen
           eventName={event?.name}
-          onSnapAnother={() => { setPendingBlob(null); setScreen(SCREENS.CAMERA); }}
+          onSnapAnother={() => { setPendingBlob(null); setPendingFiles(null); setScreen(SCREENS.CAMERA); }}
         />
       )}
 

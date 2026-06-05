@@ -145,4 +145,25 @@ router.patch('/:eventId', requireAuth, async (req, res, next) => {
   }
 });
 
+// ─── DELETE /api/events/:eventId ─────────────────────────────────────────────
+router.delete('/:eventId', requireAuth, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `DELETE FROM events
+       WHERE id = $1
+         AND host_id = (SELECT id FROM hosts WHERE auth_id = $2)
+       RETURNING id`,
+      [req.params.eventId, req.user.authId],
+    );
+    if (!rows.length) {
+      const err = new Error('Event not found or does not belong to this host');
+      err.status = 404;
+      return next(err);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

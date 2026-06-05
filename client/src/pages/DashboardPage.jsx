@@ -4,6 +4,7 @@ import {
   setAuthToken, getOrCreateHost, createEvent,
   googleAuthUrl, dropboxAuthUrl, oneDriveAuthUrl,
   linkGoogleDriveFromSession, disconnectStorage, getStorageInfo,
+  updateEvent, deleteEvent,
 } from '../api';
 import QRCard from '../components/QRCard';
 
@@ -203,6 +204,14 @@ function Dashboard({ session, host, events, setEvents, signOut }) {
     finally { setCreating(false); }
   }
 
+  function handleEventUpdate(updated) {
+    setEvents(prev => prev.map(e => e.id === updated.id ? { ...e, ...updated } : e));
+  }
+
+  function handleEventDelete(eventId) {
+    setEvents(prev => prev.filter(e => e.id !== eventId));
+  }
+
   return (
     <Shell>
       <div className="dash-topbar">
@@ -251,6 +260,8 @@ function Dashboard({ session, host, events, setEvents, signOut }) {
               event={ev}
               token={session?.access_token}
               loginHint={session?.user?.app_metadata?.provider === 'google' ? session?.user?.email : undefined}
+              onUpdate={handleEventUpdate}
+              onDelete={handleEventDelete}
             />
           ))
         }
@@ -261,15 +272,73 @@ function Dashboard({ session, host, events, setEvents, signOut }) {
 
 // ── Event card ────────────────────────────────────────────────────────────────
 
-function EventCard({ event, token, loginHint }) {
-  const [showQR,    setShowQR]    = useState(false);
-  const [ev,        setEv]        = useState(event);
+function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
+  const [showQR,       setShowQR]       = useState(false);
+  const [ev,           setEv]           = useState(event);
+  const [toggling,     setToggling]     = useState(false);
+  const [delConfirm,   setDelConfirm]   = useState(false);
+  const [deleting,     setDeleting]     = useState(false);
+  const [mgmtError,    setMgmtError]    = useState('');
+  const [copied,       setCopied]       = useState(false);
 
   const statusColors = { active: 'status-active', draft: 'status-draft', closed: 'status-closed' };
+  const guestUrl = `${window.location.origin}/e/${ev.join_code}`;
 
   function handleDisconnected() {
-    setEv(prev => ({ ...prev, linked_provider: null, linked_account: null }));
+    const updated = { ...ev, linked_provider: null, linked_account: null };
+    setEv(updated);
+    onUpdate?.(updated);
   }
+
+  async function handleToggleStatus() {
+    const next = ev.status === 'active' ? 'closed' : 'active';
+    setToggling(true); setMgmtError('');
+    try {
+      const { event: updated } = await updateEvent(ev.id, { status: next });
+      const merged = { ...ev, ...updated };
+      setEv(merged);
+      onUpdate?.(merged);
+    } catch (err) {
+      setMgmtError(err.message);
+    } finally {
+      setToggling(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true); setMgmtError('');
+    try {
+      await deleteEvent(ev.id);
+      onDelete?.(ev.id);
+    } catch (err) {
+      setMgmtError(err.message);
+      setDelConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function handleShare() {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: ev.name,
+          text: `Join ${ev.name} on Picachoo and share your photos!`,
+          url:  guestUrl,
+        });
+      } catch (e) { /* user dismissed */ }
+    } else {
+      await navigator.clipboard.writeText(guestUrl).catch(() => {});
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  }
+
+  const photoCount   = parseInt(ev.photo_count ?? 0, 10);
+  const lastPhotoAt  = ev.last_photo_at ? new Date(ev.last_photo_at) : null;
+  const lastPhotoFmt = lastPhotoAt
+    ? lastPhotoAt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : null;
 
   return (
     <div className="event-card">
@@ -278,9 +347,28 @@ function EventCard({ event, token, loginHint }) {
           <h3>{ev.name}</h3>
           <span className={`status-pill ${statusColors[ev.status] ?? ''}`}>{ev.status}</span>
         </div>
-        <button className="btn-ghost btn-sm" onClick={() => setShowQR(v => !v)}>
-          {showQR ? 'Hide QR' : 'Show QR'}
-        </button>
+        <div className="event-card-actions">
+          <button className="btn-ghost btn-sm" onClick={handleShare} title="Share event link">
+            {copied ? '✓ Copied' : <ShareIcon />}
+          </button>
+          <button className="btn-ghost btn-sm" onClick={() => setShowQR(v => !v)}>
+            {showQR ? 'Hide QR' : 'QR'}
+          </button>
+        </div>
+      </div>
+
+      {/* Analytics */}
+      <div className="event-analytics">
+        <span className="event-stat">
+          <PhotoCountIcon />
+          {photoCount === 0 ? 'No photos yet' : `${photoCount} photo${photoCount !== 1 ? 's' : ''}`}
+        </span>
+        {lastPhotoFmt && (
+          <span className="event-stat">
+            <ClockIcon />
+            Last: {lastPhotoFmt}
+          </span>
+        )}
       </div>
 
       <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="wall-link">
@@ -297,6 +385,40 @@ function EventCard({ event, token, loginHint }) {
       ) : (
         <StoragePicker eventId={ev.id} token={token} loginHint={loginHint} />
       )}
+
+      {/* Management controls */}
+      <div className="event-mgmt">
+        {!delConfirm ? (
+          <>
+            <button
+              className={ev.status === 'active' ? 'event-close-btn' : 'event-reopen-btn'}
+              onClick={handleToggleStatus}
+              disabled={toggling || ev.status === 'draft'}
+            >
+              {toggling ? '…' : ev.status === 'active' ? 'Close event' : 'Reopen event'}
+            </button>
+            <button className="event-delete-btn" onClick={() => setDelConfirm(true)}>
+              Delete
+            </button>
+          </>
+        ) : (
+          <div className="event-delete-confirm">
+            <p>
+              Delete <strong>{ev.name}</strong>?
+              {photoCount > 0 && ` ${photoCount} photo record${photoCount !== 1 ? 's' : ''} will be removed (files in your cloud storage are kept).`}
+            </p>
+            <div className="event-delete-confirm-btns">
+              <button className="btn-ghost btn-sm" onClick={() => setDelConfirm(false)} disabled={deleting}>
+                Cancel
+              </button>
+              <button className="event-delete-confirm-yes" onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'Deleting…' : 'Yes, delete'}
+              </button>
+            </div>
+          </div>
+        )}
+        {mgmtError && <p className="msg-error">{mgmtError}</p>}
+      </div>
 
       {showQR && <QRCard event={ev} />}
     </div>
@@ -527,6 +649,36 @@ function OneDriveIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
       <path d="M10.5 18H4a3 3 0 0 1-.4-5.97A5 5 0 0 1 13.4 8.1 3.5 3.5 0 0 1 20 11a3 3 0 0 1-.5 5.95L10.5 18z"/>
+    </svg>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+         strokeLinecap="round" strokeLinejoin="round" className="drive-icon" aria-hidden="true">
+      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+      <path d="M8.59 13.51l6.83 3.98M15.41 6.51L8.59 10.49"/>
+    </svg>
+  );
+}
+
+function PhotoCountIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
+         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="3" width="18" height="18" rx="3"/>
+      <path d="M3 16l5-5 4 4 3-3 6 6"/>
+      <circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" stroke="none"/>
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7"
+         strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>
     </svg>
   );
 }

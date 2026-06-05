@@ -6,14 +6,20 @@ const REASON_COPY = {
   gallery:     { title: 'Choose a photo',        hint: 'Select from your gallery or take a new one.' },
 };
 
-export default function FilePicker({ guestName, reason = 'gallery', onFile }) {
+// onFile(file) for single, onFiles([file, ...]) for multiple (gallery mode)
+export default function FilePicker({ guestName, reason = 'gallery', onFile, onFiles }) {
   const inputRef = useRef(null);
   const { title, hint } = REASON_COPY[reason] ?? REASON_COPY.gallery;
+  const isGallery = reason === 'gallery';
 
   function handleChange(e) {
-    const file = e.target.files?.[0];
-    if (file) onFile(file);
-    // Reset so the same file can be re-selected after a retake
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    if (isGallery && onFiles && files.length > 1) {
+      onFiles(files);
+    } else {
+      onFile?.(files[0]);
+    }
     e.target.value = '';
   }
 
@@ -29,12 +35,12 @@ export default function FilePicker({ guestName, reason = 'gallery', onFile }) {
         <p className="text-zinc-400 text-sm leading-snug">{hint}</p>
       </div>
 
-      {/* Hidden native file input — capture="environment" opens rear camera */}
+      {/* Gallery mode: no capture, allow multiple. Camera fallback: single via capture */}
       <input
         ref={inputRef}
         type="file"
         accept="image/*"
-        capture="environment"
+        {...(isGallery ? { multiple: true } : { capture: 'environment' })}
         className="sr-only"
         onChange={handleChange}
         aria-label="Select photo"

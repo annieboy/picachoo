@@ -41,6 +41,18 @@ export function getEvent(eventCode) {
   return apiFetch(`/api/events/by-code/${eventCode}`).then(d => d.event);
 }
 
+export function updateEvent(eventId, patch) {
+  return apiFetch(`/api/events/${eventId}`, {
+    method:  'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify(patch),
+  });
+}
+
+export function deleteEvent(eventId) {
+  return apiFetch(`/api/events/${eventId}`, { method: 'DELETE' });
+}
+
 // ── Storage OAuth URLs ────────────────────────────────────────────────────────
 // These are browser-redirect URLs — the JWT is NOT sent as a header (it's a
 // navigation, not a fetch). Instead the backend verifies ownership via

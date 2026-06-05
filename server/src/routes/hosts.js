@@ -26,11 +26,15 @@ router.get('/me', requireAuth, async (req, res, next) => {
     const eventsResult = await pool.query(
       `SELECT
          e.id, e.name, e.join_code, e.status, e.created_at,
-         ct.provider              AS linked_provider,
-         ct.provider_account_email AS linked_account
+         ct.provider               AS linked_provider,
+         ct.provider_account_email AS linked_account,
+         COUNT(p.id)               AS photo_count,
+         MAX(p.created_at)         AS last_photo_at
        FROM events e
        LEFT JOIN cloud_tokens ct ON ct.event_id = e.id
+       LEFT JOIN photos p        ON p.event_id  = e.id
        WHERE e.host_id = $1
+       GROUP BY e.id, ct.provider, ct.provider_account_email
        ORDER BY e.created_at DESC`,
       [host.id],
     );
@@ -60,11 +64,15 @@ router.get('/:hostId', requireAuth, async (req, res, next) => {
     const { rows: eventRows } = await pool.query(
       `SELECT
          e.id, e.name, e.join_code, e.status, e.created_at,
-         ct.provider              AS linked_provider,
-         ct.provider_account_email AS linked_account
+         ct.provider               AS linked_provider,
+         ct.provider_account_email AS linked_account,
+         COUNT(p.id)               AS photo_count,
+         MAX(p.created_at)         AS last_photo_at
        FROM events e
        LEFT JOIN cloud_tokens ct ON ct.event_id = e.id
+       LEFT JOIN photos p        ON p.event_id  = e.id
        WHERE e.host_id = $1
+       GROUP BY e.id, ct.provider, ct.provider_account_email
        ORDER BY e.created_at DESC`,
       [hostRows[0].id],
     );
