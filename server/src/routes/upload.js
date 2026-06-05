@@ -183,11 +183,8 @@ router.post(
         }
       } catch (uploadErr) {
         if (isQuotaError(uploadErr)) {
-          const providerName =
-            row.provider === 'google_drive' ? 'Google Drive' :
-            row.provider === 'dropbox'      ? 'Dropbox' : 'OneDrive';
           const err = new Error(
-            `The host's ${providerName} storage is full. Photos cannot be saved until the host frees up space.`
+            'The cloud storage is full. Photos cannot be saved until the owner frees up space.'
           );
           err.status = 507;
           return next(err);
