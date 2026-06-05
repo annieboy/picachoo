@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   setAuthToken, getOrCreateHost, createEvent,
   googleAuthUrl, dropboxAuthUrl, oneDriveAuthUrl,
-  linkGoogleDriveFromSession,
+  linkGoogleDriveFromSession, disconnectStorage,
 } from '../api';
 import QRCard from '../components/QRCard';
 
@@ -262,11 +262,14 @@ function Dashboard({ session, host, events, setEvents, signOut }) {
 // ── Event card ────────────────────────────────────────────────────────────────
 
 function EventCard({ event, token, loginHint }) {
-  const [showQR, setShowQR]     = useState(false);
-  const [ev, setEv]             = useState(event);
-  const provider = ev.linked_provider;
+  const [showQR,    setShowQR]    = useState(false);
+  const [ev,        setEv]        = useState(event);
 
   const statusColors = { active: 'status-active', draft: 'status-draft', closed: 'status-closed' };
+
+  function handleDisconnected() {
+    setEv(prev => ({ ...prev, linked_provider: null, linked_account: null }));
+  }
 
   return (
     <div className="event-card">
@@ -284,8 +287,13 @@ function EventCard({ event, token, loginHint }) {
         <span>📺</span> Open Live Wall
       </a>
 
-      {provider ? (
-        <LinkedBadge provider={provider} account={ev.linked_account} />
+      {ev.linked_provider ? (
+        <StorageStatus
+          provider={ev.linked_provider}
+          account={ev.linked_account}
+          eventId={ev.id}
+          onDisconnected={handleDisconnected}
+        />
       ) : (
         <StoragePicker eventId={ev.id} token={token} loginHint={loginHint} />
       )}
@@ -295,16 +303,113 @@ function EventCard({ event, token, loginHint }) {
   );
 }
 
-// ── Storage components ────────────────────────────────────────────────────────
+// ── Storage status (connected) ────────────────────────────────────────────────
 
-function LinkedBadge({ provider, account }) {
-  const labels = { google_drive: 'Google Drive', dropbox: 'Dropbox', onedrive: 'OneDrive' };
-  const icons  = { google_drive: <DriveIcon />, dropbox: <DropboxIcon />, onedrive: <OneDriveIcon /> };
+const PROVIDER_META = {
+  google_drive: {
+    label:      'Google Drive',
+    shortLabel: 'Drive',
+    icon:       <DriveIcon />,
+    folderNote: 'Photos are saved to a dedicated folder in your Google Drive.',
+  },
+  dropbox: {
+    label:      'Dropbox',
+    shortLabel: 'Dropbox',
+    icon:       <DropboxIcon />,
+    folderNote: 'Photos are saved to /Picachoo/<event name> in your Dropbox.',
+  },
+  onedrive: {
+    label:      'OneDrive',
+    shortLabel: 'OneDrive',
+    icon:       <OneDriveIcon />,
+    folderNote: 'Photos are saved to Picachoo/<event name> in your OneDrive.',
+  },
+};
+
+// Maps our internal provider key to the DELETE endpoint path segment
+const PROVIDER_ENDPOINT = {
+  google_drive: 'google',
+  dropbox:      'dropbox',
+  onedrive:     'onedrive',
+};
+
+function StorageStatus({ provider, account, eventId, onDisconnected }) {
+  const [confirming,    setConfirming]    = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [error,         setError]         = useState('');
+
+  const meta = PROVIDER_META[provider] ?? { label: provider, icon: <DriveIcon />, folderNote: '' };
+
+  async function handleDisconnect() {
+    setDisconnecting(true); setError('');
+    try {
+      await disconnectStorage({ provider: PROVIDER_ENDPOINT[provider], eventId });
+      onDisconnected();
+    } catch (err) {
+      setError(err.message);
+      setConfirming(false);
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
   return (
-    <p className="drive-linked">
-      {icons[provider] ?? <DriveIcon />}
-      {labels[provider] ?? provider} connected{account ? ` · ${account}` : ''}
-    </p>
+    <div className="storage-status">
+      {/* Connected header */}
+      <div className="storage-status-header">
+        <div className="storage-status-badge">
+          {meta.icon}
+          <div className="storage-status-text">
+            <span className="storage-status-label">
+              {meta.label} connected
+            </span>
+            {account && (
+              <span className="storage-status-account">{account}</span>
+            )}
+          </div>
+        </div>
+        <span className="storage-status-tick">✓</span>
+      </div>
+
+      {/* Folder note */}
+      <p className="storage-status-note">{meta.folderNote}</p>
+
+      {/* Error */}
+      {error && <p className="msg-error">{error}</p>}
+
+      {/* Disconnect flow */}
+      {!confirming ? (
+        <button
+          className="storage-disconnect-btn"
+          onClick={() => setConfirming(true)}
+        >
+          Switch storage provider
+        </button>
+      ) : (
+        <div className="storage-confirm">
+          <p className="storage-confirm-text">
+            Disconnect {meta.shortLabel}? Existing photos in your {meta.shortLabel} won't be deleted,
+            but new uploads will stop until you connect a provider.
+          </p>
+          <div className="storage-confirm-btns">
+            <button
+              className="btn-ghost btn-sm"
+              onClick={() => setConfirming(false)}
+              disabled={disconnecting}
+            >
+              Cancel
+            </button>
+            <button
+              className="storage-confirm-disconnect"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+            >
+              {disconnecting ? 'Disconnecting…' : 'Yes, disconnect'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
 

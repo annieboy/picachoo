@@ -70,6 +70,16 @@ export function oneDriveAuthUrl({ eventId, token }) {
   return `${API_BASE}/api/auth/onedrive?${params}`;
 }
 
+// ── Storage disconnect ────────────────────────────────────────────────────────
+// provider: 'google' | 'dropbox' | 'onedrive'
+export function disconnectStorage({ provider, eventId }) {
+  return apiFetch(`/api/auth/${provider}`, {
+    method:  'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ eventId }),
+  });
+}
+
 // ── Google Drive auto-link ────────────────────────────────────────────────────
 // Called after creating an event when the host signed in with Google.
 // provider_token comes from the Supabase session (drive.file scope was requested).
