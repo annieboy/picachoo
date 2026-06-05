@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import {
   setAuthToken, getOrCreateHost, createEvent,
   googleAuthUrl, dropboxAuthUrl, oneDriveAuthUrl,
-  linkGoogleDriveFromSession, disconnectStorage, getStorageInfo,
+  disconnectStorage, getStorageInfo,
   updateEvent, deleteEvent,
 } from '../api';
 import QRCard from '../components/QRCard';
@@ -87,10 +87,7 @@ function SignInScreen({ error, onClearError }) {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        // Request drive.file so we can auto-link Drive after sign-in
-        scopes: 'https://www.googleapis.com/auth/drive.file',
         redirectTo: `${window.location.origin}/dashboard`,
-        queryParams: { access_type: 'offline', prompt: 'consent' },
       },
     });
     if (error) { setLocalErr(error.message); setLoading(false); }
@@ -180,23 +177,6 @@ function Dashboard({ session, host, events, setEvents, signOut }) {
     setError(''); setCreating(true);
     try {
       const { event } = await createEvent({ name: eventName.trim() });
-
-      // If the host signed in with Google and a provider token is available,
-      // auto-link Google Drive to the new event — no extra click needed.
-      if (session?.provider_token && session?.user?.app_metadata?.provider === 'google') {
-        try {
-          await linkGoogleDriveFromSession({
-            eventId:      event.id,
-            accessToken:  session.provider_token,
-            refreshToken: session.provider_refresh_token ?? null,
-            expiryDate:   session.expires_at ? new Date(session.expires_at * 1000).toISOString() : null,
-          });
-          event.linked_provider = 'google_drive';
-          event.linked_account  = session.user.email;
-        } catch (e) {
-          console.warn('Auto-link Drive failed (non-fatal):', e.message);
-        }
-      }
 
       setEvents(prev => [event, ...prev]);
       setEventName('');
