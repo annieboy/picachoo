@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#0f0f11"/>
+  <!-- Subtle radial glow -->
+  <radialGradient id="g" cx="50%" cy="40%" r="55%">
+    <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.35"/>
+    <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+  </radialGradient>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <!-- Camera body -->
+  <rect x="96" y="176" width="320" height="224" rx="32" fill="none" stroke="#a78bfa" stroke-width="20"/>
+  <!-- Lens outer ring -->
+  <circle cx="256" cy="284" r="76" fill="none" stroke="#a78bfa" stroke-width="18"/>
+  <!-- Lens inner fill -->
+  <circle cx="256" cy="284" r="48" fill="#7c3aed" fill-opacity="0.5"/>
+  <!-- Lens highlight -->
+  <circle cx="238" cy="266" r="14" fill="white" fill-opacity="0.18"/>
+  <!-- Viewfinder bump -->
+  <path d="M200 176 L200 152 Q200 136 216 136 L296 136 Q312 136 312 152 L312 176Z" fill="#a78bfa" fill-opacity="0.6"/>
+  <!-- Flash dot -->
+  <circle cx="390" cy="216" r="18" fill="#a78bfa" fill-opacity="0.7"/>
+</svg>
