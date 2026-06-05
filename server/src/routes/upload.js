@@ -47,6 +47,19 @@ function extForMime(mimeType) {
   return map[mimeType] ?? path.extname('');
 }
 
+// ── Quota error detection ─────────────────────────────────────────────────────
+
+function isQuotaError(err) {
+  const msg = (err?.message ?? '').toLowerCase();
+  return (
+    msg.includes('storagequota') ||       // Google Drive
+    msg.includes('not_enough_space') ||   // Dropbox
+    msg.includes('quota') ||              // OneDrive / generic
+    msg.includes('insufficient') ||
+    err?.code === 507                     // HTTP 507 Insufficient Storage
+  );
+}
+
 // ── Provider dispatch ─────────────────────────────────────────────────────────
 
 async function uploadViaGoogleDrive(row, buffer, filename, mimeType) {
@@ -152,20 +165,34 @@ router.post(
 
       let fileId, thumbUrl;
 
-      if (row.provider === 'google_drive') {
-        ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaGoogleDrive(
-          row, req.file.buffer, filename, req.file.mimetype,
-        ));
-      } else if (row.provider === 'dropbox') {
-        ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaDropbox(
-          row, req.file.buffer, filename,
-        ));
-      } else if (row.provider === 'onedrive') {
-        ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaOneDrive(
-          row, req.file.buffer, filename, req.file.mimetype,
-        ));
-      } else {
-        throw new Error(`Unsupported storage provider: ${row.provider}`);
+      try {
+        if (row.provider === 'google_drive') {
+          ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaGoogleDrive(
+            row, req.file.buffer, filename, req.file.mimetype,
+          ));
+        } else if (row.provider === 'dropbox') {
+          ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaDropbox(
+            row, req.file.buffer, filename,
+          ));
+        } else if (row.provider === 'onedrive') {
+          ({ fileId, thumbnailUrl: thumbUrl } = await uploadViaOneDrive(
+            row, req.file.buffer, filename, req.file.mimetype,
+          ));
+        } else {
+          throw new Error(`Unsupported storage provider: ${row.provider}`);
+        }
+      } catch (uploadErr) {
+        if (isQuotaError(uploadErr)) {
+          const providerName =
+            row.provider === 'google_drive' ? 'Google Drive' :
+            row.provider === 'dropbox'      ? 'Dropbox' : 'OneDrive';
+          const err = new Error(
+            `The host's ${providerName} storage is full. Photos cannot be saved until the host frees up space.`
+          );
+          err.status = 507;
+          return next(err);
+        }
+        throw uploadErr;
       }
 
       await pool.query(

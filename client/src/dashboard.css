@@ -311,6 +311,107 @@ input::placeholder { color: #3f3f46; }
   line-height: 1.5;
 }
 
+/* ── Storage folder link ────────────────────────────────────────────────────── */
+.storage-status-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.storage-folder-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #a78bfa;
+  text-decoration: none;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  border: 1px solid rgba(167,139,250,0.25);
+  background: rgba(167,139,250,0.08);
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.storage-folder-link:hover {
+  background: rgba(167,139,250,0.15);
+  border-color: rgba(167,139,250,0.4);
+}
+
+/* ── Storage quota bar ──────────────────────────────────────────────────────── */
+.storage-quota {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.storage-quota-bar-track {
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+}
+
+.storage-quota-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.6s ease, background 0.3s ease;
+}
+
+.storage-quota-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+}
+
+.storage-quota-pct {
+  color: #3f3f46;
+  font-size: 0.7rem;
+}
+
+.storage-quota-alert {
+  font-size: 0.72rem;
+  color: #f87171;
+  background: rgba(248,113,113,0.08);
+  border: 1px solid rgba(248,113,113,0.2);
+  border-radius: 0.375rem;
+  padding: 0.4rem 0.625rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.storage-quota-warn {
+  font-size: 0.72rem;
+  color: #f59e0b;
+  margin: 0;
+}
+
+.storage-quota-loading {
+  height: 4px;
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.storage-quota-shimmer {
+  height: 100%;
+  background: linear-gradient(90deg, #1f1f23 25%, #2a2a2e 50%, #1f1f23 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 99px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.storage-quota-fetch-err {
+  font-size: 0.7rem;
+  color: #3f3f46;
+  margin: 0;
+}
+
 .storage-disconnect-btn {
   background: none;
   border: none;

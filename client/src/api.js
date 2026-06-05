@@ -70,6 +70,11 @@ export function oneDriveAuthUrl({ eventId, token }) {
   return `${API_BASE}/api/auth/onedrive?${params}`;
 }
 
+// ── Storage info ──────────────────────────────────────────────────────────────
+export function getStorageInfo(eventId) {
+  return apiFetch(`/api/storage/${eventId}/info`);
+}
+
 // ── Storage disconnect ────────────────────────────────────────────────────────
 // provider: 'google' | 'dropbox' | 'onedrive'
 export function disconnectStorage({ provider, eventId }) {

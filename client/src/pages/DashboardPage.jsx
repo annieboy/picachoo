@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import {
   setAuthToken, getOrCreateHost, createEvent,
   googleAuthUrl, dropboxAuthUrl, oneDriveAuthUrl,
-  linkGoogleDriveFromSession, disconnectStorage,
+  linkGoogleDriveFromSession, disconnectStorage, getStorageInfo,
 } from '../api';
 import QRCard from '../components/QRCard';
 
@@ -337,8 +337,19 @@ function StorageStatus({ provider, account, eventId, onDisconnected }) {
   const [confirming,    setConfirming]    = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
   const [error,         setError]         = useState('');
+  const [storage,       setStorage]       = useState(null);  // null=loading | false=failed | object
+  const [storageErr,    setStorageErr]    = useState('');
 
   const meta = PROVIDER_META[provider] ?? { label: provider, icon: <DriveIcon />, folderNote: '' };
+
+  // Fetch quota lazily on mount
+  useEffect(() => {
+    let cancelled = false;
+    getStorageInfo(eventId)
+      .then(({ storage }) => { if (!cancelled) setStorage(storage); })
+      .catch(err => { if (!cancelled) { setStorage(false); setStorageErr(err.message); } });
+    return () => { cancelled = true; };
+  }, [eventId]);
 
   async function handleDisconnect() {
     setDisconnecting(true); setError('');
@@ -353,57 +364,108 @@ function StorageStatus({ provider, account, eventId, onDisconnected }) {
     }
   }
 
+  const levelColor = {
+    ok:       { bar: '#34d399', text: '#34d399' },
+    warning:  { bar: '#f59e0b', text: '#f59e0b' },
+    critical: { bar: '#f87171', text: '#f87171' },
+  };
+  const colors = levelColor[storage?.level ?? 'ok'];
+
   return (
     <div className="storage-status">
-      {/* Connected header */}
+      {/* Header: icon + name + account + folder link */}
       <div className="storage-status-header">
         <div className="storage-status-badge">
           {meta.icon}
           <div className="storage-status-text">
-            <span className="storage-status-label">
-              {meta.label} connected
-            </span>
-            {account && (
-              <span className="storage-status-account">{account}</span>
-            )}
+            <span className="storage-status-label">{meta.label} connected</span>
+            {account && <span className="storage-status-account">{account}</span>}
           </div>
         </div>
-        <span className="storage-status-tick">✓</span>
+        <div className="storage-status-actions">
+          {storage?.folderUrl && (
+            <a
+              href={storage.folderUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="storage-folder-link"
+              title={`Open ${meta.shortLabel} folder`}
+            >
+              <FolderIcon /> View files
+            </a>
+          )}
+          <span className="storage-status-tick">✓</span>
+        </div>
       </div>
 
       {/* Folder note */}
       <p className="storage-status-note">{meta.folderNote}</p>
 
-      {/* Error */}
+      {/* Storage quota bar */}
+      {storage === null && (
+        <div className="storage-quota-loading">
+          <div className="storage-quota-shimmer" />
+        </div>
+      )}
+
+      {storage && storage !== false && (
+        <div className="storage-quota">
+          <div className="storage-quota-bar-track">
+            <div
+              className="storage-quota-bar-fill"
+              style={{
+                width:      `${Math.min(storage.pct, 100)}%`,
+                background: colors.bar,
+              }}
+            />
+          </div>
+          <div className="storage-quota-labels">
+            <span style={{ color: colors.text }}>
+              {storage.level === 'critical' ? '⚠ ' : ''}
+              {storage.usedFmt} used
+              {storage.total > 0 ? ` of ${storage.totalFmt}` : ''}
+            </span>
+            {storage.total > 0 && (
+              <span className="storage-quota-pct">{storage.pct}%</span>
+            )}
+          </div>
+          {storage.level === 'critical' && (
+            <p className="storage-quota-alert">
+              Storage is almost full — guests may not be able to upload photos.
+              Free up space or connect a different account.
+            </p>
+          )}
+          {storage.level === 'warning' && (
+            <p className="storage-quota-warn">
+              Over 80% full — consider freeing up space soon.
+            </p>
+          )}
+        </div>
+      )}
+
+      {storageErr && (
+        <p className="storage-quota-fetch-err">Could not load storage info</p>
+      )}
+
+      {/* Disconnect error */}
       {error && <p className="msg-error">{error}</p>}
 
       {/* Disconnect flow */}
       {!confirming ? (
-        <button
-          className="storage-disconnect-btn"
-          onClick={() => setConfirming(true)}
-        >
+        <button className="storage-disconnect-btn" onClick={() => setConfirming(true)}>
           Switch storage provider
         </button>
       ) : (
         <div className="storage-confirm">
           <p className="storage-confirm-text">
-            Disconnect {meta.shortLabel}? Existing photos in your {meta.shortLabel} won't be deleted,
-            but new uploads will stop until you connect a provider.
+            Disconnect {meta.shortLabel}? Existing photos won't be deleted,
+            but new uploads will pause until you connect a provider.
           </p>
           <div className="storage-confirm-btns">
-            <button
-              className="btn-ghost btn-sm"
-              onClick={() => setConfirming(false)}
-              disabled={disconnecting}
-            >
+            <button className="btn-ghost btn-sm" onClick={() => setConfirming(false)} disabled={disconnecting}>
               Cancel
             </button>
-            <button
-              className="storage-confirm-disconnect"
-              onClick={handleDisconnect}
-              disabled={disconnecting}
-            >
+            <button className="storage-confirm-disconnect" onClick={handleDisconnect} disabled={disconnecting}>
               {disconnecting ? 'Disconnecting…' : 'Yes, disconnect'}
             </button>
           </div>
@@ -465,6 +527,15 @@ function OneDriveIcon() {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
       <path d="M10.5 18H4a3 3 0 0 1-.4-5.97A5 5 0 0 1 13.4 8.1 3.5 3.5 0 0 1 20 11a3 3 0 0 1-.5 5.95L10.5 18z"/>
+    </svg>
+  );
+}
+
+function FolderIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"
+         strokeLinecap="round" strokeLinejoin="round" className="drive-icon" aria-hidden="true">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
     </svg>
   );
 }
