@@ -1,27 +1,38 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import DashboardPage from './pages/DashboardPage';
 import GuestPage     from './pages/GuestPage';
 import WallPage      from './pages/WallPage';
+import LandingPage   from './pages/LandingPage';
+import PricingPage   from './pages/PricingPage';
+import AboutPage     from './pages/AboutPage';
+import ContactPage   from './pages/ContactPage';
+import TermsPage     from './pages/TermsPage';
+import PrivacyPage   from './pages/PrivacyPage';
+import UpgradePage   from './pages/UpgradePage';
 import './dashboard.css';
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Marketing */}
+        <Route path="/"        element={<LandingPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/about"   element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/terms"   element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/upgrade" element={<UpgradePage />} />
+
         {/* Host dashboard */}
         <Route path="/dashboard" element={<DashboardPage />} />
 
-        {/* Guest camera view — /e/:eventCode */}
-        <Route path="/e/:eventCode" element={<GuestPage />} />
-
-        {/* Live photo wall — /e/:eventCode/wall */}
+        {/* Guest camera view */}
+        <Route path="/e/:eventCode"      element={<GuestPage />} />
         <Route path="/e/:eventCode/wall" element={<WallPage />} />
 
-        {/* Legacy path kept for backwards compatibility */}
+        {/* Legacy path */}
         <Route path="/events/:eventCode" element={<GuestPage />} />
-
-        {/* Root → dashboard */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
         {/* Catch-all */}
         <Route path="*" element={<NotFound />} />
