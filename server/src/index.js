@@ -23,7 +23,15 @@ app.use(cors({
 }));
 
 // ─── Body parsing ─────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '1mb' }));
+// Capture raw bytes for Stripe webhook signature verification before JSON parse
+app.use(express.json({
+  limit: '1mb',
+  verify: (req, _res, buf) => {
+    if (req.originalUrl.startsWith('/api/stripe/webhook')) {
+      req.rawBody = buf;
+    }
+  },
+}));
 
 // ─── Rate limiting ────────────────────────────────────────────────────────────
 // Upload endpoint will add its own stricter limiter later.

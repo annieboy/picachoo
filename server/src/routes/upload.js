@@ -244,10 +244,14 @@ router.post(
            e.name            AS event_name,
            e.status          AS event_status,
            e.drive_folder_id,
+           e.is_premium_pass,
+           e.pass_expires_at,
+           h.tier            AS host_tier,
            ct.id, ct.provider,
            ct.access_token_enc, ct.refresh_token_enc, ct.token_expires_at
          FROM events e
          JOIN cloud_tokens ct ON ct.event_id = e.id
+         JOIN hosts h         ON h.id = e.host_id
          WHERE e.join_code = $1
          ORDER BY ct.updated_at DESC
          LIMIT 1`,
@@ -265,9 +269,16 @@ router.post(
         return next(err);
       }
 
+      // Resolve effective tier:
+      // Rule 1: valid single-event pass takes priority
+      // Rule 2: annual subscription tier
+      const passActive = row.is_premium_pass && row.pass_expires_at && new Date(row.pass_expires_at) > new Date();
+      const isPro = passActive || ['pro', 'pro_annual', 'business_annual'].includes(row.host_tier);
+      const effectiveTier = isPro ? 'pro' : 'free';
+
       // Dropbox has no presigned-URL equivalent — fall back to server-side upload
       if (row.provider === 'dropbox') {
-        return res.json({ direct: false });
+        return res.json({ direct: false, hostTier: effectiveTier });
       }
 
       const ext      = extForMime(mimeType);
@@ -294,7 +305,7 @@ router.post(
         return res.json({ direct: false }); // Degrade gracefully
       }
 
-      res.json({ direct: true, uploadUrl, filename, provider: row.provider, eventId: row.event_id });
+      res.json({ direct: true, uploadUrl, filename, provider: row.provider, eventId: row.event_id, hostTier: effectiveTier });
     } catch (err) {
       next(err);
     }

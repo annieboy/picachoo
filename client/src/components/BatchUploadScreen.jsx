@@ -34,8 +34,9 @@ async function uploadOne(file, guestName, eventCode, hostTier) {
   } catch { /* fall through to server-side */ }
 
   if (session) {
-    // Direct path — pro: raw, free: compressed
-    const payload = hostTier === 'pro' ? file : await compress(file);
+    // Use server-resolved effective tier (pass + subscription checked server-side)
+    const effectiveTier = session.hostTier ?? hostTier;
+    const payload = effectiveTier === 'pro' ? file : await compress(file);
     const headers = { 'Content-Type': payload.type || 'image/jpeg' };
     if (session.provider === 'onedrive') {
       headers['Content-Range'] = `bytes 0-${payload.size - 1}/${payload.size}`;

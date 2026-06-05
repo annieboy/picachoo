@@ -97,6 +97,20 @@ export function disconnectStorage({ provider, eventId }) {
   });
 }
 
+// ── Stripe checkout ───────────────────────────────────────────────────────────
+
+/** Creates a Stripe Checkout session and returns the redirect URL.
+ *  type: 'one_time_pass' | 'pro_annual' | 'business_annual'
+ *  eventId: required for 'one_time_pass'
+ */
+export function createCheckoutSession({ type, eventId }) {
+  return apiFetch('/api/stripe/checkout', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ type, eventId }),
+  });
+}
+
 // ── Google Drive auto-link ────────────────────────────────────────────────────
 // Called after creating an event when the host signed in with Google.
 // provider_token comes from the Supabase session (drive.file scope was requested).

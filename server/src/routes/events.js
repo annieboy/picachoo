@@ -67,7 +67,10 @@ router.post('/create', requireAuth, createEvent);
 router.get('/by-code/:joinCode', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT e.id, e.name, e.join_code, e.status, h.tier AS host_tier
+      `SELECT e.id, e.name, e.join_code, e.status,
+              h.tier AS host_tier,
+              CASE WHEN e.is_premium_pass AND e.pass_expires_at > NOW()
+                   THEN 'pro' ELSE h.tier END AS effective_tier
        FROM events e
        JOIN hosts h ON h.id = e.host_id
        WHERE e.join_code = $1`,

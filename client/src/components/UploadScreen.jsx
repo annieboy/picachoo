@@ -88,16 +88,17 @@ export default function UploadScreen({
 
       if (session) {
         setIsDirect(true);
-        await runDirect(session);
+        // Use server-resolved effective tier (pass + subscription checked server-side)
+        await runDirect(session, session.hostTier ?? hostTier);
       } else {
-        await runServerSide(); // Dropbox or session-creation failure
+        await runServerSide();
       }
     }
 
     // ── Direct-to-cloud path (Drive + OneDrive) ──────────────────────────
     // Free: compress first (quality tier)  |  Pro: raw original
-    async function runDirect(session) {
-      const isPro = hostTier === 'pro';
+    async function runDirect(session, resolvedTier) {
+      const isPro = resolvedTier === 'pro';
       let payload = blob; // start with original
 
       if (!isPro) {
