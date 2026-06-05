@@ -212,25 +212,38 @@ const TIER_LABEL = {
 
 function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
   const navigate    = useNavigate();
-  const [tab,       setTab]      = useState('events'); // 'events' | 'account'
-  const [eventName, setEventName] = useState('');
-  const [creating,  setCreating]  = useState(false);
-  const [error,     setError]     = useState('');
+  const [tab,           setTab]          = useState('events');
+  const [eventName,     setEventName]    = useState('');
+  const [creating,      setCreating]     = useState(false);
+  const [error,         setError]        = useState('');
+  const [showUpgrade,   setShowUpgrade]  = useState(false);
 
   const params        = new URLSearchParams(window.location.search);
   const linked        = params.get('linked');
   const oauthErr      = params.get('error');
   const checkoutOk    = params.get('checkout') === 'success';
-  const checkoutType  = params.get('type'); // 'pass' | 'subscription'
+  const checkoutType  = params.get('type');
 
-  // Clear checkout params from URL after showing banner
+  // After checkout success, poll briefly until webhook updates the tier
   useEffect(() => {
     if (!checkoutOk) return;
     const clean = new URL(window.location.href);
     clean.searchParams.delete('checkout');
     clean.searchParams.delete('type');
     window.history.replaceState({}, '', clean.toString());
-  }, [checkoutOk]);
+
+    let attempts = 0;
+    const poll = async () => {
+      attempts++;
+      try {
+        const { host: fresh } = await getOrCreateHost();
+        setHost(fresh);
+        if (fresh.tier !== 'free' || attempts >= 6) return;
+      } catch { return; }
+      setTimeout(poll, 2000);
+    };
+    setTimeout(poll, 1500);
+  }, [checkoutOk]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handleCreateEvent(e) {
     e.preventDefault();
@@ -293,7 +306,7 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
             <strong>Unlock full resolution</strong> — upgrade to Pro for uncompressed original uploads,
             direct-to-cloud delivery, and priority support.
           </div>
-          <button className="upgrade-banner-btn" onClick={() => navigate('/pricing')}>
+          <button className="upgrade-banner-btn" onClick={() => setShowUpgrade(true)}>
             View plans
           </button>
         </div>
@@ -311,7 +324,7 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
 
       {/* Account tab */}
       {tab === 'account' && (
-        <AccountPanel host={host} setHost={setHost} signOut={signOut} />
+        <AccountPanel host={host} setHost={setHost} signOut={signOut} onUpgrade={() => setShowUpgrade(true)} />
       )}
 
       {/* Events tab */}
@@ -353,6 +366,8 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
         </>
       )}
     </Shell>
+
+    {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
   );
 }
 
@@ -479,7 +494,7 @@ function OnboardingScreen({ host, onContinueFree }) {
 
 // ── Account panel ─────────────────────────────────────────────────────────────
 
-function AccountPanel({ host, setHost, signOut }) {
+function AccountPanel({ host, setHost, signOut, onUpgrade }) {
   const navigate      = useNavigate();
   const [name,        setName]        = useState(host?.display_name ?? '');
   const [savingName,  setSavingName]  = useState(false);
@@ -574,7 +589,7 @@ function AccountPanel({ host, setHost, signOut }) {
             </p>
           </div>
           {!isPro && (
-            <button className="btn-primary" onClick={() => navigate('/pricing')} style={{ flexShrink: 0, marginLeft: '16px' }}>
+            <button className="btn-primary" onClick={onUpgrade} style={{ flexShrink: 0, marginLeft: '16px' }}>
               Upgrade
             </button>
           )}
@@ -777,6 +792,135 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
       </div>
 
       {showQR && <QRCard event={ev} />}
+
+    </div>
+  );
+}
+
+// ── Upgrade modal ─────────────────────────────────────────────────────────────
+
+const UPGRADE_PLANS = [
+  {
+    type:        'one_time_pass',
+    name:        'Pro Event Pass',
+    price:       '£19',
+    note:        'one-time · per event',
+    description: 'Full-resolution originals for one specific event. Valid 30 days from purchase.',
+    features:    ['Full-res originals for one event', 'No compression or quality loss', 'Valid for 30 days'],
+    cta:         'Buy Event Pass',
+    badge:       null,
+  },
+  {
+    type:        'pro_annual',
+    name:        'Pro Annual',
+    price:       '£9',
+    note:        '/mo · billed £108/yr',
+    description: 'Full-resolution across every event you create, forever.',
+    features:    ['Full-res across all events', 'Priority support', 'Cancel anytime'],
+    cta:         'Get Pro Annual',
+    badge:       'Most popular',
+  },
+  {
+    type:        'business_annual',
+    name:        'Business',
+    price:       '£29',
+    note:        '/mo · billed £348/yr',
+    description: 'For teams and professional event planners running multiple events.',
+    features:    ['Everything in Pro', 'Team management', 'Dedicated support & SLA'],
+    cta:         'Get Business',
+    badge:       null,
+  },
+];
+
+function UpgradeModal({ onClose }) {
+  const navigate = useNavigate();
+
+  function choosePlan(type) {
+    onClose();
+    navigate(`/checkout?type=${type}`);
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(15,10,40,0.55)', backdropFilter: 'blur(6px)' }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="px-8 pt-8 pb-6 text-center relative"
+             style={{ background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%)' }}>
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+              <path strokeLinecap="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+          <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-2">Upgrade your plan</p>
+          <h2 className="text-white text-2xl font-black tracking-tight">Unlock full-resolution photos</h2>
+          <p className="text-white/70 text-sm mt-2">No compression. Originals straight to your cloud storage.</p>
+        </div>
+
+        {/* Plans */}
+        <div className="p-6 grid md:grid-cols-3 gap-4">
+          {UPGRADE_PLANS.map(plan => (
+            <div
+              key={plan.type}
+              className={`relative rounded-2xl p-5 flex flex-col gap-3 border-2 transition-all hover:shadow-md ${
+                plan.badge ? 'border-violet-500' : 'border-gray-100'
+              }`}
+            >
+              {plan.badge && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="px-3 py-0.5 rounded-full text-[11px] font-bold text-white whitespace-nowrap"
+                        style={{ background: 'linear-gradient(135deg, #5B52E8, #29BFBF)' }}>
+                    {plan.badge}
+                  </span>
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-1">{plan.name}</p>
+                <p className="text-3xl font-black text-gray-900">{plan.price}
+                  <span className="text-sm font-normal text-gray-400 ml-1">{plan.note}</span>
+                </p>
+              </div>
+
+              <ul className="space-y-2 flex-1">
+                {plan.features.map(f => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
+                    <svg viewBox="0 0 20 20" fill="#6B5CE7" className="w-4 h-4 mt-0.5 flex-shrink-0">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
+                    </svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={() => choosePlan(plan.type)}
+                className="w-full py-2.5 rounded-xl font-semibold text-sm transition-all"
+                style={
+                  plan.badge
+                    ? { background: 'linear-gradient(135deg, #5B52E8, #29BFBF)', color: '#fff' }
+                    : { background: '#f4f3ff', color: '#5B52E8' }
+                }
+              >
+                {plan.cta}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="px-6 pb-6 flex items-center justify-center gap-1.5 text-gray-400 text-xs">
+          <svg viewBox="0 0 20 20" fill="#34d399" className="w-3.5 h-3.5">
+            <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+          </svg>
+          30-day money-back guarantee · Secure payment via Stripe
+        </div>
+      </div>
     </div>
   );
 }
