@@ -1,35 +1,56 @@
-const { oauth2Client } = require('../config/googleOAuth');
+const { OAuth2Client } = require('google-auth-library');
 const { encrypt, decrypt } = require('../config/crypto');
 const pool = require('../config/db');
 
 /**
  * Returns a valid access token for the given cloud_tokens row, refreshing
- * automatically if the token has expired (or expires within 60 seconds).
+ * automatically if the token has expired (or will expire within 60 seconds).
  *
- * Also persists the new access token back to the database so subsequent
- * calls don't re-hit Google unnecessarily.
+ * Uses a fresh OAuth2Client per call so concurrent refreshes for different
+ * events cannot clobber each other's credentials on a shared singleton.
  *
- * @param {object} tokenRow - A row from the cloud_tokens table
- * @returns {string} A live access token
+ * Persists the new access token back to the database so the next call hits
+ * the fast path.
+ *
+ * @param {object} tokenRow - A row (or row-shaped object) from cloud_tokens.
+ *   Required fields: id, access_token_enc, refresh_token_enc, token_expires_at
+ * @returns {Promise<string>} A live access token string
  */
 async function getValidAccessToken(tokenRow) {
-  const expiresAt = tokenRow.token_expires_at ? new Date(tokenRow.token_expires_at) : null;
-  const nowPlusBuffer = new Date(Date.now() + 60 * 1000); // 60-second buffer
+  const expiresAt = tokenRow.token_expires_at
+    ? new Date(tokenRow.token_expires_at)
+    : null;
+  const nowPlusBuffer = new Date(Date.now() + 60 * 1000); // 60-second safety buffer
 
+  // Fast path: token is still valid.
   if (expiresAt && expiresAt > nowPlusBuffer) {
-    // Token is still valid — decrypt and return immediately.
     return decrypt(tokenRow.access_token_enc);
   }
 
-  // Token is expired or expiry unknown — use the refresh token.
+  // Slow path: token is expired or expiry is unknown — refresh it.
   if (!tokenRow.refresh_token_enc) {
-    throw new Error('Access token expired and no refresh token is available. Host must re-authorize.');
+    const err = new Error(
+      'Access token is expired and no refresh token is stored. The host must re-authorize.',
+    );
+    err.status = 401;
+    throw err;
   }
 
   const refreshToken = decrypt(tokenRow.refresh_token_enc);
 
-  oauth2Client.setCredentials({ refresh_token: refreshToken });
-  const { credentials } = await oauth2Client.refreshAccessToken();
+  // Fresh client per refresh — avoids credential clobbering on the singleton
+  // if two events refresh concurrently.
+  const client = new OAuth2Client(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+  );
+  client.setCredentials({ refresh_token: refreshToken });
+
+  const { credentials } = await client.refreshAccessToken();
+
+  if (!credentials.access_token) {
+    throw new Error('Google did not return a new access token during refresh.');
+  }
 
   const newAccessTokenEnc = encrypt(credentials.access_token);
   const newExpiresAt = credentials.expiry_date
@@ -48,16 +69,22 @@ async function getValidAccessToken(tokenRow) {
 }
 
 /**
- * Fetches the cloud_tokens row for a given event + provider, validates it
- * exists, then returns a live access token via getValidAccessToken.
+ * Fetches the cloud_tokens row for a given event + provider from the
+ * database, then delegates to getValidAccessToken.
+ *
+ * Use this when you only have an eventId and haven't already loaded the
+ * token row.  If the caller already has the row (e.g. from a JOIN), call
+ * getValidAccessToken directly to avoid a redundant query.
  *
  * @param {string} eventId
- * @param {string} provider  e.g. 'google_drive'
- * @returns {string} A live access token
+ * @param {string} [provider='google_drive']
+ * @returns {Promise<string>} A live access token string
  */
 async function getTokenForEvent(eventId, provider = 'google_drive') {
   const { rows } = await pool.query(
-    `SELECT * FROM cloud_tokens WHERE event_id = $1 AND provider = $2`,
+    `SELECT id, access_token_enc, refresh_token_enc, token_expires_at
+       FROM cloud_tokens
+      WHERE event_id = $1 AND provider = $2`,
     [eventId, provider],
   );
 

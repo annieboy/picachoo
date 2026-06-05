@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const pool = require('../config/db');
 const { singleImageUpload } = require('../middleware/uploadMiddleware');
-const { getTokenForEvent } = require('../services/googleTokenService');
+const { getValidAccessToken } = require('../services/googleTokenService');
 const { buildDriveClient, getOrCreateEventFolder, uploadFile } = require('../services/driveService');
 
 // Stricter rate limit for the upload endpoint specifically.
@@ -78,11 +78,11 @@ router.post(
       // needed without a second round-trip.
       const { rows } = await pool.query(
         `SELECT
-           e.id            AS event_id,
-           e.name          AS event_name,
-           e.status        AS event_status,
+           e.id              AS event_id,
+           e.name            AS event_name,
+           e.status          AS event_status,
            e.drive_folder_id,
-           ct.id           AS token_id,
+           ct.id             AS id,
            ct.access_token_enc,
            ct.refresh_token_enc,
            ct.token_expires_at
@@ -113,8 +113,10 @@ router.post(
         return next(err);
       }
 
-      // ── 3. Decrypt the token and build the Drive client ────────────────────
-      const accessToken = await getTokenForEvent(row.event_id, 'google_drive');
+      // ── 3. Decrypt / refresh the token and build the Drive client ──────────
+      // Pass the token row directly — the JOIN already fetched everything
+      // getValidAccessToken needs, so no second DB query is required.
+      const accessToken = await getValidAccessToken(row);
       const driveClient = buildDriveClient(accessToken);
 
       // ── 4. Get or create the event folder (cached after first upload) ──────
