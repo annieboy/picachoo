@@ -36,66 +36,79 @@ function Hero() {
   }
 
   return (
-    <section className="bezl-hero relative flex flex-col items-center pt-10 pb-16 px-6 overflow-hidden" style={{ minHeight: '88vh' }}>
+    <section className="bezl-hero relative flex flex-col items-center px-6 overflow-hidden"
+             style={{ minHeight: '88vh', paddingTop: '96px', paddingBottom: '64px' }}>
 
-      {/* ── Join capsule — flow element, sits above the headline ── */}
+      {/* ── Two-tone Slido-style join capsule ── */}
       <form onSubmit={handleJoin}
-            className="anim-fade-up inline-flex items-center rounded-full mb-8"
-            style={{ background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.35)', backdropFilter: 'blur(10px)', height: '42px' }}>
-        <span className="pl-4 pr-3 text-white font-semibold text-sm whitespace-nowrap">Joining an event?</span>
-        <div className="w-px h-5 shrink-0" style={{ background: 'rgba(255,255,255,0.3)' }} />
-        <span className="px-2 text-white/50 font-bold text-sm">#</span>
-        <input
-          type="text"
-          value={code}
-          onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-          placeholder="Event code"
-          maxLength={12}
-          autoCapitalize="characters"
-          autoCorrect="off"
-          className="bg-transparent text-white placeholder-white/40 font-medium text-sm focus:outline-none w-28"
-        />
-        <button type="submit"
-                className="mr-1.5 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:bg-white/40 active:scale-90"
-                style={{ background: '#6045f4' }}
-                aria-label="Join event">
-          {checking ? (
-            <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
-              <path d="M12 3a9 9 0 019 9" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-            </svg>
-          ) : (
-            <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4">
-              <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
-            </svg>
-          )}
-        </button>
+            className="anim-fade-up flex items-center rounded-full overflow-hidden mb-10 shadow-xl"
+            style={{ border: '2px solid rgba(255,255,255,0.4)' }}>
+        {/* Left: dark label */}
+        <span className="px-5 py-2.5 text-white font-bold text-sm whitespace-nowrap"
+              style={{ background: 'rgba(0,0,0,0.35)' }}>
+          Joining an event?
+        </span>
+        {/* Right: light input area */}
+        <div className="flex items-center px-3 gap-1.5"
+             style={{ background: 'rgba(255,255,255,0.18)', minWidth: 0 }}>
+          <span className="text-white/60 font-bold text-sm">#</span>
+          <input
+            type="text"
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            placeholder="Enter code here"
+            maxLength={12}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            className="bg-transparent text-white placeholder-white/50 font-medium text-sm focus:outline-none py-2.5"
+            style={{ width: '130px' }}
+          />
+          <button type="submit"
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90"
+                  style={{ background: '#fff' }}
+                  aria-label="Join event">
+            {checking ? (
+              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#6045f4" strokeWidth="3" strokeOpacity="0.3"/>
+                <path d="M12 3a9 9 0 019 9" stroke="#6045f4" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="#6045f4" className="w-4 h-4">
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+              </svg>
+            )}
+          </button>
+        </div>
       </form>
 
       {/* Headline */}
-      <h1 className="anim-fade-up relative z-10 text-center text-5xl md:text-7xl font-black tracking-tight text-white leading-[1.05] max-w-4xl">
+      <h1 className="anim-fade-up text-center text-5xl md:text-7xl font-black tracking-tight text-white leading-[1.05] max-w-4xl">
         Photos and memories,<br />
         straight to your cloud.
       </h1>
 
-      <div className="anim-fade-up anim-delay-1 relative z-10 mt-6 flex flex-col items-start gap-y-3 max-w-xl px-2">
+      {/* Numbered steps — single horizontal line */}
+      <div className="anim-fade-up anim-delay-1 mt-8 flex flex-wrap justify-center items-center gap-x-6 gap-y-2">
         {[
-          { n: '1', text: 'Guests scan a QR code.', grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
-          { n: '2', text: 'Snap a photo.', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
-          { n: '3', text: 'It lands directly in your Google Drive, OneDrive, or Dropbox.', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
-        ].map(({ n, text, grad }) => (
-          <div key={n} className="flex items-center gap-3">
+          { n: '1', text: 'Guests scan a QR code', grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
+          { n: '2', text: 'Snap a photo', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
+          { n: '3', text: 'It lands in your Google Drive, OneDrive, or Dropbox', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
+        ].map(({ n, text, grad }, i, arr) => (
+          <div key={n} className="flex items-center gap-2">
             <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white"
-                  style={{ background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
+                  style={{ background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}>
               {n}
             </span>
-            <p className="text-white/80 text-base leading-snug">{text}</p>
+            <span className="text-white/85 text-sm font-medium whitespace-nowrap">{text}</span>
+            {i < arr.length - 1 && (
+              <span className="text-white/30 ml-2">·</span>
+            )}
           </div>
         ))}
       </div>
 
       {/* CTA */}
-      <div className="anim-fade-up anim-delay-2 relative z-10 mt-8">
+      <div className="anim-fade-up anim-delay-2 mt-8">
         <Link to="/dashboard"
               className="px-8 py-4 text-base rounded-full font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-lg"
               style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 20px rgba(34,197,94,0.4)' }}>
