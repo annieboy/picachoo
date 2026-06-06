@@ -210,7 +210,8 @@ function HeroScene() {
     : 'phoneSlideIn  0.55s cubic-bezier(0.34,1.35,0.64,1) both';
 
   /* camera stage has dark status bar */
-  const darkBar = stage === 2;
+  /* QR (0), Welcome (1), and Camera (2) all have dark/gradient backgrounds */
+  const darkBar = stage === 0 || stage === 1 || stage === 2;
 
   /*
    * Fixed-size stage viewport so phone + monitor occupy identical space.
@@ -279,8 +280,8 @@ function HeroScene() {
                 </div>
               </div>
 
-              {/* Picachoo nav bar (hidden on camera) */}
-              {stage !== 2 && (
+              {/* Picachoo nav bar (hidden on QR, welcome, camera — they have their own full-screen brand header) */}
+              {stage !== 0 && stage !== 1 && stage !== 2 && (
                 <div style={{
                   position: 'absolute', top: 22, left: 0, right: 0, height: 30,
                   background: '#fff', borderBottom: '1px solid #f0f0f0',
@@ -379,24 +380,33 @@ function StageQR({ active }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 10, padding: '58px 20px 20px',
-      background: '#f5f5f7',
+      alignItems: 'center', justifyContent: 'center', gap: 8,
+      background: 'linear-gradient(160deg,#6045f4 0%,#7060f6 50%,#53e6d4 100%)',
+      padding: '52px 20px 20px',
     }}>
-      {/* Event title */}
-      <div style={{ textAlign: 'center' }}>
-        <p style={{ fontSize: 8, fontWeight: 700, color: '#6045f4', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>You're invited to</p>
-        <p style={{ fontSize: 13, fontWeight: 900, color: '#1a1a1a', lineHeight: 1.2 }}>Phil &amp; Jane's<br/>Wedding</p>
-      </div>
+      {/* Logo */}
+      <p style={{ fontSize: 13, fontWeight: 900, letterSpacing: '-0.01em', marginBottom: 2 }}>
+        <span style={{ color: '#fff' }}>pica</span><span style={{ color: '#a5f3e8' }}>choo</span>
+      </p>
+      <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>
+        made for memorable moments
+      </p>
       {/* QR card */}
-      <div style={{ padding: 10, background: '#fff', borderRadius: 14, boxShadow: '0 4px 20px rgba(96,69,244,0.15)', border: '1px solid #ede9fe', position: 'relative' }}>
-        <QRCodeSVG size={88} />
-        {/* Scan line */}
-        <div style={{ position: 'absolute', left: 10, right: 10, height: 1.5,
+      <div style={{
+        padding: 10, background: '#fff', borderRadius: 14,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+        position: 'relative',
+      }}>
+        <QRCodeSVG size={90} />
+        <div style={{
+          position: 'absolute', left: 10, right: 10, height: 1.5,
           background: 'linear-gradient(90deg,transparent,#6045f4,#53e6d4,transparent)',
           animation: 'scanLine 2s ease-in-out infinite', borderRadius: 99,
         }} />
       </div>
-      <p style={{ color: '#aaa', fontSize: 8, textAlign: 'center' }}>Scan with your camera to share photos</p>
+      <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 8, textAlign: 'center', marginTop: 4 }}>
+        Scan to join and share photos
+      </p>
     </div>
   );
 }
@@ -406,49 +416,52 @@ function StageWelcome({ active }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-      background: '#f5f5f7',
+      alignItems: 'center', justifyContent: 'center',
+      background: 'linear-gradient(160deg,#6045f4 0%,#7060f6 50%,#53e6d4 100%)',
+      padding: '52px 16px 20px',
+      gap: 0,
     }}>
-      {/* Purple brand top band */}
+      {/* Logo */}
+      <p style={{ fontSize: 13, fontWeight: 900, letterSpacing: '-0.01em', marginBottom: 2 }}>
+        <span style={{ color: '#fff' }}>pica</span><span style={{ color: '#a5f3e8' }}>choo</span>
+      </p>
+      <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 14 }}>
+        made for memorable moments
+      </p>
+      {/* Invited label */}
+      <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>
+        you're invited to
+      </p>
+      {/* Event name */}
+      <p style={{ fontSize: 16, fontWeight: 900, color: '#fff', textAlign: 'center', lineHeight: 1.15, marginBottom: 6 }}>
+        Phil &amp; Jane's<br/>Wedding
+      </p>
+      <p style={{ fontSize: 8, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginBottom: 16, lineHeight: 1.5 }}>
+        Share your photos and help<br/>capture the memories.
+      </p>
+      {/* Name input */}
       <div style={{
-        background: 'linear-gradient(135deg,#6045f4,#7060f6,#53e6d4)',
-        padding: '36px 20px 24px',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
+        width: '100%', padding: '9px 12px', borderRadius: 99,
+        background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
+        display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8,
       }}>
-        <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 8, textTransform: 'uppercase', letterSpacing: '0.12em' }}>Welcome to</p>
-        <p style={{ color: '#fff', fontSize: 14, fontWeight: 900, textAlign: 'center', lineHeight: 1.2 }}>
-          PHIL &amp; JANE'S<br/>WEDDING
-        </p>
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" strokeWidth="1.5" width="11" height="11"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9 }}>Enter name to proceed</span>
       </div>
-      {/* White body */}
+      {/* Open Camera */}
       <div style={{
-        flex: 1, background: '#fff', padding: '18px 16px',
-        display: 'flex', flexDirection: 'column', gap: 10,
-        borderRadius: '0 0 26px 26px',
+        width: '100%', padding: '9px 12px', borderRadius: 99,
+        background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.3)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
       }}>
-        {/* Name input */}
-        <div style={{
-          padding: '9px 12px', borderRadius: 12,
-          background: '#f5f5f7', border: '1.5px solid #e5e5ea',
-          display: 'flex', alignItems: 'center', gap: 6,
-        }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="1.5" width="13" height="13"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          <span style={{ color: '#bbb', fontSize: 11 }}>Enter your name</span>
-        </div>
-        {/* Open Camera CTA */}
-        <button style={{
-          padding: '11px 0', borderRadius: 12, border: 'none', cursor: 'pointer',
-          background: 'linear-gradient(135deg,#6045f4,#53e6d4)',
-          color: '#fff', fontSize: 11, fontWeight: 800, letterSpacing: '0.04em',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-          boxShadow: '0 4px 16px rgba(96,69,244,0.35)',
-        }}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="13" height="13">
-            <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-            <circle cx="12" cy="13" r="4"/>
-          </svg>
-          OPEN CAMERA
-        </button>
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" width="11" height="11">
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: 700, letterSpacing: '0.06em' }}>Open Camera</span>
       </div>
+      <p style={{ color: 'rgba(255,255,255,0.25)', fontSize: 7, textTransform: 'uppercase', letterSpacing: '0.14em', marginTop: 14 }}>
+        photobook</p>
     </div>
   );
 }
