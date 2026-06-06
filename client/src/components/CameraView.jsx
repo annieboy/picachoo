@@ -105,25 +105,22 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       {/* Video */}
       {!needsFallback && (
         <>
-          {/* Photo: 3:4 frame — capped so controls always have room */}
-          {mode === 'photo' ? (
-            <div style={{
-              position: 'absolute',
-              top: '8px',
-              left: 0,
-              right: 0,
-              aspectRatio: '3/4',
-              maxHeight: 'calc(100dvh - 195px)',
-              overflow: 'hidden',
-            }}>
-              <video ref={videoRef} autoPlay playsInline muted
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-            </div>
-          ) : (
-            /* Video: fill full screen */
+          {/* Single video element always mounted — wrapper changes shape per mode */}
+          <div style={mode === 'photo' ? {
+            position: 'absolute',
+            top: '8px',
+            left: 0,
+            right: 0,
+            aspectRatio: '3/4',
+            maxHeight: 'calc(100dvh - 195px)',
+            overflow: 'hidden',
+          } : {
+            position: 'absolute',
+            inset: 0,
+          }}>
             <video ref={videoRef} autoPlay playsInline muted
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-          )}
+              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
           {flashVisible && (
             <div className="absolute inset-0 bg-white pointer-events-none z-30 animate-shutter-flash" />
           )}
