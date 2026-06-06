@@ -80,8 +80,8 @@ function Hero() {
 
       <div className="anim-fade-up anim-delay-1 relative z-10 mt-6 flex flex-col items-start gap-y-3 max-w-xl px-2">
         {[
-          { n: '1', text: 'No app. No account. No friction.', grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
-          { n: '2', text: 'Guests scan a QR code and snap a photo.', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
+          { n: '1', text: 'Guests scan a QR code.', grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
+          { n: '2', text: 'Snap a photo.', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
           { n: '3', text: 'It lands directly in your Google Drive, OneDrive, or Dropbox.', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
         ].map(({ n, text, grad }) => (
           <div key={n} className="flex items-center gap-3">
