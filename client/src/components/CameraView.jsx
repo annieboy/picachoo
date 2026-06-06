@@ -108,7 +108,14 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           <video
             ref={videoRef}
             autoPlay playsInline muted
-            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              position: 'absolute',
+              width: '100%',
+              aspectRatio: '3/4',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              objectFit: 'cover',
+            }}
           />
           {flashVisible && (
             <div className="absolute inset-0 bg-white pointer-events-none z-30 animate-shutter-flash" />
