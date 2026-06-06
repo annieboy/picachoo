@@ -1,19 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-async function getDeviceIdForFacing(facing) {
-  try {
-    const devices = await navigator.mediaDevices.enumerateDevices();
-    const videos   = devices.filter(d => d.kind === 'videoinput');
-    if (videos.length <= 1) return null;
-    const label = facing === 'user' ? 'front' : 'back';
-    const match = videos.find(d => d.label.toLowerCase().includes(label));
-    if (match) return match.deviceId;
-    return facing === 'user' ? videos[videos.length - 1].deviceId : videos[0].deviceId;
-  } catch {
-    return null;
-  }
-}
-
 export function useCamera() {
   const videoRef         = useRef(null);
   const streamRef        = useRef(null);
@@ -44,13 +30,14 @@ export function useCamera() {
     setZoom(1);
 
     try {
-      const deviceId = await getDeviceIdForFacing(facing);
-      // Request portrait-oriented high resolution — no aspect ratio constraint
-      // to avoid browser zooming the feed
-      const sizeConstraints = { width: { ideal: 2448 }, height: { ideal: 3264 } };
-      const videoConstraints = deviceId
-        ? { deviceId: { exact: deviceId }, ...sizeConstraints }
-        : { facingMode: { ideal: facing }, ...sizeConstraints };
+      // facingMode: exact ensures the correct lens is selected and the front
+      // camera is mirrored. No deviceId lookup — label-based matching is
+      // fragile and omitting facingMode breaks front camera on iOS Safari.
+      const videoConstraints = {
+        facingMode: { exact: facing },
+        width:  { ideal: 2448 },
+        height: { ideal: 3264 },
+      };
 
       const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
       streamRef.current = stream;
