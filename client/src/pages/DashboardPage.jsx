@@ -9,6 +9,7 @@ import {
   updateHostProfile, deleteAccount, cancelSubscription,
 } from '../api';
 import QRCard from '../components/QRCard';
+import { QRCodeSVG } from 'qrcode.react';
 
 const ONBOARDING_KEY = id => `picachoo_onboarded_${id}`;
 
@@ -212,11 +213,13 @@ const TIER_LABEL = {
 
 function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
   const navigate    = useNavigate();
-  const [tab,           setTab]          = useState('events');
-  const [eventName,     setEventName]    = useState('');
-  const [creating,      setCreating]     = useState(false);
-  const [error,         setError]        = useState('');
-  const [showUpgrade,   setShowUpgrade]  = useState(false);
+  const [tab,              setTab]             = useState('events');
+  const [error,            setError]           = useState('');  // eslint-disable-line no-unused-vars
+  const [showUpgrade,      setShowUpgrade]     = useState(false);
+  const [filter,           setFilter]          = useState('all');
+  const [search,           setSearch]          = useState('');
+  const [showCreateModal,  setShowCreateModal] = useState(false);
+  const [shareEvent,       setShareEvent]      = useState(null);
 
   const params        = new URLSearchParams(window.location.search);
   const linked        = params.get('linked');
@@ -245,19 +248,6 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
     setTimeout(poll, 1500);
   }, [checkoutOk]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function handleCreateEvent(e) {
-    e.preventDefault();
-    if (!eventName.trim()) return;
-    setError(''); setCreating(true);
-    try {
-      const { event } = await createEvent({ name: eventName.trim() });
-
-      setEvents(prev => [event, ...prev]);
-      setEventName('');
-    } catch (err) { setError(err.message); }
-    finally { setCreating(false); }
-  }
-
   function handleEventUpdate(updated) {
     setEvents(prev => prev.map(e => e.id === updated.id ? { ...e, ...updated } : e));
   }
@@ -269,6 +259,12 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
   const tier = host?.tier ?? 'free';
   const tierMeta = TIER_LABEL[tier] ?? TIER_LABEL.free;
   const isPro = tier !== 'free';
+
+  const activeCount = events.filter(e => e.status === 'active').length;
+  const pastCount   = events.filter(e => e.status !== 'active').length;
+  const filteredEvents = events
+    .filter(ev => filter === 'all' || (filter === 'active' ? ev.status === 'active' : ev.status !== 'active'))
+    .filter(ev => !search.trim() || ev.name.toLowerCase().includes(search.toLowerCase()) || ev.join_code.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <>
@@ -345,50 +341,77 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
             </div>
           </div>
 
-          <section className="dash-section create-section">
-            <div className="create-section-header">
-              <div className="create-section-icon">＋</div>
-              <div>
-                <p className="create-section-title">Create new event</p>
-                <p className="create-section-sub">Share a QR code — guests snap photos straight to your cloud</p>
+          {/* Events list panel */}
+          <div className="events-panel">
+
+            {/* Toolbar: filter tabs + search + create button */}
+            <div className="events-toolbar">
+              <div className="filter-tabs">
+                {[['all','All',events.length],['active','Active',activeCount],['past','Past',pastCount]].map(([key,label,count])=>(
+                  <button key={key} className={`filter-tab${filter===key?' filter-tab--active':''}`} onClick={()=>setFilter(key)}>
+                    {label} <span className="tab-count">{count}</span>
+                  </button>
+                ))}
+              </div>
+              <div style={{display:'flex',gap:10,alignItems:'center',flexWrap:'wrap'}}>
+                <div className="search-bar-wrap">
+                  <SearchIcon />
+                  <input className="search-bar-input" placeholder="Search by name or code" value={search} onChange={e=>setSearch(e.target.value)} />
+                </div>
+                <button className="btn-create-event" onClick={()=>setShowCreateModal(true)}>+ Create event</button>
               </div>
             </div>
-            <form className="create-form" onSubmit={handleCreateEvent}>
-              <input
-                type="text"
-                placeholder="e.g. Sarah & Tom's Wedding"
-                value={eventName}
-                onChange={e => setEventName(e.target.value)}
-                required
-              />
-              <button type="submit" className="btn-primary" disabled={creating || !eventName.trim()}>
-                {creating ? 'Creating…' : 'Create'}
-              </button>
-            </form>
-            {error && <p className="msg-error">{error}</p>}
-          </section>
 
-          <section className="dash-section">
-            <h2 className="events-heading">Your events {events.length > 0 && <span className="badge">{events.length}</span>}</h2>
-            {events.length === 0
-              ? <p className="empty-state">Create your first event above to get started.</p>
-              : events.map(ev => (
-                <EventCard
-                  key={ev.id}
-                  event={ev}
-                  token={session?.access_token}
-                  loginHint={session?.user?.app_metadata?.provider === 'google' ? session?.user?.email : undefined}
-                  onUpdate={handleEventUpdate}
-                  onDelete={handleEventDelete}
-                />
-              ))
-            }
-          </section>
+            {/* Table header */}
+            {filteredEvents.length > 0 && (
+              <div className="events-table-head">
+                <span>Event details</span>
+                <span>Status</span>
+                <span>Actions</span>
+              </div>
+            )}
+
+            {/* Rows */}
+            {filteredEvents.length === 0 ? (
+              <div className="events-empty-state">
+                {search ? (
+                  <p>No events matching &ldquo;<strong>{search}</strong>&rdquo;</p>
+                ) : (
+                  <>
+                    <p>No events yet.</p>
+                    <button className="btn-create-event" onClick={()=>setShowCreateModal(true)}>+ Create your first event</button>
+                  </>
+                )}
+              </div>
+            ) : filteredEvents.map(ev => (
+              <EventRow
+                key={ev.id}
+                event={ev}
+                token={session?.access_token}
+                loginHint={session?.user?.app_metadata?.provider === 'google' ? session?.user?.email : undefined}
+                onUpdate={handleEventUpdate}
+                onDelete={handleEventDelete}
+                onShare={()=>setShareEvent(ev)}
+              />
+            ))}
+          </div>
         </>
       )}
     </Shell>
 
     {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+    {showCreateModal && (
+      <CreateEventModal
+        onClose={()=>setShowCreateModal(false)}
+        onCreated={ev=>{ setEvents(prev=>[ev,...prev]); setShowCreateModal(false); }}
+      />
+    )}
+    {shareEvent && (
+      <SharePanel
+        event={shareEvent}
+        onClose={()=>setShareEvent(null)}
+      />
+    )}
     </>
   );
 }
@@ -727,7 +750,7 @@ function AccountPanel({ host, setHost, signOut, onUpgrade }) {
   );
 }
 
-// ── Event card ────────────────────────────────────────────────────────────────
+// ── Event card (kept for reference, unused in new layout) ─────────────────────
 
 function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
   const [showQR,       setShowQR]       = useState(false);
@@ -994,6 +1017,389 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
       {showQR && <QRCard event={ev} />}
     </div>
   );
+}
+
+// ── EventRow ──────────────────────────────────────────────────────────────────
+
+function EventRow({ event, token, loginHint, onUpdate, onDelete, onShare }) {
+  const [ev, setEv] = useState(event);
+  const [expanded, setExpanded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [toggling, setToggling] = useState(false);
+  const [delConfirm, setDelConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [mgmtError, setMgmtError] = useState('');
+  const menuRef = useRef(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const h = e => { if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [menuOpen]);
+
+  function handleDisconnected() {
+    const u = { ...ev, linked_provider: null, linked_account: null };
+    setEv(u); onUpdate?.(u);
+  }
+
+  async function handleToggleStatus() {
+    const next = ev.status === 'active' ? 'closed' : 'active';
+    setToggling(true);
+    try {
+      const { event: u } = await updateEvent(ev.id, { status: next });
+      const m = { ...ev, ...u }; setEv(m); onUpdate?.(m);
+    } catch (err) { setMgmtError(err.message); }
+    finally { setToggling(false); }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try { await deleteEvent(ev.id); onDelete?.(ev.id); }
+    catch (err) { setMgmtError(err.message); setDelConfirm(false); }
+    finally { setDeleting(false); }
+  }
+
+  const photoCount = parseInt(ev.photo_count ?? 0, 10);
+  const createdFmt = ev.created_at
+    ? new Date(ev.created_at).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' })
+    : null;
+  const statusColors = { active:'status-active', draft:'status-draft', closed:'status-closed' };
+
+  return (
+    <>
+      <div className={`event-row${expanded?' event-row--open':''}`}>
+        {/* Left accent */}
+        <div className={`event-row-accent event-row-accent--${ev.status}`} />
+
+        {/* Details (clickable to expand) */}
+        <div className="event-row-details" onClick={()=>setExpanded(v=>!v)}>
+          <p className="event-row-name">{ev.name}</p>
+          <p className="event-row-meta">
+            #{ev.join_code}
+            {createdFmt && <> · {createdFmt}</>}
+            {photoCount > 0 && <> · {photoCount} photo{photoCount!==1?'s':''}</>}
+          </p>
+        </div>
+
+        {/* Status */}
+        <div className="event-row-status-col">
+          <span className={`status-pill ${statusColors[ev.status]??''}`}>{ev.status}</span>
+        </div>
+
+        {/* Actions */}
+        <div className="event-row-actions" onClick={e=>e.stopPropagation()}>
+          <button className="row-action-btn" onClick={onShare} title="Share & QR"><ShareIcon /></button>
+          <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="row-action-btn" title="Live Wall"><TVIcon /></a>
+          <div style={{position:'relative'}} ref={menuRef}>
+            <button className="row-action-btn" onClick={()=>setMenuOpen(v=>!v)} title="More"><MoreIcon /></button>
+            {menuOpen && (
+              <div className="row-dropdown">
+                <button onClick={()=>{setMenuOpen(false);handleToggleStatus();}} disabled={toggling||ev.status==='draft'}>
+                  {ev.status==='active'?'Close event':'Reopen event'}
+                </button>
+                <button className="row-dropdown--danger" onClick={()=>{setMenuOpen(false);setDelConfirm(true);}}>Delete event</button>
+              </div>
+            )}
+          </div>
+          <button className="row-action-btn row-chevron" onClick={()=>setExpanded(v=>!v)} title={expanded?'Collapse':'Expand'}>
+            <ChevronIcon open={expanded} />
+          </button>
+        </div>
+      </div>
+
+      {/* Expanded body: wall + storage */}
+      {expanded && (
+        <div className="event-row-body">
+          <WallControls ev={ev} setEv={setEv} onUpdate={onUpdate} />
+          {ev.linked_provider
+            ? <StorageStatus provider={ev.linked_provider} account={ev.linked_account} eventId={ev.id} onDisconnected={handleDisconnected} />
+            : <StoragePicker eventId={ev.id} token={token} loginHint={loginHint} />
+          }
+          {mgmtError && <p className="msg-error">{mgmtError}</p>}
+        </div>
+      )}
+
+      {/* Delete confirm */}
+      {delConfirm && (
+        <div className="event-row-body">
+          <div className="event-delete-confirm">
+            <p>Delete <strong>{ev.name}</strong>?{photoCount>0&&` ${photoCount} photo record${photoCount!==1?'s':''} will be removed (files in your cloud storage are kept).`}</p>
+            <div className="event-delete-confirm-btns">
+              <button className="btn-ghost btn-sm" onClick={()=>setDelConfirm(false)} disabled={deleting}>Cancel</button>
+              <button className="event-delete-confirm-yes" onClick={handleDelete} disabled={deleting}>{deleting?'Deleting…':'Yes, delete'}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ── WallControls ──────────────────────────────────────────────────────────────
+
+function WallControls({ ev, setEv, onUpdate }) {
+  const [wallPicker, setWallPicker] = useState(false);
+  const [wallSaving, setWallSaving] = useState(false);
+  const [uploadPicker, setUploadPicker] = useState(false);
+  const [uploadSaving, setUploadSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleWallMode(mode) {
+    setWallSaving(true);
+    try {
+      const { event: u } = await updateEvent(ev.id, { wallMode: mode });
+      const m = { ...ev, ...u }; setEv(m); onUpdate?.(m); setWallPicker(false);
+    } catch (err) { setError(err.message); }
+    finally { setWallSaving(false); }
+  }
+
+  async function handleUploadMode(mode) {
+    setUploadSaving(true);
+    try {
+      const { event: u } = await updateEvent(ev.id, { wallUploadMode: mode });
+      const m = { ...ev, ...u }; setEv(m); onUpdate?.(m); setUploadPicker(false);
+    } catch (err) { setError(err.message); }
+    finally { setUploadSaving(false); }
+  }
+
+  return (
+    <div className="wall-section">
+      <div className="wall-section-row">
+        <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="wall-link">
+          <span>📺</span> Open Live Wall
+        </a>
+        <button
+          className={`wall-toggle-btn${ev.wall_mode!=='off'?' wall-toggle-on':''}`}
+          onClick={()=>ev.wall_mode!=='off'?handleWallMode('off'):setWallPicker(true)}
+          disabled={wallSaving}
+        >
+          <span className={`wall-toggle-dot${ev.wall_mode!=='off'?' wall-toggle-dot-on':''}`}/>
+          {ev.wall_mode==='off'?'Wall off':ev.wall_mode==='everyone'?'Visible to all':'Visible: host only'}
+        </button>
+      </div>
+      {wallPicker && (
+        <div className="wall-picker">
+          <p className="wall-picker-label">Who can view the live wall?</p>
+          <div className="wall-picker-options">
+            <button className="wall-picker-opt" onClick={()=>handleWallMode('everyone')} disabled={wallSaving}><span className="wall-picker-opt-icon">🌐</span><div><strong>Everyone</strong><p>Guests and host can see the live wall</p></div></button>
+            <button className="wall-picker-opt" onClick={()=>handleWallMode('host_only')} disabled={wallSaving}><span className="wall-picker-opt-icon">🔒</span><div><strong>Host only</strong><p>Only you can see the live wall</p></div></button>
+          </div>
+          <button className="wall-picker-cancel" onClick={()=>setWallPicker(false)}>Cancel</button>
+        </div>
+      )}
+      {ev.wall_mode !== 'off' && (
+        <>
+          <div className="wall-section-row wall-section-row-sub">
+            <span className="wall-sub-label">Who can contribute photos?</span>
+            <button className={`wall-toggle-btn${ev.wall_upload_mode==='host_only'?' wall-toggle-on':''}`} onClick={()=>setUploadPicker(true)} disabled={uploadSaving}>
+              <span className={`wall-toggle-dot${ev.wall_upload_mode==='host_only'?' wall-toggle-dot-on':''}`}/>
+              {ev.wall_upload_mode==='host_only'?'Host only':'Everyone'}
+            </button>
+          </div>
+          {uploadPicker && (
+            <div className="wall-picker">
+              <p className="wall-picker-label">Who can add photos to the wall?</p>
+              <div className="wall-picker-options">
+                <button className="wall-picker-opt" onClick={()=>handleUploadMode('everyone')} disabled={uploadSaving}><span className="wall-picker-opt-icon">👥</span><div><strong>Everyone</strong><p>All guests can submit photos to the live wall</p></div></button>
+                <button className="wall-picker-opt" onClick={()=>handleUploadMode('host_only')} disabled={uploadSaving}><span className="wall-picker-opt-icon">🎛️</span><div><strong>Host only</strong><p>Only you can add photos — curated wall</p></div></button>
+              </div>
+              <button className="wall-picker-cancel" onClick={()=>setUploadPicker(false)}>Cancel</button>
+            </div>
+          )}
+        </>
+      )}
+      {error && <p className="msg-error">{error}</p>}
+    </div>
+  );
+}
+
+// ── CreateEventModal ──────────────────────────────────────────────────────────
+
+function CreateEventModal({ onClose, onCreated }) {
+  const [name, setName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState('');
+  const inputRef = useRef(null);
+  useEffect(()=>{ inputRef.current?.focus(); },[]);
+
+  async function handleCreate(e) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setError(''); setCreating(true);
+    try {
+      const { event } = await createEvent({ name: name.trim() });
+      onCreated(event);
+    } catch (err) { setError(err.message); setCreating(false); }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="modal-card">
+        <h2 className="modal-title">Create your event</h2>
+        <form onSubmit={handleCreate}>
+          <label className="modal-label">
+            Give your event a name
+            <input ref={inputRef} type="text" className="modal-input" placeholder="Event name" value={name} onChange={e=>setName(e.target.value)} required />
+          </label>
+          {error && <p className="msg-error" style={{marginTop:8}}>{error}</p>}
+          <div className="modal-privacy-note">
+            <svg viewBox="0 0 20 20" fill="currentColor" style={{width:14,height:14,flexShrink:0,color:'#6045f4'}}><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
+            Anyone with the code or link can participate
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn-create-event" disabled={!name.trim()||creating}>{creating?'Creating…':'Create event'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── SharePanel ────────────────────────────────────────────────────────────────
+
+function SharePanel({ event, onClose }) {
+  const [tab, setTab] = useState('share');
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [coHostEmail, setCoHostEmail] = useState('');
+  const [shareableLink, setShareableLink] = useState(false);
+  const [inviteSent, setInviteSent] = useState(false);
+  const guestUrl = `${window.location.origin}/e/${event.join_code}`;
+
+  function copyLink() {
+    navigator.clipboard.writeText(guestUrl).catch(()=>{});
+    setCopiedLink(true);
+    setTimeout(()=>setCopiedLink(false), 2000);
+  }
+
+  function handleInvite(e) {
+    e.preventDefault();
+    if (!coHostEmail.trim()) return;
+    setInviteSent(true);
+    setCoHostEmail('');
+    setTimeout(()=>setInviteSent(false), 3000);
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="share-panel">
+        {/* Header */}
+        <div className="share-panel-header">
+          <div>
+            <p className="share-panel-event-name">{event.name}</p>
+            <div style={{display:'flex',alignItems:'center',gap:8,marginTop:2}}>
+              <span className="share-panel-code">#{event.join_code}</span>
+              <span className="share-panel-dot">·</span>
+              <span className={`status-pill status-${event.status}`}>{event.status}</span>
+            </div>
+          </div>
+          <button className="share-panel-close" onClick={onClose}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:16,height:16}}><path strokeLinecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="share-tabs">
+          <button className={`share-tab${tab==='share'?' share-tab--active':''}`} onClick={()=>setTab('share')}>Share with guests</button>
+          <button className={`share-tab${tab==='collaborate'?' share-tab--active':''}`} onClick={()=>setTab('collaborate')}>Collaborate</button>
+        </div>
+
+        {/* Share with guests */}
+        {tab === 'share' && (
+          <div className="share-body">
+            {/* Joining link */}
+            <div className="share-row">
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16,color:'#6b7280'}}><path strokeLinecap="round" d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path strokeLinecap="round" d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+                <span className="share-row-label">Joining link</span>
+              </div>
+              <button className="share-copy-btn" onClick={copyLink}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:13,height:13}}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                {copiedLink ? 'Copied!' : 'Copy joining link'}
+              </button>
+            </div>
+            <p className="share-url-text">{guestUrl}</p>
+
+            <div className="share-divider"/>
+
+            {/* QR code */}
+            <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:14}}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16,color:'#6b7280'}}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
+              <span className="share-row-label">QR code</span>
+            </div>
+            <div style={{display:'flex',alignItems:'center',gap:20}}>
+              <div style={{padding:10,background:'#fff',borderRadius:12,border:'1px solid #e5e7eb',flexShrink:0}}>
+                <QRInline value={guestUrl} size={120}/>
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:8,flex:1}}>
+                <button className="share-qr-btn" onClick={()=>navigator.clipboard.writeText(guestUrl).catch(()=>{})}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:13,height:13}}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  Copy QR code
+                </button>
+                <a href={guestUrl} download={`${event.join_code}-qr.png`} className="share-qr-btn" style={{textDecoration:'none',display:'flex',alignItems:'center',gap:6,justifyContent:'center'}}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:13,height:13}}><path strokeLinecap="round" d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download QR code
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Collaborate */}
+        {tab === 'collaborate' && (
+          <div className="share-body">
+            <div className="collab-header">
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:18,height:18,color:'#1f1f2e'}}><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+                <span className="collab-title">Add co-hosts</span>
+              </div>
+            </div>
+            <p className="collab-sub">Invite others to help you with managing this event.</p>
+
+            <div className="share-divider"/>
+
+            {/* Shareable link toggle */}
+            <div className="collab-toggle-row">
+              <div>
+                <p className="collab-toggle-label">Shareable link</p>
+                <p className="collab-toggle-sub">Anyone with the link can help with this event.</p>
+              </div>
+              <button
+                className={`toggle-switch${shareableLink?' toggle-switch--on':''}`}
+                onClick={()=>setShareableLink(v=>!v)}
+                aria-checked={shareableLink}
+                role="switch"
+              >
+                <span className="toggle-knob"/>
+              </button>
+            </div>
+
+            <div className="share-divider"/>
+
+            {/* Email invite */}
+            <form className="collab-invite-row" onSubmit={handleInvite}>
+              <div style={{display:'flex',alignItems:'center',gap:8,flex:1}}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16,color:'#9ca3af',flexShrink:0}}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M22 11h-4m2-2v4"/></svg>
+                <input type="email" className="collab-email-input" placeholder="Email" value={coHostEmail} onChange={e=>setCoHostEmail(e.target.value)} />
+              </div>
+              <button type="submit" className="btn-invite" disabled={!coHostEmail.trim()}>Invite</button>
+            </form>
+
+            {inviteSent && (
+              <div className="banner-success" style={{marginTop:12}}>✓ Invitation sent!</div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── QRInline ──────────────────────────────────────────────────────────────────
+
+function QRInline({ value, size = 120 }) {
+  return <QRCodeSVG value={value} size={size} />;
 }
 
 // ── Upgrade modal ─────────────────────────────────────────────────────────────
@@ -1407,6 +1813,22 @@ function FolderIcon() {
       <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
     </svg>
   );
+}
+
+function TVIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:14,height:14}} aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>;
+}
+
+function MoreIcon() {
+  return <svg viewBox="0 0 24 24" fill="currentColor" style={{width:14,height:14}} aria-hidden="true"><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>;
+}
+
+function SearchIcon() {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:15,height:15,color:'#9ca3af'}} aria-hidden="true"><circle cx="11" cy="11" r="8"/><path strokeLinecap="round" d="M21 21l-4.35-4.35"/></svg>;
+}
+
+function ChevronIcon({ open }) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{width:13,height:13,transition:'transform 0.2s',transform:open?'rotate(180deg)':'rotate(0deg)'}} aria-hidden="true"><path strokeLinecap="round" d="M19 9l-7 7-7-7"/></svg>;
 }
 
 // ── Shared layout ─────────────────────────────────────────────────────────────
