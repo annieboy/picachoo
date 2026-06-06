@@ -154,9 +154,23 @@ function Hero() {
         </a>
       </div>
 
-      {/* Hero animated scene */}
-      <div className="anim-fade-up anim-delay-3 relative z-10 mt-10 w-full max-w-2xl px-2 sm:px-4">
-        <HeroScene />
+      {/* Hero animated scene — white canvas */}
+      <div className="anim-fade-up anim-delay-3 relative z-10 mt-10 w-full max-w-lg px-2 sm:px-4">
+        <div style={{
+          background: 'rgba(255,255,255,0.10)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          borderRadius: 32,
+          border: '1px solid rgba(255,255,255,0.22)',
+          padding: '28px 24px 24px',
+          boxShadow: '0 8px 48px rgba(0,0,0,0.18)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          overflow: 'hidden',
+        }}>
+          <HeroScene />
+        </div>
       </div>
 
       <div className="wave-bottom" />
@@ -176,42 +190,44 @@ const REAL_PHOTOS = [
   '/photos/Picture9.jpg',
 ];
 
-/* Stage durations ms — invite, QR, welcome, camera, uploading, live wall, dashboard */
-const STAGE_DURATIONS = [3200, 3000, 2800, 2800, 2800, 3600, 3400];
+/*
+ * Stage order: 0=QR, 1=Welcome, 2=Camera, 3=Joining, 4=LiveWall(TV), 5=Dashboard
+ * Each stage: phone slides IN from right → holds → slides OUT to left → next stage slides in from right
+ */
+const STAGE_DURATIONS = [3400, 3000, 3000, 2800, 3800, 3200];
 const TOTAL_STAGES = STAGE_DURATIONS.length;
+const EXIT_MS = 420; /* slide-out duration before next stage mounts */
 
 function HeroScene() {
-  const [stage, setStage] = useState(0);
-  const [entering, setEntering] = useState(true);
-  const timerRef = useRef(null);
+  const [stage, setStage]     = useState(0);
+  const [exiting, setExiting] = useState(false);
+  const timerRef              = useRef(null);
 
   useEffect(() => {
-    setEntering(true);
+    setExiting(false);
     timerRef.current = setTimeout(() => {
-      setEntering(false);
+      setExiting(true);
       setTimeout(() => {
         setStage(s => (s + 1) % TOTAL_STAGES);
-      }, 400);
-    }, STAGE_DURATIONS[stage] - 400);
+      }, EXIT_MS);
+    }, STAGE_DURATIONS[stage] - EXIT_MS);
     return () => clearTimeout(timerRef.current);
   }, [stage]);
 
-  const stageLabels = [
-    'Invite card',
-    'Guests scan QR',
-    'Welcome screen',
-    'Camera captures',
-    'Guests uploading',
-    'Live wall',
-    'Event dashboard',
-  ];
+  const stageLabels = ['QR scan', 'Welcome', 'Camera', 'Uploading', 'Live wall', 'Dashboard'];
+  const showMonitor = stage === 4;
+  /* key changes → React remounts the element → CSS entry animation fires again */
+  const phoneKey    = `phone-${stage}-${exiting ? 'out' : 'in'}`;
 
-  /* phone stages: 0–4 and 6 | monitor stage: 5 */
-  const showMonitor = stage === 5;
-  const phoneKey    = `phone-${stage}`;   /* remount phone on each stage → whole phone animates in */
+  const phoneAnim = exiting
+    ? 'phoneSlideOut 0.42s cubic-bezier(0.4,0,0.8,0.2) both'
+    : 'phoneSlideIn  0.55s cubic-bezier(0.34,1.35,0.64,1) both';
+
+  /* camera stage has dark status bar */
+  const darkBar = stage === 2;
 
   return (
-    <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+    <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14, overflow: 'hidden' }}>
 
       {/* Stage indicator pills */}
       <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
@@ -225,79 +241,75 @@ function HeroScene() {
         ))}
       </div>
 
-      {/* ── Phone (stages 0–4, 6) ── */}
+      {/* ── Phone (stages 0–3, 5) ── */}
       {!showMonitor && (
         <div
           key={phoneKey}
           style={{
-            width: 'min(210px, 70vw)', flexShrink: 0,
-            background: '#d8d8de',
-            borderRadius: 44,
-            padding: '12px 8px 16px',
-            boxShadow: '0 2px 0 rgba(0,0,0,0.25), 0 32px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 1px rgba(0,0,0,0.12)',
-            animation: 'phoneSlideIn 0.55s cubic-bezier(0.34,1.4,0.64,1) both',
+            width: 'min(195px, 68vw)', flexShrink: 0,
+            background: 'linear-gradient(160deg,#e0e0e6 0%,#c8c8d0 100%)',
+            borderRadius: 40,
+            padding: '10px 7px 12px',
+            boxShadow: '0 2px 0 rgba(0,0,0,0.22), 0 24px 56px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.55), inset 0 0 0 1px rgba(0,0,0,0.1)',
+            animation: phoneAnim,
           }}>
           {/* Dynamic island */}
-          <div style={{
-            margin: '0 auto 8px', width: 74, height: 26,
-            background: '#111', borderRadius: 99, zIndex: 10,
-          }} />
+          <div style={{ margin: '0 auto 7px', width: 66, height: 22, background: '#111', borderRadius: 99 }} />
           {/* Screen */}
           <div style={{
-            borderRadius: 30, overflow: 'hidden',
-            height: 'min(420px, 128vw)',
+            borderRadius: 26, overflow: 'hidden',
+            height: 'min(360px, 112vw)',
             background: '#f5f5f7',
             position: 'relative',
           }}>
             {/* Status bar */}
             <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: 28,
-              background: stage === 3 ? 'rgba(0,0,0,0.01)' : '#fff',
+              position: 'absolute', top: 0, left: 0, right: 0, height: 24,
+              background: darkBar ? 'transparent' : '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0 16px', zIndex: 8, transition: 'background 0.3s',
+              padding: '0 14px', zIndex: 8,
             }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: stage === 3 ? '#fff' : '#1a1a1a' }}>9:41</span>
-              <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                <div style={{ width: 13, height: 7, borderRadius: 2, border: `1.5px solid ${stage === 3 ? '#fff' : '#1a1a1a'}`, position: 'relative' }}>
-                  <div style={{ position: 'absolute', top: 1, left: 1, bottom: 1, background: stage === 3 ? '#fff' : '#1a1a1a', borderRadius: 1, width: '65%' }} />
-                </div>
+              <span style={{ fontSize: 8, fontWeight: 700, color: darkBar ? '#fff' : '#1a1a1a' }}>9:41</span>
+              <div style={{ width: 11, height: 6, borderRadius: 2, border: `1.5px solid ${darkBar ? '#fff' : '#1a1a1a'}`, position: 'relative' }}>
+                <div style={{ position: 'absolute', top: 1, left: 1, bottom: 1, borderRadius: 1, background: darkBar ? '#fff' : '#1a1a1a', width: '65%' }} />
               </div>
             </div>
 
-            {/* Picachoo nav bar (hidden on invite + camera) */}
-            {stage !== 0 && stage !== 3 && (
+            {/* Picachoo nav bar (hidden on camera) */}
+            {stage !== 2 && (
               <div style={{
-                position: 'absolute', top: 28, left: 0, right: 0, height: 38,
+                position: 'absolute', top: 24, left: 0, right: 0, height: 34,
                 background: '#fff', borderBottom: '1px solid #f0f0f0',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                gap: 6, zIndex: 7,
+                gap: 5, zIndex: 7,
               }}>
-                <div style={{ width: 18, height: 18, borderRadius: 6, background: 'linear-gradient(135deg,#6045f4,#53e6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg viewBox="0 0 24 24" fill="white" width="11" height="11"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                <div style={{ width: 15, height: 15, borderRadius: 5, background: 'linear-gradient(135deg,#6045f4,#53e6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <svg viewBox="0 0 24 24" fill="white" width="9" height="9"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
                 </div>
-                <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '-0.01em' }}>
+                <span style={{ fontSize: 11, fontWeight: 800 }}>
                   <span style={{ color: '#6045f4' }}>Pica</span><span style={{ color: '#1a1a1a' }}>choo</span>
                 </span>
               </div>
             )}
 
-            <StageInvite  active={stage === 0} />
-            <StageQR      active={stage === 1} />
-            <StageWelcome active={stage === 2} />
-            <StageCamera  active={stage === 3} />
-            <StageJoining active={stage === 4} />
-            <StageDashboard active={stage === 6} />
+            <StageQR       active={stage === 0} />
+            <StageWelcome  active={stage === 1} />
+            <StageCamera   active={stage === 2} />
+            <StageJoining  active={stage === 3} />
+            <StageDashboard active={stage === 5} />
           </div>
           {/* Home bar */}
-          <div style={{ height: 4, margin: '8px auto 0', width: 60, borderRadius: 99, background: 'rgba(0,0,0,0.18)' }} />
+          <div style={{ height: 3, margin: '7px auto 0', width: 52, borderRadius: 99, background: 'rgba(0,0,0,0.18)' }} />
         </div>
       )}
 
-      {/* ── Monitor / TV screen (stage 5) ── */}
+      {/* ── Monitor / TV screen (stage 4) ── */}
       {showMonitor && (
         <div style={{
-          width: '100%', maxWidth: 580,
-          animation: 'monitorSlideIn 0.6s cubic-bezier(0.34,1.3,0.64,1) both',
+          width: '100%', maxWidth: 520,
+          animation: exiting
+            ? 'monitorSlideOut 0.42s cubic-bezier(0.4,0,0.8,0.2) both'
+            : 'monitorSlideIn 0.6s cubic-bezier(0.34,1.3,0.64,1) both',
         }}>
           <TVScreen />
         </div>
@@ -362,18 +374,24 @@ function StageQR({ active }) {
   return (
     <div style={{
       position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center', gap: 12, padding: '64px 20px 20px',
+      alignItems: 'center', justifyContent: 'center', gap: 10, padding: '58px 20px 20px',
       background: '#f5f5f7',
     }}>
-      <p style={{ fontSize: 11, fontWeight: 700, color: '#1a1a1a', textAlign: 'center' }}>Scan to join the event</p>
-      <div style={{ padding: 12, background: '#fff', borderRadius: 16, boxShadow: '0 4px 20px rgba(96,69,244,0.15)', border: '1px solid #ede9fe' }}>
-        <QRCodeSVG size={96} />
+      {/* Event title */}
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ fontSize: 8, fontWeight: 700, color: '#6045f4', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 3 }}>You're invited to</p>
+        <p style={{ fontSize: 13, fontWeight: 900, color: '#1a1a1a', lineHeight: 1.2 }}>Phil &amp; Jane's<br/>Wedding</p>
       </div>
-      <p style={{ color: '#888', fontSize: 9, textAlign: 'center' }}>Point your camera here</p>
-      <div style={{ position: 'absolute', top: '44%', left: '20px', right: '20px', height: 2,
-        background: 'linear-gradient(90deg,transparent,#6045f4,#53e6d4,transparent)',
-        animation: 'scanLine 2s ease-in-out infinite', borderRadius: 99,
-      }} />
+      {/* QR card */}
+      <div style={{ padding: 10, background: '#fff', borderRadius: 14, boxShadow: '0 4px 20px rgba(96,69,244,0.15)', border: '1px solid #ede9fe', position: 'relative' }}>
+        <QRCodeSVG size={88} />
+        {/* Scan line */}
+        <div style={{ position: 'absolute', left: 10, right: 10, height: 1.5,
+          background: 'linear-gradient(90deg,transparent,#6045f4,#53e6d4,transparent)',
+          animation: 'scanLine 2s ease-in-out infinite', borderRadius: 99,
+        }} />
+      </div>
+      <p style={{ color: '#aaa', fontSize: 8, textAlign: 'center' }}>Scan with your camera to share photos</p>
     </div>
   );
 }
