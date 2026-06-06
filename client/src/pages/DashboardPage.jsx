@@ -299,8 +299,7 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
       {!isPro && (
         <div className="upgrade-banner">
           <div className="upgrade-banner-text">
-            <strong>Unlock full resolution</strong> — upgrade to Pro for uncompressed original uploads,
-            direct-to-cloud delivery, and priority support.
+            <strong>Upgrade to Pro</strong> — unlimited events, full-resolution originals (25 MB+), priority uploads, and priority support.
           </div>
           <button className="upgrade-banner-btn" onClick={() => setShowUpgrade(true)}>
             View plans
@@ -434,30 +433,30 @@ function OnboardingScreen({ host, onContinueFree }) {
   const plans = [
     {
       type:        'free',
-      name:        'Standard',
+      name:        'Free',
       price:       'Free',
       note:        'Always free',
-      description: 'Perfect for getting started. Unlimited events and guests, photos compressed to 2 MB.',
+      description: '1 event/month · Up to 10 participants · 2 MB per upload · Google Drive, OneDrive, Dropbox · Live photo wall · QR code sharing',
       cta:         'Continue for free',
       popular:     false,
     },
     {
-      type:        'one_time_pass',
-      name:        'Pro Event Pass',
-      price:       '£19',
-      note:        'One-time · per event',
-      description: 'Full-resolution originals for one specific event. Valid 30 days from purchase.',
-      cta:         'Buy Event Pass',
+      type:        'pro_annual',
+      name:        'Pro',
+      price:       '£9',
+      note:        '/mo · billed £108/yr',
+      description: 'Unlimited events & guests · Full-resolution originals (25 MB+) · No browser compression · Priority upload queue · Priority support · Google Drive, OneDrive, Dropbox · Live photo wall',
+      cta:         'Get Pro',
       popular:     true,
-      badge:       'Best for Weddings & Galas',
+      badge:       'Most popular',
     },
     {
-      type:        'pro_annual',
-      name:        'Pro Annual',
-      price:       '£9',
-      note:        '/mo · £108 billed annually',
-      description: 'Full-resolution across all your events. Unlimited events, priority support.',
-      cta:         'Get Pro Annual',
+      type:        'business_annual',
+      name:        'Business',
+      price:       '£29',
+      note:        '/mo · billed £348/yr',
+      description: 'Everything in Pro · Multiple collaborators · Centralised photo repository · White-label branding · SSO & custom domain · Branded event page · Dedicated support & SLA',
+      cta:         'Get Business',
       popular:     false,
     },
   ];
@@ -1451,34 +1450,56 @@ function QRInline({ value, size = 120 }) {
 
 const UPGRADE_PLANS = [
   {
-    type:        'one_time_pass',
-    name:        'Pro Event Pass',
-    price:       '£19',
-    note:        'one-time · per event',
-    description: 'Full-resolution originals for one specific event. Valid 30 days from purchase.',
-    features:    ['Full-res originals for one event', 'No compression or quality loss', 'Valid for 30 days'],
-    cta:         'Buy Event Pass',
-    badge:       null,
+    type:     'free',
+    name:     'Free',
+    price:    'Free',
+    note:     'Always free',
+    features: [
+      '1 event per month',
+      'Up to 10 participants',
+      'Up to 2 MB per upload (compressed)',
+      'Google Drive, OneDrive, Dropbox',
+      'Live photo wall',
+      'QR code sharing',
+      'No event name on camera',
+    ],
+    cta:   'Current plan',
+    badge: null,
   },
   {
-    type:        'pro_annual',
-    name:        'Pro Annual',
-    price:       '£9',
-    note:        '/mo · billed £108/yr',
-    description: 'Full-resolution across every event you create, forever.',
-    features:    ['Full-res across all events', 'Priority support', 'Cancel anytime'],
-    cta:         'Get Pro Annual',
-    badge:       'Most popular',
+    type:     'pro_annual',
+    name:     'Pro',
+    price:    '£9',
+    note:     '/mo · billed £108/yr',
+    features: [
+      'Unlimited events',
+      'Unlimited guests',
+      'Full-resolution originals (25 MB+)',
+      'No browser compression',
+      'Priority upload queue',
+      'Priority support',
+      'Google Drive, OneDrive, Dropbox',
+      'Live photo wall',
+    ],
+    cta:   'Get Pro',
+    badge: 'Most popular',
   },
   {
-    type:        'business_annual',
-    name:        'Business',
-    price:       '£29',
-    note:        '/mo · billed £348/yr',
-    description: 'For teams and professional event planners running multiple events.',
-    features:    ['Everything in Pro', 'Team management', 'Dedicated support & SLA'],
-    cta:         'Get Business',
-    badge:       null,
+    type:     'business_annual',
+    name:     'Business',
+    price:    '£29',
+    note:     '/mo · billed £348/yr',
+    features: [
+      'Everything in Pro',
+      'More than one collaborator',
+      'Centralised photo repository',
+      'White-label branding',
+      'SSO & custom domain',
+      'Branded event page',
+      'Dedicated support & SLA',
+    ],
+    cta:   'Get Business',
+    badge: null,
   },
 ];
 
@@ -1486,6 +1507,7 @@ function UpgradeModal({ onClose }) {
   const navigate = useNavigate();
 
   function choosePlan(type) {
+    if (type === 'free') { onClose(); return; }
     onClose();
     navigate(`/checkout?type=${type}`);
   }
@@ -1496,7 +1518,7 @@ function UpgradeModal({ onClose }) {
       style={{ background: 'rgba(15,10,40,0.55)', backdropFilter: 'blur(6px)' }}
       onClick={e => e.target === e.currentTarget && onClose()}
     >
-      <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden">
+      <div className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="px-8 pt-8 pb-6 text-center relative"
              style={{ background: 'linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%)' }}>
@@ -1508,9 +1530,9 @@ function UpgradeModal({ onClose }) {
               <path strokeLinecap="round" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
-          <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-2">Upgrade your plan</p>
-          <h2 className="text-white text-2xl font-black tracking-tight">Unlock full-resolution photos</h2>
-          <p className="text-white/70 text-sm mt-2">No compression. Originals straight to your cloud storage.</p>
+          <p className="text-white/70 text-xs font-bold uppercase tracking-widest mb-2">Choose your plan</p>
+          <h2 className="text-white text-2xl font-black tracking-tight">Simple, transparent pricing</h2>
+          <p className="text-white/70 text-sm mt-2">Upgrade anytime. Cancel anytime. No hidden fees.</p>
         </div>
 
         {/* Plans */}
