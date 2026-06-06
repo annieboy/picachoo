@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useCamera } from '../hooks/useCamera';
 
-export default function CameraView({ guestName, eventName, onCapture, onGalleryFiles }) {
+export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const {
     videoRef, cameraState, capturedBlob, flashVisible,
     startCamera, snapPhoto, stopStream,
@@ -158,44 +158,37 @@ export default function CameraView({ guestName, eventName, onCapture, onGalleryF
 
       {/* ── Top bar (overlaid) ── */}
       <div
-        className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5"
+        className="absolute inset-x-0 top-0 z-20 flex items-center justify-center px-5"
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
       >
-        {/* Event name — freehand lettering style */}
-        <div className="flex flex-col leading-none">
-          {eventName && (
-            <span
-              className="text-white drop-shadow-lg truncate max-w-[55vw]"
-              style={{
-                fontFamily: "'Caveat', 'Segoe Script', 'Comic Sans MS', cursive",
-                fontSize: '1.35rem',
-                fontWeight: 700,
-                letterSpacing: '0.01em',
-                textShadow: '0 1px 8px rgba(0,0,0,0.5)',
-              }}
-            >
-              {eventName}
-            </span>
-          )}
-          <span className="text-white/50 text-xs font-medium">{guestName}</span>
-        </div>
+        {/* Event name — centred handwriting */}
+        {eventName && (
+          <span
+            className="text-white drop-shadow-lg truncate max-w-[70vw] text-center"
+            style={{
+              fontFamily: "'Caveat', 'Segoe Script', cursive",
+              fontSize: '1.4rem',
+              fontWeight: 700,
+              textShadow: '0 1px 8px rgba(0,0,0,0.55)',
+            }}
+          >
+            {eventName}
+          </span>
+        )}
 
-        <div className="flex items-center gap-2">
-          {/* Recording timer */}
+        {/* Flash / timer — absolute right so they don't offset the centred name */}
+        <div className="absolute right-4 flex items-center gap-2">
           {recording && (
             <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-semibold tabular-nums">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
               {fmtSecs(recordSecs)}
             </span>
           )}
-          {/* Flash / Torch */}
           {torchSupported && !recording && (
             <button
               onClick={toggleTorch}
               className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
-              style={torchOn
-                ? { background: '#FACC15', color: '#000' }
-                : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}
+              style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}
               aria-label={torchOn ? 'Flash off' : 'Flash on'}
             >
               <FlashIcon on={torchOn} />
