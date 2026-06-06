@@ -30,16 +30,24 @@ export function useCamera() {
     setZoom(1);
 
     try {
-      // facingMode: exact ensures the correct lens is selected and the front
-      // camera is mirrored. No deviceId lookup — label-based matching is
-      // fragile and omitting facingMode breaks front camera on iOS Safari.
-      const videoConstraints = {
-        facingMode: { exact: facing },
-        width:  { ideal: 2448 },
-        height: { ideal: 3264 },
-      };
+      const sizeConstraints = { width: { ideal: 2448 }, height: { ideal: 3264 } };
 
-      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
+      // Try exact facingMode first (guarantees correct lens + mirroring).
+      // Fall back to ideal if the browser throws OverconstrainedError — some
+      // browsers can't satisfy 'exact' even when the camera exists.
+      let stream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: facing }, ...sizeConstraints },
+          audio: false,
+        });
+      } catch (innerErr) {
+        if (innerErr.name !== 'OverconstrainedError' && innerErr.name !== 'ConstraintNotSatisfiedError') throw innerErr;
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: facing }, ...sizeConstraints },
+          audio: false,
+        });
+      }
       streamRef.current = stream;
 
       try {
