@@ -341,21 +341,21 @@ function PaymentForm({ plan, type }) {
         )}
       </button>
 
+      {/* Cancel transaction — prominent, below Pay button */}
+      <button
+        type="button"
+        onClick={() => window.history.length > 1 ? window.history.back() : navigate('/dashboard')}
+        className="w-full py-3.5 rounded-2xl font-semibold text-sm border transition-colors hover:bg-gray-50 active:bg-gray-100"
+        style={{ color: '#6B5CE7', borderColor: '#e0deff', background: '#fff' }}
+      >
+        Cancel transaction
+      </button>
+
       <p className="text-center text-gray-400 text-xs leading-relaxed">
         By completing this purchase you agree to our{' '}
         <Link to="/terms" className="underline hover:text-gray-600 transition-colors">Terms of Service</Link>
         {' '}and{' '}
         <Link to="/privacy" className="underline hover:text-gray-600 transition-colors">Privacy Policy</Link>.
-      </p>
-
-      <p className="text-center">
-        <button
-          type="button"
-          onClick={() => window.history.length > 1 ? window.history.back() : navigate('/dashboard')}
-          className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
-        >
-          Cancel
-        </button>
       </p>
     </form>
   );
