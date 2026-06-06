@@ -17,19 +17,6 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
                  autoPlay loop muted playsInline />
         ) : (
           /* Photo: 3:4 frame — naturally clipped by flex-1 container */
-          {/* Title in black bar above photo */}
-          {eventName && (
-            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center px-4"
-                 style={{ height: '52px' }}>
-              <span
-                className="text-white truncate max-w-[80vw] text-center"
-                style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
-              >
-                {eventName}
-              </span>
-            </div>
-          )}
-
           <div style={{
             position: 'absolute',
             top: '52px',
@@ -40,6 +27,19 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
           }}>
             <img src={objectUrl.current} alt="Preview"
                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+
+            {/* Title overlaid inside the photo box */}
+            {eventName && (
+              <div className="absolute inset-x-0 top-0 z-10 flex justify-center px-4 pt-3 pb-2"
+                   style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 100%)' }}>
+                <span
+                  className="text-white truncate max-w-[70vw] text-center"
+                  style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
+                >
+                  {eventName}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

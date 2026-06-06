@@ -57,19 +57,6 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Title in black bar above viewfinder */}
-      {eventName && (
-        <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-center px-4"
-             style={{ height: '52px' }}>
-          <span
-            className="text-white truncate max-w-[80vw] text-center"
-            style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
-          >
-            {eventName}
-          </span>
-        </div>
-      )}
-
       {/* Viewfinder */}
       {!needsFallback && (
         <>
@@ -85,16 +72,25 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
             <video ref={videoRef} autoPlay playsInline muted
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
 
-            {/* Torch overlaid inside the viewfinder */}
-            {torchSupported && (
-              <div className="absolute inset-x-0 top-0 z-10 flex justify-end px-3 pt-2">
+            {/* Title + torch overlaid inside the viewfinder */}
+            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center px-4 pt-3 pb-2"
+                 style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 100%)' }}>
+              {eventName && (
+                <span
+                  className="text-white truncate max-w-[70vw] text-center"
+                  style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
+                >
+                  {eventName}
+                </span>
+              )}
+              {torchSupported && (
                 <button onClick={toggleTorch}
-                  className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
+                  className="absolute right-3 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
                   style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}>
                   <FlashIcon on={torchOn} />
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {flashVisible && (
