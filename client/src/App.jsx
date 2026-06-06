@@ -10,6 +10,7 @@ import TermsPage     from './pages/TermsPage';
 import PrivacyPage   from './pages/PrivacyPage';
 import UpgradePage    from './pages/UpgradePage';
 import CheckoutPage   from './pages/CheckoutPage';
+import JoinPage       from './pages/JoinPage';
 import './dashboard.css';
 
 export default function App() {
@@ -24,6 +25,9 @@ export default function App() {
         <Route path="/terms"   element={<TermsPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/upgrade" element={<UpgradePage />} />
+
+        {/* Guest join by code */}
+        <Route path="/join" element={<JoinPage />} />
 
         {/* Host dashboard + checkout */}
         <Route path="/dashboard" element={<DashboardPage />} />

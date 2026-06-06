@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import MarketingLayout from '../components/MarketingLayout';
 
 export default function LandingPage() {
@@ -18,8 +19,83 @@ export default function LandingPage() {
 
 /* ── Hero ─────────────────────────────────────────────────────────────────── */
 function Hero() {
+  const navigate = useNavigate();
+  const [code, setCode] = useState('');
+  const [checking, setChecking] = useState(false);
+
+  async function handleJoin(e) {
+    e.preventDefault();
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) { navigate('/join'); return; }
+    setChecking(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE ?? ''}/api/events/by-code/${trimmed}`);
+      if (res.ok) {
+        navigate(`/e/${trimmed}`);
+      } else {
+        navigate(`/join?code=${trimmed}&error=1`);
+      }
+    } catch {
+      navigate(`/join?code=${trimmed}&error=1`);
+    }
+    setChecking(false);
+  }
+
   return (
     <section className="bezl-hero relative min-h-screen flex flex-col items-center justify-center pt-24 pb-32 px-6 overflow-hidden">
+
+      {/* ── Slido-style join bar ── */}
+      <div className="anim-fade-up relative z-10 mb-12 w-full max-w-xl">
+        <form onSubmit={handleJoin}
+              className="flex items-center rounded-2xl overflow-hidden shadow-2xl"
+              style={{ background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(12px)' }}>
+          {/* Label half */}
+          <div className="flex items-center gap-2.5 px-5 py-4 shrink-0">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4 opacity-70">
+              <path strokeLinecap="round" strokeLinejoin="round"
+                    d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
+            </svg>
+            <span className="text-white font-semibold text-sm whitespace-nowrap">Joining an event?</span>
+          </div>
+
+          {/* Divider */}
+          <div className="w-px self-stretch" style={{ background: 'rgba(255,255,255,0.2)' }} />
+
+          {/* Input half */}
+          <div className="flex items-center flex-1 px-4">
+            <span className="text-white/50 font-bold mr-1.5">#</span>
+            <input
+              type="text"
+              value={code}
+              onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              placeholder="Enter event code"
+              maxLength={12}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              className="flex-1 bg-transparent text-white placeholder-white/35 font-semibold text-sm focus:outline-none py-4"
+            />
+          </div>
+
+          {/* Arrow button */}
+          <button type="submit"
+                  className="m-2 w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                  style={{ background: 'rgba(255,255,255,0.25)' }}
+                  aria-label="Join event">
+            {checking ? (
+              <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
+                <path d="M12 3a9 9 0 019 9" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="white" className="w-5 h-5">
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+              </svg>
+            )}
+          </button>
+        </form>
+      </div>
+
       {/* Badge */}
       <div className="anim-fade-up relative z-10 mb-8">
         <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/30">
@@ -41,7 +117,7 @@ function Hero() {
       {/* CTAs */}
       <div className="anim-fade-up anim-delay-3 relative z-10 mt-10 flex flex-col sm:flex-row gap-3 items-center">
         <Link to="/dashboard" className="btn-white px-8 py-4 text-base">
-          Create a free event
+          Get started for free
         </Link>
         <a href="#how-it-works" className="btn-outline-white px-8 py-4 text-base flex items-center gap-2">
           See how it works
