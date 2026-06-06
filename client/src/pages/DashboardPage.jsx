@@ -1333,24 +1333,30 @@ function GoogleIcon() {
 
 function DriveIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
-      <path d="M6.28 3l5.72 9.9L6.28 21H2l5.72-9.9L2 3h4.28zM22 21h-4.28l-5.72-9.9L17.72 3H22l-5.72 9.9L22 21zm-8.14-9.9L8.14 3h7.72l5.72 9.9-5.72 9.9H8.14l5.72-9.9z"/>
+    <svg viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg" className="drive-icon" aria-hidden="true">
+      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+      <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0-1.2 4.5h27.5z" fill="#00ac47"/>
+      <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.5l5.85 11.5z" fill="#ea4335"/>
+      <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+      <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+      <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
     </svg>
   );
 }
 
 function DropboxIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
-      <path d="M6 2L0 6l6 4-6 4 6 4 6-4-6-4 6-4L6 2zm12 0l-6 4 6 4-6 4 6 4 6-4-6-4 6-4-6-4zM6 16.5L12 20l6-3.5-6-4-6 4z"/>
+    <svg viewBox="0 0 43 40" xmlns="http://www.w3.org/2000/svg" className="drive-icon" aria-hidden="true">
+      <path fill="#0061FF" d="M12.5 0L0 7.9l8.6 6.9L21 7.2 12.5 0zM0 21.7l12.5 7.9 8.5-7.2-8.6-6.9L0 21.7zM21 22.4l8.5 7.2L42 21.7l-12.4-6.2L21 22.4zM42 7.9L29.5 0 21 7.2l12.4 6.9L42 7.9zM21.1 23.9L12.5 31l-3.9-2.6v2.9l12.5 7.5 12.5-7.5v-2.9L29.5 31l-8.4-7.1z"/>
     </svg>
   );
 }
 
 function OneDriveIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className="drive-icon" aria-hidden="true">
-      <path d="M10.5 18H4a3 3 0 0 1-.4-5.97A5 5 0 0 1 13.4 8.1 3.5 3.5 0 0 1 20 11a3 3 0 0 1-.5 5.95L10.5 18z"/>
+    <svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" className="drive-icon" aria-hidden="true">
+      <path fill="#1976d2" d="M28.2 18.5A12 12 0 0 0 17 11C10.4 11 5 16.4 5 23a12 12 0 0 0 .6 3.7A8.5 8.5 0 0 0 8.5 43h28a7.5 7.5 0 0 0 1.7-14.8A12 12 0 0 0 28.2 18.5z"/>
+      <path fill="#42a5f5" d="M38.2 21.5A9 9 0 0 0 30 16a9 9 0 0 0-8.8 7.1A6 6 0 0 0 22 35h16a6 6 0 0 0 .2-12z" opacity=".85"/>
     </svg>
   );
 }
