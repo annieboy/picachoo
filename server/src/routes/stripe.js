@@ -79,18 +79,23 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
       items:            [{ price: priceId }],
       payment_behavior: 'default_incomplete',
       payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand:           ['latest_invoice.payment_intent'],
+      expand:           ['latest_invoice', 'latest_invoice.payment_intent'],
       metadata:         { hostId: host.id, type },
       ...(promoCodeId ? { promotion_code: promoCodeId } : {}),
     });
 
-    let clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
+    // Normalise latest_invoice — may be a string ID or an expanded object
+    let invoice = subscription.latest_invoice;
+    if (typeof invoice === 'string') {
+      invoice = await stripe.invoices.retrieve(invoice, {
+        expand: ['payment_intent'],
+      });
+    }
 
-    // The expand may return payment_intent as a bare string ID rather than an
-    // object (happens with some Stripe SDK / account configurations).
-    // Fall back to a direct retrieve so we always get the client_secret.
+    // Normalise payment_intent — may be a string ID or an expanded object
+    let clientSecret = invoice?.payment_intent?.client_secret;
     if (!clientSecret) {
-      const pi = subscription.latest_invoice?.payment_intent;
+      const pi = invoice?.payment_intent;
       const piId = typeof pi === 'string' ? pi : pi?.id;
       if (piId) {
         const paymentIntent = await stripe.paymentIntents.retrieve(piId);
@@ -99,8 +104,8 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
     }
 
     if (!clientSecret) {
-      console.error('[stripe] no clientSecret after fallback — sub:', subscription.status,
-        'invoice:', subscription.latest_invoice?.status);
+      console.error('[stripe] no clientSecret — sub:', subscription.status,
+        'invoice:', invoice?.status, 'invoice.id:', invoice?.id ?? 'null');
       return res.status(500).json({ error: 'Could not initialise subscription payment' });
     }
 
