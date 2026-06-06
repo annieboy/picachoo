@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import NameScreen        from '../components/NameScreen';
 import CameraView        from '../components/CameraView';
-import FilePicker        from '../components/FilePicker';
 import PreviewScreen     from '../components/PreviewScreen';
 import UploadScreen      from '../components/UploadScreen';
 import BatchUploadScreen from '../components/BatchUploadScreen';
@@ -12,7 +11,7 @@ import { getEvent }      from '../api';
 const NAME_KEY = 'picachoo_guest_name';
 
 const SCREENS = {
-  NAME: 'name', CAMERA: 'camera', GALLERY: 'gallery',
+  NAME: 'name', CAMERA: 'camera',
   PREVIEW: 'preview', BATCH: 'batch',
   UPLOAD: 'upload', SUCCESS: 'success', ERROR: 'error',
 };
@@ -20,20 +19,18 @@ const SCREENS = {
 export default function GuestPage() {
   const { eventCode } = useParams();
 
-  const [event, setEvent]           = useState(null);
-  const [eventError, setEventError] = useState('');
-  const [screen, setScreen]         = useState(() =>
+  const [event,        setEvent]        = useState(null);
+  const [eventError,   setEventError]   = useState('');
+  const [screen,       setScreen]       = useState(() =>
     sessionStorage.getItem(NAME_KEY) ? SCREENS.CAMERA : SCREENS.NAME,
   );
-  const [guestName, setGuestName]     = useState(() => sessionStorage.getItem(NAME_KEY) ?? '');
-  const [pendingBlob, setPendingBlob] = useState(null);
+  const [guestName,    setGuestName]    = useState(() => sessionStorage.getItem(NAME_KEY) ?? '');
+  const [pendingBlob,  setPendingBlob]  = useState(null);
   const [pendingFiles, setPendingFiles] = useState(null);
-  const [uploadError, setUploadError] = useState('');
+  const [uploadError,  setUploadError]  = useState('');
 
   useEffect(() => {
-    getEvent(eventCode)
-      .then(setEvent)
-      .catch(err => setEventError(err.message));
+    getEvent(eventCode).then(setEvent).catch(err => setEventError(err.message));
   }, [eventCode]);
 
   const handleNameConfirm = useCallback(name => {
@@ -42,25 +39,24 @@ export default function GuestPage() {
     setScreen(SCREENS.CAMERA);
   }, []);
 
-  // Camera captured a single blob → go to preview
+  // Camera snapped a photo → show preview (user can retake or upload)
   const handleCapture = useCallback(blob => {
-    if (!blob) { setScreen(SCREENS.GALLERY); return; }
     setPendingBlob(blob);
     setScreen(SCREENS.PREVIEW);
   }, []);
 
-  // Gallery picked a single file → preview; multiple → batch
-  const handleFileChosen = useCallback(file => {
-    setPendingBlob(file);
-    setScreen(SCREENS.PREVIEW);
+  // Gallery files selected → skip preview, upload immediately
+  const handleGalleryFiles = useCallback(files => {
+    if (files.length === 1) {
+      setPendingBlob(files[0]);
+      setScreen(SCREENS.UPLOAD);
+    } else {
+      setPendingFiles(files);
+      setScreen(SCREENS.BATCH);
+    }
   }, []);
 
-  const handleFilesChosen = useCallback(files => {
-    setPendingFiles(files);
-    setScreen(SCREENS.BATCH);
-  }, []);
-
-  // Preview → Upload (confirmed by user or auto-upload countdown)
+  // Preview confirmed → upload
   const handlePreviewUpload = useCallback(() => {
     setScreen(SCREENS.UPLOAD);
   }, []);
@@ -71,6 +67,7 @@ export default function GuestPage() {
     setScreen(SCREENS.CAMERA);
   }, []);
 
+  // After upload: return directly to camera (not a blocking success screen)
   const handleSuccess = useCallback(() => {
     setPendingBlob(null);
     setPendingFiles(null);
@@ -97,23 +94,11 @@ export default function GuestPage() {
       )}
 
       {screen === SCREENS.CAMERA && (
-        <CameraView guestName={guestName} onCapture={handleCapture} />
-      )}
-
-      {screen === SCREENS.GALLERY && (
-        <div className="flex flex-col items-center justify-center flex-1 px-6">
-          <FilePicker
-            reason="gallery"
-            onFile={handleFileChosen}
-            onFiles={handleFilesChosen}
-          />
-          <button
-            onClick={() => setScreen(SCREENS.CAMERA)}
-            className="mt-6 text-zinc-500 text-sm underline underline-offset-2"
-          >
-            ← Back to camera
-          </button>
-        </div>
+        <CameraView
+          guestName={guestName}
+          onCapture={handleCapture}
+          onGalleryFiles={handleGalleryFiles}
+        />
       )}
 
       {screen === SCREENS.PREVIEW && pendingBlob && (
@@ -169,7 +154,8 @@ export default function GuestPage() {
             <p className="text-zinc-400 text-sm leading-snug">{uploadError}</p>
           </div>
           <button onClick={handleRetake}
-            className="w-full max-w-xs rounded-2xl py-4 text-lg font-semibold bg-violet-500 text-white active:scale-95 transition-transform">
+            className="w-full max-w-xs rounded-2xl py-4 text-lg font-semibold text-white active:scale-95 transition-transform"
+            style={{ background: 'linear-gradient(135deg, #5B52E8, #29BFBF)' }}>
             Try again
           </button>
         </div>

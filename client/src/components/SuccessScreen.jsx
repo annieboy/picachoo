@@ -13,7 +13,11 @@ const BG = { background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BF
 
 export default function SuccessScreen({ eventName, onSnapAnother }) {
   const headingRef = useRef(null);
-  useEffect(() => headingRef.current?.focus(), []);
+  useEffect(() => {
+    headingRef.current?.focus();
+    const t = setTimeout(onSnapAnother, 3000);
+    return () => clearTimeout(t);
+  }, [onSnapAnother]);
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-full px-6 gap-8 overflow-hidden" style={BG}>
@@ -56,13 +60,16 @@ export default function SuccessScreen({ eventName, onSnapAnother }) {
       </div>
 
       {/* CTA */}
-      <button
-        onClick={onSnapAnother}
-        className="w-full max-w-xs rounded-2xl py-4 text-lg font-bold active:scale-95 transition-transform duration-100 focus:outline-none animate-pop-in relative z-10"
-        style={{ background: '#fff', color: '#6B5CE7', boxShadow: '0 6px 24px rgba(0,0,0,0.2)', animationDelay: '0.2s' }}
-      >
-        Snap another
-      </button>
+      <div className="flex flex-col items-center gap-3 animate-pop-in relative z-10 w-full max-w-xs" style={{ animationDelay: '0.2s' }}>
+        <button
+          onClick={onSnapAnother}
+          className="w-full rounded-2xl py-4 text-lg font-bold active:scale-95 transition-transform duration-100 focus:outline-none"
+          style={{ background: '#fff', color: '#6B5CE7', boxShadow: '0 6px 24px rgba(0,0,0,0.2)' }}
+        >
+          Take another photo
+        </button>
+        <p className="text-white/50 text-xs">Returning to camera in 3 seconds…</p>
+      </div>
     </div>
   );
 }

@@ -1,60 +1,40 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-/**
- * Manages a getUserMedia camera stream and exposes capture logic.
- *
- * Capture strategy (best → fallback):
- *   1. ImageCapture.takePhoto() — W3C API that triggers a full-resolution
- *      hardware snapshot from the camera sensor, independent of stream res.
- *      Supported on Chrome/Android. NOT on iOS Safari.
- *   2. Canvas drawImage() — screenshots the current video frame at whatever
- *      resolution the browser negotiated (up to 4K if hardware permits).
- *
- * Returns:
- *   videoRef        — attach to <video> element
- *   cameraState     — 'idle' | 'starting' | 'active' | 'capturing' | 'denied' | 'unavailable'
- *   capturedBlob    — Blob after snap, or null
- *   flashVisible    — true for ~400 ms after shutter fires
- *   captureMethod   — 'imagecapture' | 'canvas' — set after first snap
- *   snapPhoto()     — async; fires hardware snapshot or canvas fallback
- *   retake()        — clears capturedBlob to return to live preview
- *   stopStream()    — releases camera (call on unmount / navigation away)
- */
 export function useCamera() {
-  const videoRef        = useRef(null);
-  const streamRef       = useRef(null);
-  const [cameraState,   setCameraState]   = useState('idle');
-  const [capturedBlob,  setCapturedBlob]  = useState(null);
-  const [flashVisible,  setFlashVisible]  = useState(false);
-  const [captureMethod, setCaptureMethod] = useState(null);
+  const videoRef         = useRef(null);
+  const streamRef        = useRef(null);
+  const [cameraState,    setCameraState]    = useState('idle');
+  const [capturedBlob,   setCapturedBlob]   = useState(null);
+  const [flashVisible,   setFlashVisible]   = useState(false);
+  const [captureMethod,  setCaptureMethod]  = useState(null);
+  const [facingMode,     setFacingMode]     = useState('environment');
+  const [torchOn,        setTorchOn]        = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
   }, []);
 
-  useEffect(() => {
-    return stopStream;
-  }, [stopStream]);
+  useEffect(() => () => stopStream(), [stopStream]);
 
-  const startCamera = useCallback(async () => {
+  const startCameraFacing = useCallback(async (facing) => {
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraState('unavailable');
       return;
     }
     setCameraState('starting');
+    setTorchOn(false);
     try {
-      // Request 4K; the browser/device negotiates down to its highest
-      // supported resolution. Even on phones this typically yields 1080p+.
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: { ideal: 'environment' },
-          width:      { ideal: 3840 },
-          height:     { ideal: 2160 },
-        },
+        video: { facingMode: { ideal: facing }, width: { ideal: 3840 }, height: { ideal: 2160 } },
         audio: false,
       });
       streamRef.current = stream;
+      try {
+        const caps = stream.getVideoTracks()[0]?.getCapabilities?.();
+        setTorchSupported(!!(caps?.torch));
+      } catch { setTorchSupported(false); }
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
@@ -63,60 +43,56 @@ export function useCamera() {
     } catch (err) {
       stopStream();
       setCameraState(
-        err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError'
-          ? 'denied'
-          : 'unavailable',
+        err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' ? 'denied' : 'unavailable',
       );
     }
   }, [stopStream]);
+
+  const startCamera = useCallback(() => startCameraFacing(facingMode), [startCameraFacing, facingMode]);
+
+  const flipCamera = useCallback(() => {
+    const next = facingMode === 'environment' ? 'user' : 'environment';
+    setFacingMode(next);
+    stopStream();
+    startCameraFacing(next);
+  }, [facingMode, stopStream, startCameraFacing]);
+
+  const toggleTorch = useCallback(async () => {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+    const next = !torchOn;
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next }] });
+      setTorchOn(next);
+    } catch { /* not supported */ }
+  }, [torchOn]);
 
   const snapPhoto = useCallback(async () => {
     const video  = videoRef.current;
     const stream = streamRef.current;
     if (!video || !stream || cameraState !== 'active') return;
 
-    // Flash fires immediately — don't await the capture first
     setFlashVisible(true);
-    setTimeout(() => setFlashVisible(false), 400);
-
-    // Disable shutter button during async capture
+    setTimeout(() => setFlashVisible(false), 350);
     setCameraState('capturing');
 
     const videoTrack = stream.getVideoTracks()[0];
     let blob = null;
 
-    // ── Strategy 1: ImageCapture (Chrome / Android) ───────────────────────
-    // takePhoto() asks the camera driver for a full-resolution JPEG directly
-    // from the sensor, entirely bypassing the compressed video pipeline.
     if (videoTrack && typeof ImageCapture !== 'undefined') {
       try {
-        const imageCapture = new ImageCapture(videoTrack);
-
-        // Query the sensor's maximum still-photo resolution
-        let photoSettings = {};
+        const ic = new ImageCapture(videoTrack);
+        let settings = {};
         try {
-          const caps = await imageCapture.getPhotoCapabilities();
-          const maxW  = caps.imageWidth?.max;
-          const maxH  = caps.imageHeight?.max;
-          if (maxW && maxH) {
-            photoSettings = { imageWidth: maxW, imageHeight: maxH };
-          }
-        } catch {
-          // getPhotoCapabilities() not supported on this device — takePhoto()
-          // with no settings still uses the hardware default (often full-res)
-        }
-
-        blob = await imageCapture.takePhoto(photoSettings);
+          const caps = await ic.getPhotoCapabilities();
+          if (caps.imageWidth?.max && caps.imageHeight?.max)
+            settings = { imageWidth: caps.imageWidth.max, imageHeight: caps.imageHeight.max };
+        } catch { /* skip */ }
+        blob = await ic.takePhoto(settings);
         setCaptureMethod('imagecapture');
-      } catch {
-        // takePhoto() can fail on some Android devices despite the API
-        // existing; fall through to canvas
-        blob = null;
-      }
+      } catch { blob = null; }
     }
 
-    // ── Strategy 2: Canvas screenshot (iOS Safari, Firefox, fallback) ─────
-    // drawImage() at the negotiated video stream resolution (up to 4K).
     if (!blob) {
       blob = await new Promise(resolve => {
         const canvas = document.createElement('canvas');
@@ -135,18 +111,12 @@ export function useCamera() {
   const retake = useCallback(() => {
     setCapturedBlob(null);
     setCaptureMethod(null);
-    startCamera();
-  }, [startCamera]);
+    startCameraFacing(facingMode);
+  }, [startCameraFacing, facingMode]);
 
   return {
-    videoRef,
-    cameraState,
-    capturedBlob,
-    flashVisible,
-    captureMethod,
-    startCamera,
-    snapPhoto,
-    retake,
-    stopStream,
+    videoRef, cameraState, capturedBlob, flashVisible, captureMethod,
+    facingMode, torchOn, torchSupported,
+    startCamera, snapPhoto, retake, stopStream, flipCamera, toggleTorch,
   };
 }
