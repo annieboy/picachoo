@@ -105,14 +105,14 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       {/* Video */}
       {!needsFallback && (
         <>
-          {/* Photo: 3:4 container centred — iOS ignores aspect-ratio on <video> so we clip a div */}
+          {/* Photo: 3:4 frame pinned to top, controls sit in black below */}
           {mode === 'photo' ? (
             <div style={{
               position: 'absolute',
-              width: '100%',
+              top: 0,
+              left: 0,
+              right: 0,
               aspectRatio: '3/4',
-              top: '50%',
-              transform: 'translateY(-50%)',
               overflow: 'hidden',
             }}>
               <video ref={videoRef} autoPlay playsInline muted
