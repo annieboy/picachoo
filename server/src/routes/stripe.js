@@ -63,9 +63,7 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
       return res.json({ clientSecret: pi.client_secret });
     }
 
-    // ── Annual subscriptions — use Stripe hosted Checkout Session ────────────
-    // This is the most reliable approach: Stripe handles the payment UI,
-    // 3DS, SCA, etc. We never touch the PaymentIntent directly.
+    // ── Annual subscriptions (embedded Elements) ─────────────────────────────
     const priceId = type === 'pro_annual'
       ? process.env.STRIPE_PRICE_PRO_ANNUAL
       : process.env.STRIPE_PRICE_BUSINESS_ANNUAL;
@@ -75,21 +73,46 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
     }
 
     const { promoCodeId } = req.body ?? {};
-    const origin = process.env.CLIENT_ORIGIN ?? 'https://picachoo.vercel.app';
 
-    const session = await stripe.checkout.sessions.create({
-      customer:             customerId,
-      mode:                 'subscription',
-      line_items:           [{ price: priceId, quantity: 1 }],
-      success_url:          `${origin}/dashboard?checkout=success&type=subscription&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:           `${origin}/dashboard`,
-      subscription_data:    { metadata: { hostId: host.id, type } },
-      allow_promotion_codes: true,
-      metadata:             { hostId: host.id, type },
-      ...(promoCodeId ? { discounts: [{ promotion_code: promoCodeId }] } : {}),
+    // Step 1: create the subscription
+    const subscription = await stripe.subscriptions.create({
+      customer:         customerId,
+      items:            [{ price: priceId }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      metadata:         { hostId: host.id, type },
+      ...(promoCodeId ? { promotion_code: promoCodeId } : {}),
     });
 
-    return res.json({ checkoutUrl: session.url, sessionId: session.id });
+    // Step 2: get the invoice ID — may be a string or object
+    const invoiceRef = subscription.latest_invoice;
+    const invoiceId  = typeof invoiceRef === 'string' ? invoiceRef : invoiceRef?.id;
+    if (!invoiceId) {
+      console.error('[stripe] subscription has no latest_invoice — sub.status:', subscription.status);
+      return res.status(500).json({ error: 'Could not initialise subscription payment' });
+    }
+
+    // Step 3: retrieve the invoice explicitly (no expand needed)
+    const invoice = await stripe.invoices.retrieve(invoiceId);
+
+    // Step 4: get the payment intent ID
+    const piRef = invoice.payment_intent;
+    const piId  = typeof piRef === 'string' ? piRef : piRef?.id;
+    if (!piId) {
+      console.error('[stripe] invoice has no payment_intent — invoice.status:', invoice.status);
+      return res.status(500).json({ error: 'Could not initialise subscription payment' });
+    }
+
+    // Step 5: retrieve the payment intent to get the client_secret
+    const paymentIntent = await stripe.paymentIntents.retrieve(piId);
+    const clientSecret  = paymentIntent.client_secret;
+
+    if (!clientSecret) {
+      console.error('[stripe] paymentIntent has no client_secret — pi.status:', paymentIntent.status);
+      return res.status(500).json({ error: 'Could not initialise subscription payment' });
+    }
+
+    return res.json({ clientSecret, subscriptionId: subscription.id });
   } catch (err) {
     next(err);
   }

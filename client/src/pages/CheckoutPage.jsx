@@ -85,11 +85,6 @@ export default function CheckoutPage() {
 
       try {
         const result = await createCheckoutIntent({ type, eventId: eventId ?? selectedEvent });
-        // Subscriptions now use hosted Checkout — redirect immediately
-        if (result.checkoutUrl) {
-          window.location.href = result.checkoutUrl;
-          return;
-        }
         setClientSecret(result.clientSecret);
         if (result.subscriptionId) setSubscriptionId(result.subscriptionId);
       } catch (err) {
@@ -107,7 +102,6 @@ export default function CheckoutPage() {
     setLoading(true);
     try {
       const result = await createCheckoutIntent({ type, eventId: evId });
-      if (result.checkoutUrl) { window.location.href = result.checkoutUrl; return; }
       setClientSecret(result.clientSecret);
       if (result.subscriptionId) setSubscriptionId(result.subscriptionId);
     } catch (err) {
