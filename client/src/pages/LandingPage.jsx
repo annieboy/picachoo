@@ -98,7 +98,9 @@ function Hero() {
 
       {/* CTA */}
       <div className="anim-fade-up anim-delay-2 relative z-10 mt-8">
-        <Link to="/dashboard" className="btn-white px-8 py-4 text-base">
+        <Link to="/dashboard"
+              className="px-8 py-4 text-base rounded-full font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-lg"
+              style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 20px rgba(34,197,94,0.4)' }}>
           Get started for free
         </Link>
       </div>
