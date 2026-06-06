@@ -161,7 +161,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       {/* Top bar */}
       <div
         className="absolute inset-x-0 top-0 z-20 flex items-center justify-center px-5"
-        style={{ paddingTop: 'max(2rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
+        style={{ paddingTop: 'max(3.5rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
       >
         {eventName && (
           <span
