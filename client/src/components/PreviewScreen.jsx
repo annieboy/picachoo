@@ -19,7 +19,7 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
           /* Photo: 3:4 frame matching camera viewfinder */
           <div style={{
             position: 'absolute',
-            top: '8px',
+            top: '52px',
             left: 0,
             right: 0,
             height: 'calc(100vw * 4 / 3)',

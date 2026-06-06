@@ -108,7 +108,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           {/* Single video element always mounted — wrapper changes shape per mode */}
           <div style={mode === 'photo' ? {
             position: 'absolute',
-            top: '8px',
+            top: '52px',
             left: 0,
             right: 0,
             height: 'calc(100vw * 4 / 3)',
