@@ -1,20 +1,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useCamera } from '../hooks/useCamera';
 
-const RATIOS = [
-  { label: '3:4', value: 3 / 4 },
-  { label: '1:1', value: 1 },
-  { label: '4:5', value: 4 / 5 },
-  { label: 'Full', value: null },
-];
-const DEFAULT_RATIO = RATIOS[0]; // 3:4
-
 export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const {
     videoRef, cameraState, capturedBlob, flashVisible,
     startCamera, snapPhoto, stopStream,
-    flipCamera, facingMode, torchOn, torchSupported, toggleTorch,
-    zoom, zoomRange, applyZoom, switchMode, switchRatio,
+    flipCamera, torchOn, torchSupported, toggleTorch,
+    zoom, zoomRange, applyZoom,
   } = useCamera();
 
   const fileInputRef = useRef(null);
@@ -23,12 +15,11 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const pinchRef     = useRef({ active: false, startDist: 0, startZoom: 1 });
 
   const [mode,       setMode]       = useState('photo');
-  const [ratio,      setRatio]      = useState(DEFAULT_RATIO);
   const [recording,  setRecording]  = useState(false);
   const [recordSecs, setRecordSecs] = useState(0);
   const timerRef = useRef(null);
 
-  useEffect(() => { startCamera('photo', DEFAULT_RATIO.value); return stopStream; }, [startCamera, stopStream]);
+  useEffect(() => { startCamera(); return stopStream; }, [startCamera, stopStream]);
   useEffect(() => { if (capturedBlob) onCapture(capturedBlob); }, [capturedBlob, onCapture]);
 
   const hasZoom = zoomRange.max > zoomRange.min;
@@ -88,12 +79,6 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   function handleModeChange(m) {
     if (recording) stopRecording();
     setMode(m);
-    switchMode(m);
-  }
-
-  function handleRatioChange(r) {
-    setRatio(r);
-    switchRatio(r.value);
   }
 
   function handleShutter() {
@@ -108,9 +93,6 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const needsFallback = cameraState === 'denied' || cameraState === 'unavailable';
   const isActive      = cameraState === 'active';
   const isStarting    = cameraState === 'starting';
-  const isPhotoMode   = mode === 'photo';
-  // Keep guide mounted during 'starting' too so it doesn't flicker on flip
-  const showGuide     = isPhotoMode && (isActive || isStarting) && ratio.value !== null;
 
   return (
     <div
@@ -163,59 +145,41 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
         </div>
       )}
 
-      {/* Crop guide — force remount on every camera flip so dims are fresh */}
-      {showGuide && (
-        <CropGuide key={`${facingMode}-${ratio.value}`} ratio={ratio.value} eventName={eventName} />
-      )}
-
-      {/* Top bar — only when no crop guide (Full or video mode) */}
-      {!showGuide && !needsFallback && (
-        <div
-          className="absolute inset-x-0 top-0 z-20 flex items-center justify-center px-5"
-          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
-        >
-          {eventName && (
-            <span
-              className="text-white drop-shadow-lg truncate max-w-[70vw] text-center"
-              style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
-            >
-              {eventName}
+      {/* Top bar */}
+      <div
+        className="absolute inset-x-0 top-0 z-20 flex items-center justify-center px-5"
+        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
+      >
+        {eventName && (
+          <span
+            className="text-white drop-shadow-lg truncate max-w-[70vw] text-center"
+            style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
+          >
+            {eventName}
+          </span>
+        )}
+        <div className="absolute right-4 flex items-center gap-2">
+          {recording && (
+            <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-semibold tabular-nums">
+              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              {fmtSecs(recordSecs)}
             </span>
           )}
-          <div className="absolute right-4 flex items-center gap-2">
-            {recording && (
-              <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-semibold tabular-nums">
-                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                {fmtSecs(recordSecs)}
-              </span>
-            )}
-            {torchSupported && !recording && (
-              <button onClick={toggleTorch}
-                className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
-                style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}>
-                <FlashIcon on={torchOn} />
-              </button>
-            )}
-          </div>
+          {torchSupported && !recording && (
+            <button onClick={toggleTorch}
+              className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
+              style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}>
+              <FlashIcon on={torchOn} />
+            </button>
+          )}
         </div>
-      )}
-
-      {/* Torch button when crop guide is active (floats over top mask) */}
-      {showGuide && torchSupported && !recording && (
-        <div className="absolute right-4 z-30" style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}>
-          <button onClick={toggleTorch}
-            className="w-9 h-9 rounded-full flex items-center justify-center transition-all active:scale-90"
-            style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(255,255,255,0.15)', color: '#fff' }}>
-            <FlashIcon on={torchOn} />
-          </button>
-        </div>
-      )}
+      </div>
 
       {/* Bottom controls */}
       <div
         className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-3"
         style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))', paddingTop: '1rem',
-                 background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)' }}
+                 background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)' }}
       >
         {hasZoom && isActive && !recording && (
           <div className="flex items-center gap-2">
@@ -231,21 +195,6 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
                 </button>
               );
             })}
-          </div>
-        )}
-
-        {/* Ratio toggle — photo mode only */}
-        {isPhotoMode && !needsFallback && !recording && (
-          <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm p-1 rounded-full">
-            {RATIOS.map(r => (
-              <button key={r.label} onClick={() => handleRatioChange(r)}
-                className="px-4 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
-                style={ratio.label === r.label
-                  ? { background: 'rgba(255,255,255,0.22)', color: '#fff' }
-                  : { color: 'rgba(255,255,255,0.45)' }}>
-                {r.label}
-              </button>
-            ))}
           </div>
         )}
 
@@ -302,90 +251,6 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       </div>
 
       <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="sr-only" onChange={handleGalleryChange} />
-    </div>
-  );
-}
-
-// ── Crop guide — JS-calculated pixel masks ────────────────────────────────────
-
-function CropGuide({ ratio, eventName }) {
-  const [dims, setDims] = useState({ w: window.innerWidth, h: window.innerHeight });
-
-  useEffect(() => {
-    const update = () => setDims({ w: window.innerWidth, h: window.innerHeight });
-    // iOS fires orientationchange before dimensions update; delay gives correct values
-    const onOrient = () => setTimeout(update, 120);
-    update(); // measure immediately on mount
-    window.addEventListener('resize', update);
-    window.addEventListener('orientationchange', onOrient);
-    return () => {
-      window.removeEventListener('resize', update);
-      window.removeEventListener('orientationchange', onOrient);
-    };
-  }, []);
-
-  // Calculate where the crop frame sits on screen.
-  // The video fills the screen with object-cover.
-  // The frame is centred, constrained to fit within the screen.
-  const { w, h } = dims;
-  let frameW, frameH;
-  if (ratio <= 1) {
-    // Portrait / square: fill width, height may be less than screen
-    frameW = w;
-    frameH = w / ratio;
-    if (frameH > h) { frameH = h; frameW = h * ratio; }
-  } else {
-    // Landscape: fill height, width may be less than screen
-    frameH = h;
-    frameW = h * ratio;
-    if (frameW > w) { frameW = w; frameH = w / ratio; }
-  }
-
-  const topMask  = Math.max(0, (h - frameH) / 2);
-  const sideMask = Math.max(0, (w - frameW) / 2);
-
-  return (
-    <div className="absolute inset-0 z-10 pointer-events-none">
-      {/* Top mask — pitch black, holds event name */}
-      <div
-        className="absolute top-0 inset-x-0 bg-black flex items-end justify-center"
-        style={{ height: topMask, paddingBottom: 10 }}
-      >
-        {eventName && topMask > 30 && (
-          <span
-            className="text-white truncate max-w-[70vw] text-center"
-            style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.35rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.8)' }}
-          >
-            {eventName}
-          </span>
-        )}
-      </div>
-
-      {/* Bottom mask */}
-      <div className="absolute bottom-0 inset-x-0 bg-black" style={{ height: topMask }} />
-
-      {/* Left mask (landscape ratios) */}
-      {sideMask > 0 && (
-        <div className="absolute inset-y-0 left-0 bg-black" style={{ width: sideMask }} />
-      )}
-      {/* Right mask */}
-      {sideMask > 0 && (
-        <div className="absolute inset-y-0 right-0 bg-black" style={{ width: sideMask }} />
-      )}
-
-      {/* Corner brackets on the live frame */}
-      {[
-        { top: topMask,            left: sideMask,          corners: 'border-t-2 border-l-2' },
-        { top: topMask,            right: sideMask,         corners: 'border-t-2 border-r-2' },
-        { bottom: topMask,         left: sideMask,          corners: 'border-b-2 border-l-2' },
-        { bottom: topMask,         right: sideMask,         corners: 'border-b-2 border-r-2' },
-      ].map(({ corners, ...pos }, i) => (
-        <div
-          key={i}
-          className={`absolute w-7 h-7 border-white/50 ${corners}`}
-          style={pos}
-        />
-      ))}
     </div>
   );
 }
