@@ -2,8 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import imageCompression from 'browser-image-compression';
 
 const API_BASE      = import.meta.env.VITE_API_BASE ?? '';
-const MAX_SIZE_MB   = 2.5;
+const MAX_SIZE_MB   = 2.0;  // must match Free plan limit
 const MAX_DIMENSION = 2048;
+
+async function withRetry(fn, maxAttempts = 3) {
+  let lastErr;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try { return await fn(); } catch (err) {
+      lastErr = err;
+      const status = err.status ?? err?.response?.status;
+      if (status && status >= 400 && status < 500) throw err;
+      if (attempt < maxAttempts - 1) await new Promise(r => setTimeout(r, 1000 * 2 ** attempt));
+    }
+  }
+  throw lastErr;
+}
 
 async function compress(blob) {
   const file = blob instanceof File
@@ -22,15 +35,16 @@ async function uploadOne(file, guestName, eventCode, hostTier) {
   // Get a direct upload session
   let session = null;
   try {
-    const res = await fetch(`${API_BASE}/api/events/${eventCode}/upload-session`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ guestName, mimeType: file.type || 'image/jpeg' }),
-    });
-    if (res.ok) {
+    session = await withRetry(async () => {
+      const res = await fetch(`${API_BASE}/api/events/${eventCode}/upload-session`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ guestName, mimeType: file.type || 'image/jpeg' }),
+      });
+      if (!res.ok) { const e = new Error('session'); e.status = res.status; throw e; }
       const data = await res.json().catch(() => ({}));
-      if (data?.direct && data.uploadUrl) session = data;
-    }
+      return (data?.direct && data.uploadUrl) ? data : null;
+    });
   } catch { /* fall through to server-side */ }
 
   if (session) {
@@ -42,7 +56,7 @@ async function uploadOne(file, guestName, eventCode, hostTier) {
       headers['Content-Range'] = `bytes 0-${payload.size - 1}/${payload.size}`;
     }
 
-    const res = await fetch(session.uploadUrl, { method: 'PUT', headers, body: payload });
+    const res = await withRetry(() => fetch(session.uploadUrl, { method: 'PUT', headers, body: payload }));
     if (!res.ok) throw new Error(`Upload failed (${res.status})`);
     const data = await res.json().catch(() => ({}));
 
@@ -61,7 +75,9 @@ async function uploadOne(file, guestName, eventCode, hostTier) {
     const form    = new FormData();
     form.append('photo', payload, payload.name);
     form.append('guestName', guestName);
-    const res = await fetch(`${API_BASE}/api/events/${eventCode}/upload`, { method: 'POST', body: form });
+    const res = await withRetry(() =>
+      fetch(`${API_BASE}/api/events/${eventCode}/upload`, { method: 'POST', body: form })
+    );
     const body = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(body.error ?? `Upload failed (${res.status})`);
   }

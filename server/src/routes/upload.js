@@ -239,10 +239,10 @@ router.post(
 );
 
 // ─── POST /api/events/:eventCode/upload-session ───────────────────────────────
-// Pro tier only. Creates a direct-to-cloud upload session so the guest's
-// browser can bypass Vercel entirely — no 4.5 MB limit.
-// Returns { direct:true, uploadUrl, filename, provider, eventId }
-// or      { direct:false } when the host is on the free tier or Dropbox.
+// All tiers. Creates a direct-to-cloud upload session so the guest's browser
+// uploads straight to Drive/OneDrive — Vercel never touches the bytes.
+// Returns { direct:true, uploadUrl, filename, provider, eventId, hostTier }
+// or      { direct:false, hostTier } when provider is Dropbox (no presigned URL).
 router.post(
   '/events/:eventCode/upload-session',
   uploadRateLimit,

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import imageCompression from 'browser-image-compression';
 
 const API_BASE      = import.meta.env.VITE_API_BASE ?? '';
-const MAX_SIZE_MB   = 2.5;
+const MAX_SIZE_MB   = 2.0;  // Free plan limit
 const MAX_DIMENSION = 2048;
 
 async function compress(blob, onProgress) {
@@ -23,6 +23,25 @@ function formatBytes(b) {
   if (b >= 1e9) return `${(b / 1e9).toFixed(1)} GB`;
   if (b >= 1e6) return `${(b / 1e6).toFixed(1)} MB`;
   return `${Math.round(b / 1e3)} KB`;
+}
+
+// Retry a thunk up to maxAttempts with exponential backoff (1s, 2s, 4s).
+// Does NOT retry on 4xx — those are definitive client errors.
+async function withRetry(fn, maxAttempts = 3) {
+  let lastErr;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      const status = err.status ?? err.xhr?.status;
+      if (status && status >= 400 && status < 500) throw err; // don't retry 4xx
+      if (attempt < maxAttempts - 1) {
+        await new Promise(r => setTimeout(r, 1000 * 2 ** attempt));
+      }
+    }
+  }
+  throw lastErr;
 }
 
 // XHR PUT with real upload progress; returns parsed JSON response body
@@ -73,16 +92,17 @@ export default function UploadScreen({
 
       let session = null;
       try {
-        const res = await fetch(`${API_BASE}/api/events/${eventCode}/upload-session`, {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ guestName, mimeType: blob.type || 'image/jpeg' }),
-        });
-        if (res.ok) {
+        session = await withRetry(async () => {
+          const res = await fetch(`${API_BASE}/api/events/${eventCode}/upload-session`, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ guestName, mimeType: blob.type || 'image/jpeg' }),
+          });
+          if (!res.ok) { const e = new Error('session'); e.status = res.status; throw e; }
           const data = await res.json().catch(() => ({}));
-          if (data?.direct && data.uploadUrl) session = data;
-        }
-      } catch { /* network hiccup — fall through to server-side path */ }
+          return (data?.direct && data.uploadUrl) ? data : null;
+        });
+      } catch { /* fall through to server-side path */ }
 
       if (abortRef.current) return;
 
@@ -232,7 +252,9 @@ export default function UploadScreen({
         const form = new FormData();
         form.append('photo', file, file.name);
         form.append('guestName', guestName);
-        res = await fetch(`${API_BASE}/api/events/${eventCode}/upload`, { method: 'POST', body: form });
+        res = await withRetry(() =>
+          fetch(`${API_BASE}/api/events/${eventCode}/upload`, { method: 'POST', body: form })
+        );
       } catch {
         // Network error after data was already sent — treat as success.
         // iOS Safari and Vercel's 30s timeout can drop the connection even
