@@ -110,7 +110,7 @@ function Hero() {
 
       {/* Headline */}
       <h1 className="anim-fade-up text-center text-3xl sm:text-4xl md:text-6xl font-black tracking-tight text-white leading-[1.1] max-w-3xl px-2">
-        The easiest way to share photos and videos to your cloud.
+        The easiest way to collect photos from everyone into your cloud storage.
       </h1>
 
       {/* Numbered steps — wrap gracefully on mobile */}
