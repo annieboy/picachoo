@@ -84,15 +84,26 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
       ...(promoCodeId ? { promotion_code: promoCodeId } : {}),
     });
 
-    const clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
+    let clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
+
+    // The expand may return payment_intent as a bare string ID rather than an
+    // object (happens with some Stripe SDK / account configurations).
+    // Fall back to a direct retrieve so we always get the client_secret.
     if (!clientSecret) {
-      const diagStatus = subscription.latest_invoice?.status;
-      const diagPiStatus = subscription.latest_invoice?.payment_intent?.status;
-      console.error('[stripe] subscription missing clientSecret — invoice.status:', diagStatus, 'pi.status:', diagPiStatus, 'sub.status:', subscription.status);
-      return res.status(500).json({
-        error: `Could not initialise subscription payment (invoice: ${diagStatus ?? 'null'}, sub: ${subscription.status}). Check that STRIPE_PRICE_PRO_ANNUAL / STRIPE_PRICE_BUSINESS_ANNUAL are set and match your Stripe mode (test vs live).`,
-      });
+      const pi = subscription.latest_invoice?.payment_intent;
+      const piId = typeof pi === 'string' ? pi : pi?.id;
+      if (piId) {
+        const paymentIntent = await stripe.paymentIntents.retrieve(piId);
+        clientSecret = paymentIntent.client_secret;
+      }
     }
+
+    if (!clientSecret) {
+      console.error('[stripe] no clientSecret after fallback — sub:', subscription.status,
+        'invoice:', subscription.latest_invoice?.status);
+      return res.status(500).json({ error: 'Could not initialise subscription payment' });
+    }
+
     return res.json({ clientSecret, subscriptionId: subscription.id });
   } catch (err) {
     next(err);
