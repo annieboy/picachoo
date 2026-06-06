@@ -7,6 +7,7 @@ import {
   disconnectStorage, getStorageInfo,
   updateEvent, deleteEvent,
   updateHostProfile, deleteAccount, cancelSubscription,
+  getCohosts, inviteCohost, removeCohost,
 } from '../api';
 import QRCard from '../components/QRCard';
 import { QRCodeSVG } from 'qrcode.react';
@@ -1264,8 +1265,17 @@ function SharePanel({ event, onClose }) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [coHostEmail, setCoHostEmail] = useState('');
   const [shareableLink, setShareableLink] = useState(false);
+  const [cohosts, setCohosts] = useState([]);
+  const [inviteError, setInviteError] = useState('');
+  const [inviting, setInviting] = useState(false);
   const [inviteSent, setInviteSent] = useState(false);
   const guestUrl = `${window.location.origin}/e/${event.join_code}`;
+
+  useEffect(() => {
+    if (tab === 'collaborate') {
+      getCohosts(event.id).then(d => setCohosts(d.cohosts ?? [])).catch(() => {});
+    }
+  }, [tab, event.id]);
 
   function copyLink() {
     navigator.clipboard.writeText(guestUrl).catch(()=>{});
@@ -1273,12 +1283,29 @@ function SharePanel({ event, onClose }) {
     setTimeout(()=>setCopiedLink(false), 2000);
   }
 
-  function handleInvite(e) {
+  async function handleInvite(e) {
     e.preventDefault();
-    if (!coHostEmail.trim()) return;
-    setInviteSent(true);
-    setCoHostEmail('');
-    setTimeout(()=>setInviteSent(false), 3000);
+    const email = coHostEmail.trim().toLowerCase();
+    if (!email) return;
+    setInviting(true);
+    setInviteError('');
+    try {
+      await inviteCohost(event.id, email);
+      const d = await getCohosts(event.id);
+      setCohosts(d.cohosts ?? []);
+      setCoHostEmail('');
+      setInviteSent(true);
+      setTimeout(() => setInviteSent(false), 3000);
+    } catch (err) {
+      setInviteError(err.message ?? 'Failed to invite');
+    } finally {
+      setInviting(false);
+    }
+  }
+
+  async function handleRemove(cohostId) {
+    await removeCohost(event.id, cohostId).catch(() => {});
+    setCohosts(prev => prev.filter(c => c.id !== cohostId));
   }
 
   return (
@@ -1381,13 +1408,31 @@ function SharePanel({ event, onClose }) {
             <form className="collab-invite-row" onSubmit={handleInvite}>
               <div style={{display:'flex',alignItems:'center',gap:8,flex:1}}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16,color:'#9ca3af',flexShrink:0}}><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M22 11h-4m2-2v4"/></svg>
-                <input type="email" className="collab-email-input" placeholder="Email" value={coHostEmail} onChange={e=>setCoHostEmail(e.target.value)} />
+                <input type="email" className="collab-email-input" placeholder="Email address" value={coHostEmail} onChange={e=>setCoHostEmail(e.target.value)} />
               </div>
-              <button type="submit" className="btn-invite" disabled={!coHostEmail.trim()}>Invite</button>
+              <button type="submit" className="btn-invite" disabled={!coHostEmail.trim() || inviting}>
+                {inviting ? 'Inviting…' : 'Invite'}
+              </button>
             </form>
 
-            {inviteSent && (
-              <div className="banner-success" style={{marginTop:12}}>✓ Invitation sent!</div>
+            {inviteError && <p className="msg-error" style={{marginTop:8}}>{inviteError}</p>}
+            {inviteSent && <div className="banner-success" style={{marginTop:8}}>✓ Invited!</div>}
+
+            {/* Co-host list */}
+            {cohosts.length > 0 && (
+              <div style={{display:'flex',flexDirection:'column',gap:6,marginTop:4}}>
+                {cohosts.map(c => (
+                  <div key={c.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 12px',background:'#f9f9ff',borderRadius:10,border:'1px solid rgba(107,92,231,0.1)'}}>
+                    <div>
+                      <p style={{margin:0,fontSize:13,fontWeight:600,color:'#1f1f2e'}}>{c.email}</p>
+                      <p style={{margin:0,fontSize:11,color:'#9ca3af'}}>{c.accepted_at ? 'Accepted' : 'Invited'}</p>
+                    </div>
+                    <button onClick={()=>handleRemove(c.id)} style={{background:'none',border:'none',cursor:'pointer',padding:4,color:'#9ca3af',display:'flex',alignItems:'center'}} title="Remove co-host">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><path strokeLinecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

@@ -16,6 +16,7 @@ const uploadRouter   = require('../server/src/routes/upload');
 const photosRouter   = require('../server/src/routes/photos');
 const storageRouter  = require('../server/src/routes/storage');
 const stripeRouter   = require('../server/src/routes/stripe');
+const cohostsRouter  = require('../server/src/routes/cohosts');
 
 const app = express();
 
@@ -65,6 +66,7 @@ app.use('/api',          healthRouter);
 app.use('/api/auth',     authRouter);
 app.use('/api/hosts',    hostsRouter);
 app.use('/api/events',   eventsRouter);
+app.use('/api/events',   cohostsRouter);
 app.use('/api/storage',  storageRouter);
 app.use('/api/stripe',   stripeRouter);
 app.use('/api',          uploadRouter);

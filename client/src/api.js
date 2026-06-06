@@ -111,6 +111,24 @@ export function disconnectStorage({ provider, eventId }) {
   });
 }
 
+// ── Co-hosts ──────────────────────────────────────────────────────────────────
+
+export function getCohosts(eventId) {
+  return apiFetch(`/api/events/${eventId}/cohosts`);
+}
+
+export function inviteCohost(eventId, email) {
+  return apiFetch(`/api/events/${eventId}/cohosts`, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ email }),
+  });
+}
+
+export function removeCohost(eventId, cohostId) {
+  return apiFetch(`/api/events/${eventId}/cohosts/${cohostId}`, { method: 'DELETE' });
+}
+
 // ── Stripe checkout ───────────────────────────────────────────────────────────
 
 /** Creates a Stripe Checkout session and returns the redirect URL.
