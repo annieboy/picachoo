@@ -44,9 +44,7 @@ export default function SuccessScreen({ eventName, blob, onSnapAnother }) {
 
   useEffect(() => {
     headingRef.current?.focus();
-    const t = setTimeout(onSnapAnother, 3000);
-    return () => clearTimeout(t);
-  }, [onSnapAnother]);
+  }, []);
 
   async function handleSave() {
     if (!blob || saveState === 'saving' || saveState === 'saved') return;
@@ -124,7 +122,6 @@ export default function SuccessScreen({ eventName, blob, onSnapAnother }) {
           </button>
         )}
 
-        <p className="text-white/50 text-xs">Returning to camera in 3 seconds…</p>
       </div>
     </div>
   );
