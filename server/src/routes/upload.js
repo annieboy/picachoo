@@ -120,19 +120,23 @@ router.post(
       const { eventCode } = req.params;
       const guestName = sanitizeGuestName(req.body.guestName);
 
-      // Fetch event + whichever cloud token is linked (most recently updated wins)
+      // Fetch event + host tier + whichever cloud token is linked (most recently updated wins)
       const { rows } = await pool.query(
         `SELECT
            e.id              AS event_id,
            e.name            AS event_name,
            e.status          AS event_status,
            e.drive_folder_id,
+           e.is_premium_pass,
+           e.pass_expires_at,
+           h.tier            AS host_tier,
            ct.id             AS id,
            ct.provider,
            ct.access_token_enc,
            ct.refresh_token_enc,
            ct.token_expires_at
          FROM events e
+         JOIN hosts h         ON h.id = e.host_id
          JOIN cloud_tokens ct ON ct.event_id = e.id
          WHERE e.join_code = $1
          ORDER BY ct.updated_at DESC
@@ -157,6 +161,16 @@ router.post(
       if (row.event_status === 'draft') {
         const err = new Error('This event has not started yet.');
         err.status = 403;
+        return next(err);
+      }
+
+      // Free tier: enforce 2 MB per upload
+      const passActive = row.is_premium_pass && row.pass_expires_at && new Date(row.pass_expires_at) > new Date();
+      const isPro = passActive || ['pro', 'pro_annual', 'business_annual'].includes(row.host_tier);
+      const FREE_MAX = 2 * 1024 * 1024;
+      if (!isPro && req.file.size > FREE_MAX) {
+        const err = new Error('File exceeds the 2 MB limit on the Free plan. Ask the event host to upgrade to Pro for full-resolution uploads.');
+        err.status = 413;
         return next(err);
       }
 

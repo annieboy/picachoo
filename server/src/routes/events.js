@@ -24,7 +24,7 @@ async function createEvent(req, res, next) {
 
     // Resolve the host row from the authenticated user
     const { rows: hostRows } = await pool.query(
-      `SELECT id FROM hosts WHERE auth_id = $1`,
+      `SELECT id, tier FROM hosts WHERE auth_id = $1`,
       [req.user.authId],
     );
     if (!hostRows.length) {
@@ -32,7 +32,23 @@ async function createEvent(req, res, next) {
       err.status = 404;
       return next(err);
     }
-    const hostId = hostRows[0].id;
+    const { id: hostId, tier } = hostRows[0];
+    const isPaid = ['pro', 'pro_annual', 'business_annual'].includes(tier);
+
+    // Free tier: max 1 event created in the current calendar month
+    if (!isPaid) {
+      const { rows: countRows } = await pool.query(
+        `SELECT COUNT(*) AS n FROM events
+         WHERE host_id = $1
+           AND date_trunc('month', created_at) = date_trunc('month', NOW())`,
+        [hostId],
+      );
+      if (parseInt(countRows[0].n, 10) >= 1) {
+        const err = new Error('Free plan allows 1 event per month. Upgrade to Pro for unlimited events.');
+        err.status = 403;
+        return next(err);
+      }
+    }
 
     // Generate a unique join code
     let joinCode;

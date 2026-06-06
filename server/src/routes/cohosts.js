@@ -36,6 +36,18 @@ router.get('/:eventId/cohosts', requireAuth, requireEventOwner, async (req, res,
 // POST /api/events/:eventId/cohosts  { email }
 router.post('/:eventId/cohosts', requireAuth, requireEventOwner, async (req, res, next) => {
   try {
+    // Co-hosts are a Business-tier feature
+    const { rows: tierRows } = await pool.query(
+      `SELECT h.tier FROM hosts h WHERE h.auth_id = $1`,
+      [req.user.authId],
+    );
+    const tier = tierRows[0]?.tier ?? 'free';
+    if (tier !== 'business_annual') {
+      const err = new Error('Co-hosts are available on the Business plan. Upgrade to add collaborators.');
+      err.status = 403;
+      return next(err);
+    }
+
     const { email } = req.body;
     if (!email || !email.includes('@')) {
       const err = new Error('Valid email is required');
