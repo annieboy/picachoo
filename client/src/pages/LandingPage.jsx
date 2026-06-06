@@ -111,26 +111,27 @@ function Hero() {
       </div>
 
       {/* Headline */}
-      <h1 className="anim-fade-up text-center text-5xl md:text-7xl font-black tracking-tight text-white leading-[1.05] max-w-4xl">
-        Photos and memories,<br />
-        straight to your cloud.
+      <h1 className="anim-fade-up text-center text-4xl md:text-6xl font-black tracking-tight text-white leading-[1.1] max-w-3xl">
+        The easiest way for guests to share photos and videos to your cloud.
       </h1>
 
-      {/* Numbered steps — single horizontal line */}
-      <div className="anim-fade-up anim-delay-1 mt-8 flex flex-wrap justify-center items-center gap-x-6 gap-y-2">
+      {/* Numbered steps — single horizontal line, no wrapping */}
+      <div className="anim-fade-up anim-delay-1 mt-8 flex flex-nowrap items-center justify-center gap-3">
         {[
           { n: '1', text: 'Guests scan a QR code', grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
           { n: '2', text: 'Snap a photo', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
-          { n: '3', text: 'It lands in your Google Drive, OneDrive, or Dropbox', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
+          { n: '3', text: 'It lands in your Drive, OneDrive, or Dropbox', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
         ].map(({ n, text, grad }, i, arr) => (
-          <div key={n} className="flex items-center gap-2">
-            <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white"
-                  style={{ background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.25)' }}>
-              {n}
-            </span>
-            <span className="text-white/85 text-sm font-medium whitespace-nowrap">{text}</span>
+          <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+            <span style={{
+              width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+              color: '#fff', fontSize: 11, fontWeight: 800,
+            }}>{n}</span>
+            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 500 }}>{text}</span>
             {i < arr.length - 1 && (
-              <span className="text-white/30 ml-2">·</span>
+              <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: 6, fontSize: 18, lineHeight: 1 }}>·</span>
             )}
           </div>
         ))}
