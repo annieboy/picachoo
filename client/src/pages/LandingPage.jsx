@@ -36,44 +36,41 @@ function Hero() {
   }
 
   return (
-    <section className="bezl-hero relative flex flex-col items-center justify-center pt-16 pb-16 px-6 overflow-hidden" style={{ minHeight: '88vh' }}>
+    <section className="bezl-hero relative flex flex-col items-center pt-10 pb-16 px-6 overflow-hidden" style={{ minHeight: '88vh' }}>
 
-      {/* ── Join capsule — pinned near top, exactly like Slido ── */}
-      <div className="absolute top-16 left-0 right-0 flex justify-center z-10 px-4"
-           style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <form onSubmit={handleJoin}
-              className="inline-flex items-center rounded-full"
-              style={{ background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.35)', backdropFilter: 'blur(10px)', height: '42px' }}>
-          <span className="pl-4 pr-3 text-white font-semibold text-sm whitespace-nowrap">Joining an event?</span>
-          <div className="w-px h-5 shrink-0" style={{ background: 'rgba(255,255,255,0.3)' }} />
-          <span className="px-2 text-white/50 font-bold text-sm">#</span>
-          <input
-            type="text"
-            value={code}
-            onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-            placeholder="Enter code here"
-            maxLength={12}
-            autoCapitalize="characters"
-            autoCorrect="off"
-            className="bg-transparent text-white placeholder-white/40 font-medium text-sm focus:outline-none w-32"
-          />
-          <button type="submit"
-                  className="mr-1.5 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:bg-white/40 active:scale-90"
-                  style={{ background: 'rgba(255,255,255,0.25)' }}
-                  aria-label="Join event">
-            {checking ? (
-              <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
-                <path d="M12 3a9 9 0 019 9" stroke="white" strokeWidth="3" strokeLinecap="round"/>
-              </svg>
-            ) : (
-              <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4">
-                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
-              </svg>
-            )}
-          </button>
-        </form>
-      </div>
+      {/* ── Join capsule — flow element, sits above the headline ── */}
+      <form onSubmit={handleJoin}
+            className="anim-fade-up inline-flex items-center rounded-full mb-8"
+            style={{ background: 'rgba(255,255,255,0.18)', border: '1.5px solid rgba(255,255,255,0.35)', backdropFilter: 'blur(10px)', height: '42px' }}>
+        <span className="pl-4 pr-3 text-white font-semibold text-sm whitespace-nowrap">Joining an event?</span>
+        <div className="w-px h-5 shrink-0" style={{ background: 'rgba(255,255,255,0.3)' }} />
+        <span className="px-2 text-white/50 font-bold text-sm">#</span>
+        <input
+          type="text"
+          value={code}
+          onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+          placeholder="Event code"
+          maxLength={12}
+          autoCapitalize="characters"
+          autoCorrect="off"
+          className="bg-transparent text-white placeholder-white/40 font-medium text-sm focus:outline-none w-28"
+        />
+        <button type="submit"
+                className="mr-1.5 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:bg-white/40 active:scale-90"
+                style={{ background: '#6045f4' }}
+                aria-label="Join event">
+          {checking ? (
+            <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
+              <path d="M12 3a9 9 0 019 9" stroke="white" strokeWidth="3" strokeLinecap="round"/>
+            </svg>
+          ) : (
+            <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4">
+              <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+            </svg>
+          )}
+        </button>
+      </form>
 
       {/* Headline */}
       <h1 className="anim-fade-up relative z-10 text-center text-5xl md:text-7xl font-black tracking-tight text-white leading-[1.05] max-w-4xl">
@@ -81,12 +78,13 @@ function Hero() {
         straight to your cloud.
       </h1>
 
-      <div className="anim-fade-up anim-delay-1 relative z-10 mt-6 flex flex-wrap justify-center items-center gap-x-5 gap-y-3 max-w-2xl px-2">
+      <div className="anim-fade-up anim-delay-1 relative z-10 mt-6 flex flex-col items-start gap-y-3 max-w-xl px-2">
         {[
           { n: '1', text: 'No app. No account. No friction.', grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
-          { n: '2', text: 'Guests scan a QR code, snap a photo, and it lands directly in your Google Drive, OneDrive, or Dropbox.', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
+          { n: '2', text: 'Guests scan a QR code and snap a photo.', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
+          { n: '3', text: 'It lands directly in your Google Drive, OneDrive, or Dropbox.', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
         ].map(({ n, text, grad }) => (
-          <div key={n} className="flex items-center gap-2">
+          <div key={n} className="flex items-center gap-3">
             <span className="shrink-0 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black text-white"
                   style={{ background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.3)' }}>
               {n}
