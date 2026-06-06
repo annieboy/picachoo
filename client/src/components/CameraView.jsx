@@ -105,14 +105,15 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       {/* Video */}
       {!needsFallback && (
         <>
-          {/* Photo: 3:4 frame pinned to top, controls sit in black below */}
+          {/* Photo: 3:4 frame — capped so controls always have room */}
           {mode === 'photo' ? (
             <div style={{
               position: 'absolute',
-              top: 0,
+              top: '8px',
               left: 0,
               right: 0,
               aspectRatio: '3/4',
+              maxHeight: 'calc(100dvh - 195px)',
               overflow: 'hidden',
             }}>
               <video ref={videoRef} autoPlay playsInline muted
@@ -161,7 +162,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       {/* Top bar */}
       <div
         className="absolute inset-x-0 top-0 z-20 flex items-center justify-center px-5"
-        style={{ paddingTop: 'max(3.5rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
+        style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
       >
         {eventName && (
           <span
