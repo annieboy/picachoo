@@ -39,47 +39,76 @@ function Hero() {
     <section className="bezl-hero relative flex flex-col items-center px-6 overflow-hidden"
              style={{ minHeight: '88vh', paddingTop: '96px', paddingBottom: '64px' }}>
 
-      {/* ── Two-tone Slido-style join capsule ── */}
-      <form onSubmit={handleJoin}
-            className="anim-fade-up flex items-center rounded-full overflow-hidden mb-10 shadow-xl"
-            style={{ border: '2px solid rgba(255,255,255,0.4)' }}>
-        {/* Left: dark label */}
-        <span className="px-5 py-2.5 text-white font-bold text-sm whitespace-nowrap"
-              style={{ background: 'rgba(0,0,0,0.35)' }}>
-          Joining an event?
-        </span>
-        {/* Right: light input area */}
-        <div className="flex items-center px-3 gap-1.5"
-             style={{ background: 'rgba(255,255,255,0.18)', minWidth: 0 }}>
-          <span className="text-white/60 font-bold text-sm">#</span>
-          <input
-            type="text"
-            value={code}
-            onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-            placeholder="Enter code here"
-            maxLength={12}
-            autoCapitalize="characters"
-            autoCorrect="off"
-            className="bg-transparent text-white placeholder-white/50 font-medium text-sm focus:outline-none py-2.5"
-            style={{ width: '130px' }}
-          />
-          <button type="submit"
-                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-all active:scale-90"
-                  style={{ background: '#fff' }}
-                  aria-label="Join event">
-            {checking ? (
-              <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" stroke="#6045f4" strokeWidth="3" strokeOpacity="0.3"/>
-                <path d="M12 3a9 9 0 019 9" stroke="#6045f4" strokeWidth="3" strokeLinecap="round"/>
-              </svg>
-            ) : (
-              <svg viewBox="0 0 20 20" fill="#6045f4" className="w-4 h-4">
-                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
-              </svg>
-            )}
-          </button>
-        </div>
-      </form>
+      {/* ── Two-tone join capsule (Slido-style) ── */}
+      <div className="anim-fade-up mb-10" style={{ filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.25))' }}>
+        <form onSubmit={handleJoin}
+              style={{
+                display: 'flex', flexDirection: 'row', alignItems: 'stretch',
+                borderRadius: '9999px', overflow: 'hidden',
+                border: '2.5px solid rgba(255,255,255,0.45)',
+                height: '54px',
+              }}>
+          {/* Left: solid dark label */}
+          <div style={{
+            display: 'flex', alignItems: 'center',
+            padding: '0 24px',
+            background: 'rgba(20,10,60,0.65)',
+            whiteSpace: 'nowrap',
+          }}>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '15px' }}>Joining an event?</span>
+          </div>
+          {/* Right: white input pill inset */}
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: '6px',
+            padding: '6px 6px 6px 16px',
+            background: 'rgba(255,255,255,0.18)',
+          }}>
+            <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 700, fontSize: '15px' }}>#</span>
+            <input
+              type="text"
+              value={code}
+              onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+              placeholder="Enter code here"
+              maxLength={12}
+              autoCapitalize="characters"
+              autoCorrect="off"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                color: '#fff',
+                fontSize: '15px',
+                fontWeight: 500,
+                width: '140px',
+                caretColor: '#fff',
+              }}
+            />
+            <button
+              type="submit"
+              aria-label="Join event"
+              style={{
+                width: '38px', height: '38px', borderRadius: '50%',
+                background: '#fff', border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, transition: 'transform 0.15s',
+              }}
+              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.9)'}
+              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+            >
+              {checking ? (
+                <svg style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#6045f4" strokeWidth="3" strokeOpacity="0.3"/>
+                  <path d="M12 3a9 9 0 019 9" stroke="#6045f4" strokeWidth="3" strokeLinecap="round"/>
+                </svg>
+              ) : (
+                <svg viewBox="0 0 20 20" fill="#6045f4" style={{ width: 16, height: 16 }}>
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+                </svg>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
 
       {/* Headline */}
       <h1 className="anim-fade-up text-center text-5xl md:text-7xl font-black tracking-tight text-white leading-[1.05] max-w-4xl">

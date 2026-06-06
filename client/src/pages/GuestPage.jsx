@@ -20,6 +20,7 @@ export default function GuestPage() {
   const { eventCode } = useParams();
 
   const [event,        setEvent]        = useState(null);
+  const [eventLoading, setEventLoading] = useState(true);
   const [eventError,   setEventError]   = useState('');
   const [screen,       setScreen]       = useState(() =>
     sessionStorage.getItem(NAME_KEY) ? SCREENS.CAMERA : SCREENS.NAME,
@@ -30,7 +31,10 @@ export default function GuestPage() {
   const [uploadError,  setUploadError]  = useState('');
 
   useEffect(() => {
-    getEvent(eventCode).then(setEvent).catch(err => setEventError(err.message));
+    getEvent(eventCode)
+      .then(setEvent)
+      .catch(err => setEventError(err.message))
+      .finally(() => setEventLoading(false));
   }, [eventCode]);
 
   const handleNameConfirm = useCallback(name => {
@@ -71,6 +75,20 @@ export default function GuestPage() {
   }, []);
 
   const uploadsLocked = event && event.wall_upload_mode === 'host_only';
+
+  // Wait for event data before showing NameScreen so the event name
+  // doesn't flash from code → name after load
+  if (eventLoading && screen === SCREENS.NAME) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center"
+           style={{ background: 'linear-gradient(140deg,#6045f4 0%,#7060f6 45%,#53e6d4 100%)' }}>
+        <svg className="w-10 h-10 animate-spin text-white/60" viewBox="0 0 24 24" fill="none">
+          <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+          <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+        </svg>
+      </div>
+    );
+  }
 
   if (eventError) {
     return (
