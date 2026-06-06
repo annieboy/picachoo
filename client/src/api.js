@@ -67,33 +67,17 @@ export function deleteEvent(eventId) {
   return apiFetch(`/api/events/${eventId}`, { method: 'DELETE' });
 }
 
-// ── Storage OAuth URLs ────────────────────────────────────────────────────────
-// These are browser-redirect URLs — the JWT is NOT sent as a header (it's a
-// navigation, not a fetch). Instead the backend verifies ownership via
-// the Supabase session cookie set by signInWithOAuth.
-// We pass the JWT as a query param on the redirect so the backend can verify.
+// ── Storage OAuth initiation ──────────────────────────────────────────────────
+// JWT is sent in the Authorization header (never in the URL).
+// Server creates a short-lived DB state token, returns the provider redirect URL.
+// Client navigates to that URL — no sensitive data ever appears in the browser bar.
 
-export function googleAuthUrl({ eventId, loginHint, token }) {
-  const t = token ?? _token ?? '';
-  const params = new URLSearchParams({ eventId });
-  if (loginHint) params.set('loginHint', loginHint);
-  // Embed the JWT so the redirect can be authenticated without a session cookie
-  if (t) params.set('token', t);
-  return `${API_BASE}/api/auth/google?${params}`;
-}
-
-export function dropboxAuthUrl({ eventId, token }) {
-  const t = token ?? _token ?? '';
-  const params = new URLSearchParams({ eventId });
-  if (t) params.set('token', t);
-  return `${API_BASE}/api/auth/dropbox?${params}`;
-}
-
-export function oneDriveAuthUrl({ eventId, token }) {
-  const t = token ?? _token ?? '';
-  const params = new URLSearchParams({ eventId });
-  if (t) params.set('token', t);
-  return `${API_BASE}/api/auth/onedrive?${params}`;
+export function initiateOAuth({ provider, eventId, loginHint }) {
+  return apiFetch('/api/auth/oauth-init', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ provider, eventId, loginHint }),
+  }).then(d => d.redirectUrl);
 }
 
 // ── Storage info ──────────────────────────────────────────────────────────────

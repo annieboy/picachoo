@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import {
   setAuthToken, getOrCreateHost, createEvent,
-  googleAuthUrl, dropboxAuthUrl, oneDriveAuthUrl,
+  initiateOAuth,
   disconnectStorage, getStorageInfo,
   updateEvent, deleteEvent,
   updateHostProfile, deleteAccount, cancelSubscription,
@@ -227,6 +227,16 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
   const oauthErr      = params.get('error');
   const checkoutOk    = params.get('checkout') === 'success';
   const checkoutType  = params.get('type');
+
+  // After storage OAuth completes, clean the URL and reload events
+  useEffect(() => {
+    if (!linked) return;
+    const clean = new URL(window.location.href);
+    clean.searchParams.delete('linked');
+    window.history.replaceState({}, '', clean.toString());
+    // Reload events so the newly linked provider shows immediately
+    getOrCreateHost().catch(() => {});
+  }, [linked]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // After checkout success, poll briefly until webhook updates the tier
   useEffect(() => {
@@ -977,7 +987,7 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
           onDisconnected={handleDisconnected}
         />
       ) : (
-        <StoragePicker eventId={ev.id} token={token} loginHint={loginHint} />
+        <StoragePicker eventId={ev.id} loginHint={loginHint} />
       )}
 
       {/* Management controls */}
@@ -1114,7 +1124,7 @@ function EventRow({ event, token, loginHint, onUpdate, onDelete, onShare }) {
           <WallControls ev={ev} setEv={setEv} onUpdate={onUpdate} />
           {ev.linked_provider
             ? <StorageStatus provider={ev.linked_provider} account={ev.linked_account} eventId={ev.id} onDisconnected={handleDisconnected} />
-            : <StoragePicker eventId={ev.id} token={token} loginHint={loginHint} />
+            : <StoragePicker eventId={ev.id} loginHint={loginHint} />
           }
           {mgmtError && <p className="msg-error">{mgmtError}</p>}
         </div>
@@ -1769,23 +1779,38 @@ function StorageStatus({ provider, account, eventId, onDisconnected }) {
   );
 }
 
-function StoragePicker({ eventId, token, loginHint }) {
+function StoragePicker({ eventId, loginHint }) {
+  const [loading, setLoading] = useState(null);
+  const [error,   setError]   = useState('');
+
+  async function connect(provider) {
+    setLoading(provider); setError('');
+    try {
+      const redirectUrl = await initiateOAuth({ provider, eventId, loginHint });
+      window.location.href = redirectUrl;
+    } catch (err) {
+      setError(err.message ?? 'Failed to connect');
+      setLoading(null);
+    }
+  }
+
   return (
     <div className="storage-picker">
       <p className="storage-picker-label">☁ Connect cloud storage to receive photos</p>
+      {error && <p className="msg-error" style={{marginBottom:8}}>{error}</p>}
       <div className="storage-picker-btns">
-        <a href={googleAuthUrl({ eventId, loginHint, token })} className="storage-provider-card">
-          <DriveIcon />
+        <button onClick={() => connect('google')} className="storage-provider-card" disabled={!!loading}>
+          {loading === 'google' ? <span className="spin">↻</span> : <DriveIcon />}
           <span>Google Drive</span>
-        </a>
-        <a href={dropboxAuthUrl({ eventId, token })} className="storage-provider-card">
-          <DropboxIcon />
+        </button>
+        <button onClick={() => connect('dropbox')} className="storage-provider-card" disabled={!!loading}>
+          {loading === 'dropbox' ? <span className="spin">↻</span> : <DropboxIcon />}
           <span>Dropbox</span>
-        </a>
-        <a href={oneDriveAuthUrl({ eventId, token })} className="storage-provider-card">
-          <OneDriveIcon />
+        </button>
+        <button onClick={() => connect('onedrive')} className="storage-provider-card" disabled={!!loading}>
+          {loading === 'onedrive' ? <span className="spin">↻</span> : <OneDriveIcon />}
           <span>OneDrive</span>
-        </a>
+        </button>
       </div>
     </div>
   );

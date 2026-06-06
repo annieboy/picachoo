@@ -7,23 +7,30 @@ const requireAuth = require('../middleware/requireAuth');
 const { getCurrentAccountEmail } = require('../services/dropboxService');
 const { getCurrentUserEmail }    = require('../services/oneDriveService');
 
-// ── CSRF state store ──────────────────────────────────────────────────────────
-// In production swap for Redis / Supabase KV so it survives serverless cold starts.
-const pendingStates = new Map();
-const STATE_TTL_MS  = 10 * 60 * 1000;
+// ── DB-backed OAuth state ─────────────────────────────────────────────────────
+// Stored in the oauth_states table — survives serverless cold starts and works
+// across multiple Vercel function instances. Expires after 10 minutes.
 
-function createState(payload) {
+async function createState({ hostId, eventId, provider }) {
   const state = crypto.randomBytes(24).toString('hex');
-  pendingStates.set(state, { ...payload, createdAt: Date.now() });
-  setTimeout(() => pendingStates.delete(state), STATE_TTL_MS);
+  await pool.query(
+    `INSERT INTO oauth_states (state, host_id, event_id, provider)
+     VALUES ($1, $2, $3, $4)`,
+    [state, hostId, eventId, provider],
+  );
+  // Best-effort cleanup of expired rows on each write
+  pool.query(`DELETE FROM oauth_states WHERE expires_at < NOW()`).catch(() => {});
   return state;
 }
 
-function consumeState(state) {
-  const payload = pendingStates.get(state);
-  pendingStates.delete(state);
-  if (!payload || Date.now() - payload.createdAt > STATE_TTL_MS) return null;
-  return payload;
+async function consumeState(state) {
+  const { rows } = await pool.query(
+    `DELETE FROM oauth_states
+     WHERE state = $1 AND expires_at > NOW()
+     RETURNING host_id, event_id, provider`,
+    [state],
+  );
+  return rows[0] ?? null;
 }
 
 // ── Ownership guard ───────────────────────────────────────────────────────────
@@ -41,17 +48,73 @@ async function assertEventOwnership(authId, eventId) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// OAuth initiation — single endpoint for all providers
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// ─── POST /api/auth/oauth-init ────────────────────────────────────────────────
+// JWT arrives in the Authorization header (never in the URL).
+// Returns { redirectUrl } — the provider OAuth URL the client should navigate to.
+router.post('/oauth-init', requireAuth, async (req, res, next) => {
+  try {
+    const { provider, eventId, loginHint } = req.body;
+    if (!provider || !eventId) {
+      return next(Object.assign(new Error('provider and eventId are required'), { status: 400 }));
+    }
+    if (!['google', 'dropbox', 'onedrive'].includes(provider)) {
+      return next(Object.assign(new Error('Invalid provider'), { status: 400 }));
+    }
+
+    const hostId = await assertEventOwnership(req.user.authId, eventId);
+    const state  = await createState({ hostId, eventId, provider });
+
+    let redirectUrl;
+
+    if (provider === 'google') {
+      redirectUrl = oauth2Client.generateAuthUrl({
+        access_type: 'offline',
+        scope:       DRIVE_SCOPE,
+        state,
+        prompt:      'consent',
+        ...(loginHint ? { login_hint: loginHint } : {}),
+      });
+    } else if (provider === 'dropbox') {
+      const params = new URLSearchParams({
+        client_id:         process.env.DROPBOX_APP_KEY,
+        response_type:     'code',
+        redirect_uri:      dropboxRedirectUri(),
+        state,
+        token_access_type: 'offline',
+      });
+      redirectUrl = `${DROPBOX_AUTH_URL}?${params}`;
+    } else if (provider === 'onedrive') {
+      const params = new URLSearchParams({
+        client_id:     process.env.ONEDRIVE_CLIENT_ID,
+        response_type: 'code',
+        redirect_uri:  oneDriveRedirectUri(),
+        scope:         ONEDRIVE_SCOPE,
+        state,
+        response_mode: 'query',
+        prompt:        'consent',
+      });
+      redirectUrl = `${ONEDRIVE_AUTH_URL}?${params}`;
+    }
+
+    res.json({ redirectUrl });
+  } catch (err) { next(err); }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Google Drive
 // ═══════════════════════════════════════════════════════════════════════════════
 
-// ─── GET /api/auth/google ─────────────────────────────────────────────────────
+// ─── GET /api/auth/google — kept for backwards compatibility only ─────────────
 router.get('/google', requireAuth, async (req, res, next) => {
   try {
     const { eventId, loginHint } = req.query;
     if (!eventId) return next(Object.assign(new Error('eventId is required'), { status: 400 }));
 
     const hostId = await assertEventOwnership(req.user.authId, eventId);
-    const state  = createState({ hostId, eventId });
+    const state  = await createState({ hostId, eventId, provider: 'google' });
 
     const authorizeUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline',
@@ -73,10 +136,10 @@ router.get('/google/callback', async (req, res, next) => {
     if (error) return res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?error=google_auth_denied`);
     if (!code || !state) return next(Object.assign(new Error('Missing code or state'), { status: 400 }));
 
-    const payload = consumeState(state);
+    const payload = await consumeState(state);
     if (!payload) return next(Object.assign(new Error('Invalid or expired state'), { status: 400 }));
 
-    const { hostId, eventId } = payload;
+    const { host_id: hostId, event_id: eventId } = payload;
 
     const { tokens }   = await oauth2Client.getToken(code);
     if (!tokens.access_token) throw new Error('Google did not return an access token');
@@ -101,7 +164,7 @@ router.get('/google/callback', async (req, res, next) => {
        tokenInfo.email ?? null],
     );
 
-    res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?linked=google&eventId=${eventId}`);
+    res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?linked=google`);
   } catch (err) { next(err); }
 });
 
@@ -182,25 +245,6 @@ function dropboxRedirectUri() {
   return `${process.env.API_BASE_URL ?? process.env.CLIENT_ORIGIN}/api/auth/dropbox/callback`;
 }
 
-router.get('/dropbox', requireAuth, async (req, res, next) => {
-  try {
-    const { eventId } = req.query;
-    if (!eventId) return next(Object.assign(new Error('eventId is required'), { status: 400 }));
-
-    const hostId = await assertEventOwnership(req.user.authId, eventId);
-    const state  = createState({ hostId, eventId, provider: 'dropbox' });
-
-    const params = new URLSearchParams({
-      client_id:         process.env.DROPBOX_APP_KEY,
-      response_type:     'code',
-      redirect_uri:      dropboxRedirectUri(),
-      state,
-      token_access_type: 'offline',
-    });
-
-    res.redirect(`${DROPBOX_AUTH_URL}?${params}`);
-  } catch (err) { next(err); }
-});
 
 router.get('/dropbox/callback', async (req, res, next) => {
   try {
@@ -209,10 +253,10 @@ router.get('/dropbox/callback', async (req, res, next) => {
     if (error) return res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?error=dropbox_auth_denied`);
     if (!code || !state) return next(Object.assign(new Error('Missing code or state'), { status: 400 }));
 
-    const payload = consumeState(state);
+    const payload = await consumeState(state);
     if (!payload) return next(Object.assign(new Error('Invalid or expired state'), { status: 400 }));
 
-    const { hostId, eventId } = payload;
+    const { host_id: hostId, event_id: eventId } = payload;
 
     const creds = Buffer.from(`${process.env.DROPBOX_APP_KEY}:${process.env.DROPBOX_APP_SECRET}`).toString('base64');
     const tokenRes = await fetch(DROPBOX_TOKEN_URL, {
@@ -245,7 +289,7 @@ router.get('/dropbox/callback', async (req, res, next) => {
        expiresAt, accountEmail],
     );
 
-    res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?linked=dropbox&eventId=${eventId}`);
+    res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?linked=dropbox`);
   } catch (err) { next(err); }
 });
 
@@ -277,27 +321,6 @@ function oneDriveRedirectUri() {
   return `${process.env.API_BASE_URL ?? process.env.CLIENT_ORIGIN}/api/auth/onedrive/callback`;
 }
 
-router.get('/onedrive', requireAuth, async (req, res, next) => {
-  try {
-    const { eventId } = req.query;
-    if (!eventId) return next(Object.assign(new Error('eventId is required'), { status: 400 }));
-
-    const hostId = await assertEventOwnership(req.user.authId, eventId);
-    const state  = createState({ hostId, eventId, provider: 'onedrive' });
-
-    const params = new URLSearchParams({
-      client_id:     process.env.ONEDRIVE_CLIENT_ID,
-      response_type: 'code',
-      redirect_uri:  oneDriveRedirectUri(),
-      scope:         ONEDRIVE_SCOPE,
-      state,
-      response_mode: 'query',
-      prompt:        'consent',
-    });
-
-    res.redirect(`${ONEDRIVE_AUTH_URL}?${params}`);
-  } catch (err) { next(err); }
-});
 
 router.get('/onedrive/callback', async (req, res, next) => {
   try {
@@ -306,10 +329,10 @@ router.get('/onedrive/callback', async (req, res, next) => {
     if (error) return res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?error=onedrive_auth_denied`);
     if (!code || !state) return next(Object.assign(new Error('Missing code or state'), { status: 400 }));
 
-    const payload = consumeState(state);
+    const payload = await consumeState(state);
     if (!payload) return next(Object.assign(new Error('Invalid or expired state'), { status: 400 }));
 
-    const { hostId, eventId } = payload;
+    const { host_id: hostId, event_id: eventId } = payload;
 
     const tokenRes = await fetch(ONEDRIVE_TOKEN_URL, {
       method: 'POST',
@@ -348,7 +371,7 @@ router.get('/onedrive/callback', async (req, res, next) => {
        expiresAt, accountEmail],
     );
 
-    res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?linked=onedrive&eventId=${eventId}`);
+    res.redirect(`${process.env.CLIENT_ORIGIN}/dashboard?linked=onedrive`);
   } catch (err) { next(err); }
 });
 
