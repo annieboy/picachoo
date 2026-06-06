@@ -16,7 +16,7 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
           <video src={objectUrl.current} className="absolute inset-0 w-full h-full object-cover"
                  autoPlay loop muted playsInline />
         ) : (
-          /* Photo: 3:4 frame matching camera viewfinder */
+          /* Photo: 3:4 frame — naturally clipped by flex-1 container */
           <div style={{
             position: 'absolute',
             top: '52px',
