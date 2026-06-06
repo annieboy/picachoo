@@ -108,12 +108,18 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           <video
             ref={videoRef}
             autoPlay playsInline muted
-            style={{
+            style={mode === 'photo' ? {
               position: 'absolute',
               width: '100%',
               aspectRatio: '3/4',
               top: '50%',
               transform: 'translateY(-50%)',
+              objectFit: 'cover',
+            } : {
+              position: 'absolute',
+              inset: 0,
+              width: '100%',
+              height: '100%',
               objectFit: 'cover',
             }}
           />
