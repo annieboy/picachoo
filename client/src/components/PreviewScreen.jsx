@@ -22,8 +22,7 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
             top: '8px',
             left: 0,
             right: 0,
-            aspectRatio: '3/4',
-            maxHeight: 'calc(100% - 8px)',
+            height: 'calc(100vw * 4 / 3)',
             overflow: 'hidden',
           }}>
             <img src={objectUrl.current} alt="Preview"

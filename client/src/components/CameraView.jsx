@@ -111,8 +111,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
             top: '8px',
             left: 0,
             right: 0,
-            aspectRatio: '3/4',
-            maxHeight: 'calc(100dvh - 195px)',
+            height: 'calc(100vw * 4 / 3)',
             overflow: 'hidden',
           } : {
             position: 'absolute',
