@@ -147,6 +147,44 @@ body.mkt #root {
   box-shadow: 0 16px 48px rgba(107,92,231,0.35);
 }
 
+/* ── Hero scene keyframes ── */
+@keyframes heroFadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes flyAcross {
+  0%   { transform: translate(0, 0)       scale(0.7); opacity: 0; }
+  10%  { opacity: 1; }
+  50%  { transform: translate(50px, -20px) scale(1);   opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translate(110px, 0)   scale(0.7); opacity: 0; }
+}
+@keyframes shutterFlash {
+  0%, 8%, 100% { opacity: 0; }
+  2%, 5%       { opacity: 0.85; }
+}
+@keyframes wallPop {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes progressGrow {
+  0%   { width: 30%; }
+  60%  { width: 90%; }
+  100% { width: 30%; }
+}
+@keyframes ping {
+  0%, 100% { transform: scale(1);   opacity: 1; }
+  50%       { transform: scale(1.5); opacity: 0.5; }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes wallScroll {
+  0%   { transform: translateY(0); }
+  100% { transform: translateY(-50%); }
+}
+
 /* ── Scroll fade-up ── */
 @keyframes mkt-fade-up {
   from { opacity: 0; transform: translateY(24px); }

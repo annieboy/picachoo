@@ -146,69 +146,207 @@ function Hero() {
         </Link>
       </div>
 
-      {/* Hero mockup */}
-      <div className="anim-fade-up anim-delay-3 relative z-10 mt-12 w-full max-w-3xl px-4">
-        <div className="rounded-3xl overflow-hidden bg-white/10 border border-white/20 backdrop-blur-sm p-6 md:p-8">
-          <div className="flex items-center gap-2 mb-5">
-            <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-white/20" />
-              <div className="w-3 h-3 rounded-full bg-white/20" />
-              <div className="w-3 h-3 rounded-full bg-white/20" />
-            </div>
-            <div className="flex-1 h-7 rounded-lg bg-white/10 flex items-center px-3">
-              <span className="text-white/50 text-xs">picachoo.app/e/WEDDING2025</span>
-            </div>
-          </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="rounded-2xl bg-white/10 border border-white/15 p-6 flex flex-col items-center justify-center gap-4 aspect-square">
-              <div className="w-16 h-16 rounded-2xl bg-white/15 border border-white/25 flex items-center justify-center">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" className="w-8 h-8 opacity-80">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
-                </svg>
-              </div>
-              <p className="text-white font-semibold text-sm">Tap to take photo</p>
-              <p className="text-white/50 text-xs">Or upload from gallery</p>
-            </div>
-            <div className="flex flex-col gap-3">
-              {[
-                { name: 'Sarah_ceremony.jpg', size: '4.2 MB', pct: 100, done: true },
-                { name: 'Mike_reception.jpg', size: '3.8 MB', pct: 67,  done: false },
-                { name: 'Anna_dance.jpg',     size: '5.1 MB', pct: 0,   done: false, queued: true },
-              ].map(f => (
-                <div key={f.name} className="rounded-xl bg-white/10 border border-white/15 p-3 flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${f.done ? 'bg-emerald-400/20' : f.queued ? 'bg-white/10' : 'bg-white/15'}`}>
-                    {f.done ? <svg viewBox="0 0 20 20" fill="#34d399" className="w-4 h-4"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                    : f.queued ? <div className="w-2 h-2 rounded-full bg-white/30" />
-                    : <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4 animate-spin opacity-70"><circle cx="12" cy="12" r="9" strokeOpacity="0.2"/><path d="M12 3a9 9 0 019 9" strokeLinecap="round"/></svg>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white text-xs font-medium truncate">{f.name}</p>
-                    <div className="mt-1 h-1 rounded-full bg-white/10 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${f.pct}%`, background: f.done ? '#34d399' : 'rgba(255,255,255,0.7)' }} />
-                    </div>
-                  </div>
-                  <span className="text-white/40 text-[10px] flex-shrink-0">{f.size}</span>
-                </div>
-              ))}
-              <div className="rounded-xl bg-white/10 border border-white/20 p-3 flex items-center gap-2">
-                <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4 flex-shrink-0 opacity-80"><path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"/></svg>
-                <span className="text-white/80 text-xs font-medium">Saving to Google Drive…</span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div className="absolute -bottom-4 left-4 md:left-8 bg-white rounded-xl px-4 py-2.5 flex items-center gap-2.5 shadow-lg">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-gray-800 text-xs font-semibold">24 photos uploaded</span>
-        </div>
-        <div className="absolute -top-4 right-4 md:right-8 bg-white rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-lg">
-          <span className="text-xs font-semibold" style={{ color: '#6045f4' }}>✦ Full resolution · Pro</span>
-        </div>
+      {/* Hero animated scene */}
+      <div className="anim-fade-up anim-delay-3 relative z-10 mt-12 w-full max-w-5xl px-4">
+        <HeroScene />
       </div>
 
       <div className="wave-bottom" />
     </section>
+  );
+}
+
+/* ── Hero animated scene ─────────────────────────────────────────────────── */
+
+// Real photos — place these files in client/public/photos/
+const REAL_PHOTOS = [
+  '/photos/friends.jpg',
+  '/photos/wedding-sparklers.jpg',
+  '/photos/confetti.jpg',
+  '/photos/party.jpg',
+  '/photos/wedding-celebration.jpg',
+];
+
+const GUEST_ROWS = [
+  { src: '/photos/friends.jpg',            label: 'friends.jpg',    delay: 0    },
+  { src: '/photos/wedding-sparklers.jpg',  label: 'sparklers.jpg',  delay: 1.2  },
+  { src: '/photos/confetti.jpg',           label: 'confetti.jpg',   delay: 2.4  },
+];
+
+function HeroScene() {
+  return (
+    <div style={{ position: 'relative', width: '100%' }}>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 80px 1fr',
+        gap: '20px',
+        alignItems: 'center',
+        background: 'rgba(255,255,255,0.07)',
+        border: '1px solid rgba(255,255,255,0.18)',
+        borderRadius: '28px',
+        padding: '24px',
+        backdropFilter: 'blur(16px)',
+      }}>
+
+        {/* LEFT: Guests snapping — real photo thumbnails with shutter flash */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 2 }}>
+            Guests snapping
+          </p>
+          {GUEST_ROWS.map((row, i) => (
+            <GuestPhone key={i} src={row.src} label={row.label} delay={row.delay} />
+          ))}
+        </div>
+
+        {/* CENTRE: Cloud hub with flying thumbnails */}
+        <div style={{ position: 'relative', height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {/* Dashed lines */}
+          <svg width="80" height="200" viewBox="0 0 80 200" style={{ position: 'absolute', inset: 0 }}>
+            {[30, 100, 170].map((y, i) => (
+              <path key={i} d={`M 0 ${y} Q 40 ${y} 40 100`}
+                fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeDasharray="4 5"/>
+            ))}
+            {[30, 100, 170].map((y, i) => (
+              <path key={`r${i}`} d={`M 40 100 Q 40 ${y} 80 ${y}`}
+                fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeDasharray="4 5"/>
+            ))}
+          </svg>
+          {/* Flying photo chips */}
+          {REAL_PHOTOS.slice(0, 4).map((src, i) => (
+            <div key={i} style={{
+              position: 'absolute',
+              left: i % 2 === 0 ? 0 : 'auto', right: i % 2 === 1 ? 0 : 'auto',
+              top: `${20 + i * 45}px`,
+              width: 28, height: 28, borderRadius: 7,
+              overflow: 'hidden',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.4)',
+              animation: `flyAcross 3s cubic-bezier(0.4,0,0.2,1) ${i * 0.9}s infinite`,
+              border: '1.5px solid rgba(255,255,255,0.4)',
+            }}>
+              <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+          ))}
+          {/* Cloud centre */}
+          <div style={{
+            width: 44, height: 44, borderRadius: '50%', zIndex: 2,
+            background: 'linear-gradient(135deg,#6045f4,#53e6d4)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 0 8px rgba(96,69,244,0.18), 0 4px 20px rgba(96,69,244,0.4)',
+          }}>
+            <svg viewBox="0 0 24 24" fill="white" width="22" height="22">
+              <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
+            </svg>
+          </div>
+        </div>
+
+        {/* RIGHT: Live wall + upload queue */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {/* Live photo wall */}
+          <div style={{
+            borderRadius: 18,
+            background: 'rgba(255,255,255,0.07)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            padding: '10px',
+            overflow: 'hidden',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', animation: 'ping 2s infinite', boxShadow: '0 0 6px #34d399' }} />
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 700, letterSpacing: '0.05em' }}>LIVE WALL · WEDDING2025</span>
+            </div>
+            {/* Scrolling photo wall grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 5 }}>
+              {REAL_PHOTOS.concat(REAL_PHOTOS).slice(0, 6).map((src, i) => (
+                <div key={i} style={{
+                  aspectRatio: '1', borderRadius: 8, overflow: 'hidden',
+                  animation: `wallPop 0.4s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.5}s both`,
+                }}>
+                  <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Upload queue */}
+          {[
+            { name: 'ceremony.jpg',     size: '4.2 MB', done: true,  pct: 100, src: REAL_PHOTOS[0] },
+            { name: 'first_dance.mp4',  size: '18 MB',  done: false, pct: 65,  src: REAL_PHOTOS[1] },
+            { name: 'sparklers.jpg',    size: '5.8 MB', done: false, pct: 0,   src: REAL_PHOTOS[2] },
+          ].map((f, i) => (
+            <div key={f.name} style={{
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              borderRadius: 12, padding: '8px 10px',
+              display: 'flex', alignItems: 'center', gap: 8,
+              animation: `heroFadeIn 0.5s ease ${i * 0.4}s both`,
+            }}>
+              <div style={{ width: 30, height: 30, borderRadius: 7, overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.2)' }}>
+                <img src={f.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</p>
+                <div style={{ marginTop: 3, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', borderRadius: 99, width: `${f.pct}%`, transition: 'width 0.3s',
+                    background: f.done ? '#34d399' : 'linear-gradient(90deg,#6045f4,#53e6d4)',
+                    animation: (!f.done && f.pct > 0) ? 'progressGrow 3s ease infinite' : 'none',
+                  }} />
+                </div>
+              </div>
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: 18, height: 18 }}>
+                {f.done
+                  ? <svg viewBox="0 0 20 20" fill="#34d399" width="14" height="14"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                  : f.pct > 0
+                    ? <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" width="12" height="12" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="9" strokeOpacity="0.2"/><path d="M12 3a9 9 0 019 9" strokeLinecap="round"/></svg>
+                    : <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
+                }
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Floating badge */}
+      <div style={{
+        position: 'absolute', bottom: -16, left: 28,
+        background: '#fff', borderRadius: 12,
+        padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 8,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+      }}>
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', animation: 'ping 2s infinite' }} />
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#111' }}>47 photos &amp; videos uploaded</span>
+      </div>
+    </div>
+  );
+}
+
+function GuestPhone({ src, label, delay }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 10,
+      background: 'rgba(255,255,255,0.07)',
+      border: '1px solid rgba(255,255,255,0.14)',
+      borderRadius: 14, padding: '8px 10px',
+      animation: `heroFadeIn 0.6s ease ${delay}s both`,
+    }}>
+      {/* Phone thumbnail */}
+      <div style={{
+        width: 34, height: 46, borderRadius: 7,
+        border: '1.5px solid rgba(255,255,255,0.3)',
+        flexShrink: 0, overflow: 'hidden', position: 'relative',
+      }}>
+        <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {/* Shutter flash overlay */}
+        <div style={{
+          position: 'absolute', inset: 0, background: 'white',
+          animation: `shutterFlash 3.5s ease ${delay + 1.2}s infinite`,
+          opacity: 0,
+        }} />
+      </div>
+      <div style={{ minWidth: 0, flex: 1 }}>
+        <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</p>
+        <p style={{ color: '#53e6d4', fontSize: 10, marginTop: 1 }}>Uploading…</p>
+      </div>
+      <div style={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, background: '#53e6d4', animation: `ping 1.5s ease ${delay}s infinite` }} />
+    </div>
   );
 }
 
