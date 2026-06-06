@@ -2,8 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import imageCompression from 'browser-image-compression';
 
 const API_BASE      = import.meta.env.VITE_API_BASE ?? '';
-const MAX_SIZE_MB   = 2.0;  // must match Free plan limit
+const MAX_SIZE_MB   = 2.0;
 const MAX_DIMENSION = 2048;
+
+// Web-safe image types the server accepts natively — everything else gets
+// re-encoded to JPEG (covers HEIC/HEIF from iPhone gallery, BMP, TIFF, etc.)
+const NATIVE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 async function withRetry(fn, maxAttempts = 3) {
   let lastErr;
@@ -22,12 +26,24 @@ async function compress(blob) {
   const file = blob instanceof File
     ? blob
     : new File([blob], `photo_${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
-  if (file.size / 1024 / 1024 <= MAX_SIZE_MB) return file;
-  const out = await imageCompression(file, {
-    maxSizeMB: MAX_SIZE_MB, maxWidthOrHeight: MAX_DIMENSION,
-    useWebWorker: true, fileType: 'image/jpeg',
-  });
-  return new File([out], out.name, { type: 'image/jpeg' });
+
+  const needsConvert = !NATIVE_TYPES.has(file.type);
+  const needsResize  = file.size / 1024 / 1024 > MAX_SIZE_MB;
+
+  // Skip compression only if already a small native-type image
+  if (!needsConvert && !needsResize) return file;
+
+  try {
+    const out = await imageCompression(file, {
+      maxSizeMB: MAX_SIZE_MB, maxWidthOrHeight: MAX_DIMENSION,
+      useWebWorker: true, fileType: 'image/jpeg',
+    });
+    return new File([out], out.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' });
+  } catch {
+    // Compression failed (e.g. unsupported format on some browsers) — return original
+    // and let the server handle it or reject it with a clear error
+    return file;
+  }
 }
 
 // Upload one file using whichever path the server indicates
@@ -88,23 +104,36 @@ export default function BatchUploadScreen({
   hostTier = 'free',
   onSuccess, onError, onCancel,
 }) {
-  const [current, setCurrent] = useState(0);
-  const [phase,   setPhase]   = useState('uploading'); // uploading | done
+  const [current,  setCurrent]  = useState(0);
+  const [failed,   setFailed]   = useState(0);
+  const [phase,    setPhase]    = useState('uploading'); // uploading | done
   const abortRef = useRef(false);
   const total    = files.length;
 
   useEffect(() => {
     abortRef.current = false;
+    let failCount = 0;
 
     async function run() {
       for (let i = 0; i < total; i++) {
         if (abortRef.current) return;
-        setCurrent(i);
-        await uploadOne(files[i], guestName, eventCode, hostTier);
+        setCurrent(i + 1);
+        try {
+          await uploadOne(files[i], guestName, eventCode, hostTier);
+        } catch {
+          // One bad file doesn't kill the batch — count it and move on
+          failCount++;
+          setFailed(failCount);
+        }
       }
       if (!abortRef.current) {
-        setPhase('done');
-        setTimeout(onSuccess, 600);
+        if (failCount === total) {
+          // Every single file failed — surface as an error
+          onError(`All ${total} uploads failed. Check your connection and try again.`);
+        } else {
+          setPhase('done');
+          setTimeout(onSuccess, 600);
+        }
       }
     }
 
@@ -113,7 +142,7 @@ export default function BatchUploadScreen({
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const isDone = phase === 'done';
-  const pct    = isDone ? 100 : Math.round((current / total) * 100);
+  const pct    = isDone ? 100 : Math.round(((current - 1) / total) * 100);
   const RADIUS = 54;
   const CIRC   = 2 * Math.PI * RADIUS;
   const dash   = CIRC * (pct / 100);
@@ -132,7 +161,7 @@ export default function BatchUploadScreen({
         <div className="w-40 h-40 rounded-full flex items-center justify-center"
              style={{ background: 'rgba(255,255,255,0.15)' }}>
           <span className="text-4xl font-black text-white tabular-nums">
-            {isDone ? '✓' : `${current + 1}/${total}`}
+            {isDone ? '✓' : `${current}/${total}`}
           </span>
         </div>
         {!isDone && (
@@ -150,10 +179,14 @@ export default function BatchUploadScreen({
 
       <div className="text-center space-y-1.5">
         <p className="text-white text-lg font-bold">
-          {isDone ? 'All done!' : `Uploading photo ${current + 1} of ${total}`}
+          {isDone ? (failed > 0 ? 'Mostly done!' : 'All done!') : `Uploading photo ${current} of ${total}`}
         </p>
         <p className="text-white/60 text-xs tracking-wide">
-          {isDone ? `${total} photos uploaded` : 'Please wait…'}
+          {isDone
+            ? failed > 0
+              ? `${total - failed} uploaded · ${failed} couldn't be sent`
+              : `${total} photos uploaded`
+            : 'Please wait…'}
         </p>
         {!isDone && (
           <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold"
