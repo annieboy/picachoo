@@ -19,7 +19,7 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
           /* Photo: 3:4 frame matching camera viewfinder */
           <div style={{
             position: 'absolute',
-            top: '8px',
+            top: '52px',
             left: 0,
             right: 0,
             height: 'calc(100vw * 4 / 3)',
@@ -47,7 +47,7 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
       {/* ── Bottom controls: Retake · Shutter-style Upload · (spacer) ── */}
       <div
         className="shrink-0 flex items-center justify-between px-10 py-4 bg-black"
-        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}
       >
         {/* Retake — left */}
         <button

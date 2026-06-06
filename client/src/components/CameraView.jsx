@@ -108,7 +108,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           {/* Single video element always mounted — wrapper changes shape per mode */}
           <div style={mode === 'photo' ? {
             position: 'absolute',
-            top: '8px',
+            top: '52px',
             left: 0,
             right: 0,
             height: 'calc(100vw * 4 / 3)',
@@ -188,7 +188,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       {/* Bottom controls */}
       <div
         className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-3"
-        style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))', paddingTop: '1rem',
+        style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))', paddingTop: '1rem',
                  background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)' }}
       >
         {hasZoom && isActive && !recording && (
