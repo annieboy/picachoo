@@ -84,10 +84,28 @@ export function useCamera() {
   const flipCamera = useCallback(() => {
     const next = facingMode === 'environment' ? 'user' : 'environment';
     setFacingMode(next);
+
+    const tracks = streamRef.current?.getVideoTracks() ?? [];
     stopStream();
-    // iOS needs ~200ms to release the camera hardware before a new
-    // getUserMedia call can succeed on the other lens.
-    setTimeout(() => startCameraFacing(next), 200);
+
+    if (tracks.length === 0) {
+      startCameraFacing(next);
+      return;
+    }
+
+    // Wait for the track's ended event before acquiring the new camera.
+    // iOS holds hardware open briefly after stop(); starting getUserMedia
+    // before release causes NotReadableError on all attempts.
+    let started = false;
+    const start = () => {
+      if (started) return;
+      started = true;
+      startCameraFacing(next);
+    };
+
+    tracks[0].addEventListener('ended', start, { once: true });
+    // Safety net: if ended never fires (some browsers skip it), proceed anyway
+    setTimeout(start, 500);
   }, [facingMode, stopStream, startCameraFacing]);
 
   const toggleTorch = useCallback(async () => {
