@@ -14,22 +14,6 @@ async function getDeviceIdForFacing(facing) {
   }
 }
 
-// Crop a video frame to the target aspect ratio (w/h), centred
-function cropToRatio(video, targetAR) {
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
-  const streamAR = vw / vh;
-  let sx = 0, sy = 0, sw = vw, sh = vh;
-  if (streamAR > targetAR) {
-    sw = Math.round(vh * targetAR);
-    sx = Math.round((vw - sw) / 2);
-  } else if (streamAR < targetAR) {
-    sh = Math.round(vw / targetAR);
-    sy = Math.round((vh - sh) / 2);
-  }
-  return { sx, sy, sw, sh };
-}
-
 export function useCamera() {
   const videoRef         = useRef(null);
   const streamRef        = useRef(null);
@@ -43,9 +27,8 @@ export function useCamera() {
   const [zoom,           setZoom]           = useState(1);
   const [zoomRange,      setZoomRange]      = useState({ min: 1, max: 1 });
 
-  // Refs so callbacks always see latest values without re-creating
   const modeRef  = useRef('photo');
-  const ratioRef = useRef(3 / 4); // default 3:4 portrait
+  const ratioRef = useRef(3 / 4); // default 3:4
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -55,8 +38,8 @@ export function useCamera() {
   useEffect(() => () => stopStream(), [stopStream]);
 
   const startCameraFacing = useCallback(async (facing, mode, ratio) => {
-    const resolvedMode  = mode  ?? modeRef.current;
-    const resolvedRatio = ratio ?? ratioRef.current;
+    const resolvedMode = mode ?? modeRef.current;
+    if (ratio !== undefined) ratioRef.current = ratio;
 
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraState('unavailable');
@@ -69,19 +52,11 @@ export function useCamera() {
     try {
       const deviceId = await getDeviceIdForFacing(facing);
 
-      let sizeConstraints;
-      if (resolvedMode === 'video') {
-        sizeConstraints = { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16 / 9 } };
-      } else if (resolvedRatio === null) {
-        // "Full" — let browser/device decide, no crop constraint
-        sizeConstraints = { width: { ideal: 3840 }, height: { ideal: 2160 } };
-      } else {
-        // Photo with specific ratio (e.g. 3/4, 1, 4/3)
-        const isPortrait = resolvedRatio <= 1;
-        const w = isPortrait ? 3072 : 4096;
-        const h = isPortrait ? Math.round(w / resolvedRatio) : Math.round(w * resolvedRatio);
-        sizeConstraints = { width: { ideal: w }, height: { ideal: h }, aspectRatio: { ideal: resolvedRatio } };
-      }
+      // Always request the highest resolution — no aspectRatio constraint.
+      // Cropping is handled in canvas at capture time, not in the stream.
+      const sizeConstraints = resolvedMode === 'video'
+        ? { width: { ideal: 1920 }, height: { ideal: 1080 } }
+        : { width: { ideal: 4096 }, height: { ideal: 3072 } };
 
       const videoConstraints = deviceId
         ? { deviceId: { exact: deviceId }, ...sizeConstraints }
@@ -124,9 +99,8 @@ export function useCamera() {
 
   const switchRatio = useCallback((ratio) => {
     ratioRef.current = ratio;
-    stopStream();
-    startCameraFacing(facingMode, modeRef.current, ratio);
-  }, [facingMode, stopStream, startCameraFacing]);
+    // No stream restart needed — ratio only affects canvas crop at capture time
+  }, []);
 
   const flipCamera = useCallback(() => {
     const next = facingMode === 'environment' ? 'user' : 'environment';
@@ -175,19 +149,31 @@ export function useCamera() {
     }
 
     if (!blob) {
-      const targetAR = ratioRef.current; // null = no crop
+      const targetAR = ratioRef.current; // w/h, null = no crop
       blob = await new Promise(resolve => {
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
         const canvas = document.createElement('canvas');
+
         if (targetAR === null) {
-          canvas.width  = video.videoWidth;
-          canvas.height = video.videoHeight;
+          canvas.width  = vw;
+          canvas.height = vh;
           canvas.getContext('2d').drawImage(video, 0, 0);
         } else {
-          const { sx, sy, sw, sh } = cropToRatio(video, targetAR);
+          const streamAR = vw / vh;
+          let sx = 0, sy = 0, sw = vw, sh = vh;
+          if (streamAR > targetAR) {
+            sw = Math.round(vh * targetAR);
+            sx = Math.round((vw - sw) / 2);
+          } else if (streamAR < targetAR) {
+            sh = Math.round(vw / targetAR);
+            sy = Math.round((vh - sh) / 2);
+          }
           canvas.width  = sw;
           canvas.height = sh;
           canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
         }
+
         canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95);
       });
       setCaptureMethod('canvas');
