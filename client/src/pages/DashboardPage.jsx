@@ -8,6 +8,7 @@ import {
   updateEvent, deleteEvent,
   updateHostProfile, deleteAccount, cancelSubscription,
   getCohosts, inviteCohost, removeCohost,
+  activateCheckout,
 } from '../api';
 import QRCard from '../components/QRCard';
 import { QRCodeSVG } from 'qrcode.react';
@@ -238,25 +239,39 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
     getOrCreateHost().catch(() => {});
   }, [linked]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // After checkout success, poll briefly until webhook updates the tier
+  // After checkout success (including Stripe hosted Checkout redirect-back)
   useEffect(() => {
     if (!checkoutOk) return;
+    const sessionId = params.get('session_id');
+
     const clean = new URL(window.location.href);
     clean.searchParams.delete('checkout');
     clean.searchParams.delete('type');
+    clean.searchParams.delete('session_id');
     window.history.replaceState({}, '', clean.toString());
 
-    let attempts = 0;
-    const poll = async () => {
-      attempts++;
-      try {
-        const { host: fresh } = await getOrCreateHost();
-        setHost(fresh);
-        if (fresh.tier !== 'free' || attempts >= 6) return;
-      } catch { return; }
-      setTimeout(poll, 2000);
-    };
-    setTimeout(poll, 1500);
+    async function handleCheckoutReturn() {
+      // If returning from hosted Checkout, activate immediately via session
+      if (sessionId && checkoutType === 'subscription') {
+        try {
+          await activateCheckout({ type: checkoutType === 'subscription' ? 'pro_annual' : checkoutType, sessionId });
+        } catch { /* webhook will still apply it */ }
+      }
+      // Poll briefly for host tier to update (webhook backup)
+      let attempts = 0;
+      const poll = async () => {
+        attempts++;
+        try {
+          const { host: fresh, events: freshEvents } = await getOrCreateHost();
+          setHost(fresh);
+          setEvents(freshEvents);
+          if (fresh.tier !== 'free' || attempts >= 8) return;
+        } catch { return; }
+        setTimeout(poll, 2000);
+      };
+      setTimeout(poll, 1000);
+    }
+    handleCheckoutReturn();
   }, [checkoutOk]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleEventUpdate(updated) {

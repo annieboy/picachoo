@@ -175,7 +175,7 @@ export default function UploadScreen({
             if (xhr.status >= 200 && xhr.status < 300) {
               resolve(JSON.parse(xhr.responseText || '{}'));
             } else {
-              reject(new Error(`Upload failed (${xhr.status})`));
+              reject(Object.assign(new Error(`Upload failed (${xhr.status})`), { httpStatus: xhr.status }));
             }
           });
           xhr.addEventListener('error', () => { xhrRef.current = null; reject(new Error('Network error')); });
@@ -186,7 +186,14 @@ export default function UploadScreen({
           xhr.send(payload);
         });
       } catch (err) {
-        if (!abortRef.current) onError(err.message);
+        if (abortRef.current) return;
+        // Network error on direct upload — fall back to server-side path
+        if (err.message === 'Network error' || !err.httpStatus) {
+          console.warn('[upload] direct PUT failed, falling back to server-side:', err.message);
+          await runServerSide();
+          return;
+        }
+        onError(err.message);
         return;
       }
 

@@ -63,53 +63,33 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
       return res.json({ clientSecret: pi.client_secret });
     }
 
-    // ── Annual subscriptions (Subscription + expand payment intent) ───────────
+    // ── Annual subscriptions — use Stripe hosted Checkout Session ────────────
+    // This is the most reliable approach: Stripe handles the payment UI,
+    // 3DS, SCA, etc. We never touch the PaymentIntent directly.
     const priceId = type === 'pro_annual'
       ? process.env.STRIPE_PRICE_PRO_ANNUAL
       : process.env.STRIPE_PRICE_BUSINESS_ANNUAL;
 
     if (!priceId) {
-      return res.status(500).json({ error: 'Stripe price not configured for this plan' });
+      return res.status(500).json({ error: 'Stripe price not configured for this plan. Contact support.' });
     }
 
     const { promoCodeId } = req.body ?? {};
+    const origin = process.env.CLIENT_ORIGIN ?? 'https://picachoo.vercel.app';
 
-    const subscription = await stripe.subscriptions.create({
-      customer:         customerId,
-      items:            [{ price: priceId }],
-      payment_behavior: 'default_incomplete',
-      payment_settings: { save_default_payment_method: 'on_subscription' },
-      expand:           ['latest_invoice', 'latest_invoice.payment_intent'],
-      metadata:         { hostId: host.id, type },
-      ...(promoCodeId ? { promotion_code: promoCodeId } : {}),
+    const session = await stripe.checkout.sessions.create({
+      customer:             customerId,
+      mode:                 'subscription',
+      line_items:           [{ price: priceId, quantity: 1 }],
+      success_url:          `${origin}/dashboard?checkout=success&type=subscription&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url:           `${origin}/dashboard`,
+      subscription_data:    { metadata: { hostId: host.id, type } },
+      allow_promotion_codes: true,
+      metadata:             { hostId: host.id, type },
+      ...(promoCodeId ? { discounts: [{ promotion_code: promoCodeId }] } : {}),
     });
 
-    // Normalise latest_invoice — may be a string ID or an expanded object
-    let invoice = subscription.latest_invoice;
-    if (typeof invoice === 'string') {
-      invoice = await stripe.invoices.retrieve(invoice, {
-        expand: ['payment_intent'],
-      });
-    }
-
-    // Normalise payment_intent — may be a string ID or an expanded object
-    let clientSecret = invoice?.payment_intent?.client_secret;
-    if (!clientSecret) {
-      const pi = invoice?.payment_intent;
-      const piId = typeof pi === 'string' ? pi : pi?.id;
-      if (piId) {
-        const paymentIntent = await stripe.paymentIntents.retrieve(piId);
-        clientSecret = paymentIntent.client_secret;
-      }
-    }
-
-    if (!clientSecret) {
-      console.error('[stripe] no clientSecret — sub:', subscription.status,
-        'invoice:', invoice?.status, 'invoice.id:', invoice?.id ?? 'null');
-      return res.status(500).json({ error: 'Could not initialise subscription payment' });
-    }
-
-    return res.json({ clientSecret, subscriptionId: subscription.id });
+    return res.json({ checkoutUrl: session.url, sessionId: session.id });
   } catch (err) {
     next(err);
   }
@@ -149,16 +129,32 @@ router.post('/activate', requireAuth, async (req, res, next) => {
       return res.json({ activated: true });
     }
 
-    // ── Annual subscriptions ──────────────────────────────────────────────────
+    // ── Annual subscriptions via Checkout Session ─────────────────────────────
     if (type === 'pro_annual' || type === 'business_annual') {
-      if (!subscriptionId) return res.status(400).json({ error: 'subscriptionId required' });
+      // Prefer sessionId (new hosted Checkout flow) over legacy subscriptionId
+      const { sessionId } = req.body ?? {};
+      if (sessionId) {
+        const cs = await stripe.checkout.sessions.retrieve(sessionId);
+        if (cs.payment_status !== 'paid' && cs.status !== 'complete') {
+          return res.status(400).json({ error: `Session not paid (status: ${cs.status})` });
+        }
+        if (cs.metadata?.hostId !== hostId) return res.status(403).json({ error: 'Forbidden' });
+        const subId = typeof cs.subscription === 'string' ? cs.subscription : cs.subscription?.id;
+        const planType = cs.metadata?.type ?? type;
+        await pool.query(
+          `UPDATE hosts SET tier = $1, stripe_subscription_id = $2 WHERE id = $3`,
+          [planType, subId, hostId],
+        );
+        return res.json({ activated: true, tier: planType });
+      }
+
+      // Legacy path: direct subscriptionId
+      if (!subscriptionId) return res.status(400).json({ error: 'sessionId or subscriptionId required' });
       const sub = await stripe.subscriptions.retrieve(subscriptionId);
       if (!['active', 'trialing'].includes(sub.status)) {
         return res.status(400).json({ error: `Subscription not active (status: ${sub.status})` });
       }
-      if (sub.metadata?.hostId !== hostId) {
-        return res.status(403).json({ error: 'Forbidden' });
-      }
+      if (sub.metadata?.hostId !== hostId) return res.status(403).json({ error: 'Forbidden' });
       await pool.query(
         `UPDATE hosts SET tier = $1, stripe_subscription_id = $2 WHERE id = $3`,
         [type, sub.id, hostId],
@@ -265,6 +261,22 @@ router.post('/webhook', async (req, res) => {
           [passExpires.toISOString(), eventId],
         );
         console.log(`[stripe] one_time_pass activated for event ${eventId}`);
+      }
+    }
+
+    // Subscription activated via hosted Checkout
+    if (event.type === 'checkout.session.completed') {
+      const cs = event.data.object;
+      if (cs.mode === 'subscription' && cs.payment_status === 'paid') {
+        const { hostId, type: planType } = cs.metadata ?? {};
+        const subId = typeof cs.subscription === 'string' ? cs.subscription : cs.subscription?.id;
+        if (hostId && planType) {
+          await pool.query(
+            `UPDATE hosts SET tier = $1, stripe_subscription_id = $2 WHERE id = $3`,
+            [planType, subId, hostId],
+          );
+          console.log(`[stripe] checkout.session completed — ${planType} for host ${hostId}`);
+        }
       }
     }
 
