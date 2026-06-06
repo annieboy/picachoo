@@ -1,29 +1,24 @@
 const { Pool } = require('pg');
 
-const dbUrl  = process.env.DATABASE_URL ?? '';
+const dbUrl      = process.env.DATABASE_URL ?? '';
 const isSupabase = dbUrl.includes('supabase');
-const useSSL = isSupabase || process.env.NODE_ENV === 'production';
+const useSSL     = isSupabase || process.env.NODE_ENV === 'production';
 
-// PgBouncer transaction mode (port 6543) does not support server-side prepared
-// statements. Appending ?prepared_statements=false (or pgbouncer=true for older
-// drivers) disables them so every query uses the simple protocol instead.
-function buildConnectionString(url) {
+// PgBouncer transaction mode doesn't support prepared statements.
+// Append the flag as a plain string — avoids URL parsing issues with
+// postgres:// schemes that some environments pass in non-standard formats.
+function withNoPreparedStatements(url) {
   if (!url) return url;
-  try {
-    const u = new URL(url);
-    u.searchParams.set('prepared_statements', 'false');
-    return u.toString();
-  } catch {
-    // URL parse failed — return as-is and hope for the best
-    return url;
-  }
+  return url.includes('?')
+    ? `${url}&prepared_statements=false`
+    : `${url}?prepared_statements=false`;
 }
 
 const pool = new Pool({
-  connectionString: buildConnectionString(dbUrl),
-  ssl: useSSL ? { rejectUnauthorized: false } : false,
-  max:                    process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 2,
-  idleTimeoutMillis:      10_000,
+  connectionString:        withNoPreparedStatements(dbUrl),
+  ssl:                     useSSL ? { rejectUnauthorized: false } : false,
+  max:                     process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 2,
+  idleTimeoutMillis:       10_000,
   connectionTimeoutMillis: 5_000,
 });
 
