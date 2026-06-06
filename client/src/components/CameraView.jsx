@@ -135,15 +135,13 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
                  background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)' }}
       >
         {hasZoom && isActive && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {zoomLevels.map(level => {
               const active = Math.abs(zoom - level) < 0.3;
               return (
                 <button key={level} onClick={() => applyZoom(level)}
-                  className="px-3 py-1 rounded-full text-sm font-bold backdrop-blur-sm transition-all active:scale-90"
-                  style={active
-                    ? { background: 'rgba(255,255,255,0.25)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.6)' }
-                    : { background: 'rgba(0,0,0,0.3)', color: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(255,255,255,0.15)' }}>
+                  className="w-9 h-9 flex items-center justify-center text-sm font-bold transition-all active:scale-90"
+                  style={active ? { color: '#fff' } : { color: 'rgba(255,255,255,0.45)' }}>
                   {level === 1 ? '1×' : `${level}×`}
                 </button>
               );
