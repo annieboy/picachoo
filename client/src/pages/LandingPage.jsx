@@ -120,7 +120,7 @@ function Hero() {
         {[
           { n: '1', text: 'Guests scan a QR code', grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
           { n: '2', text: 'Snap a photo', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
-          { n: '3', text: 'It lands in your Drive, OneDrive, or Dropbox', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
+          { n: '3', text: 'It lands in your cloud', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
         ].map(({ n, text, grad }, i, arr) => (
           <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
             <span style={{
