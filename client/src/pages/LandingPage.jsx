@@ -10,6 +10,7 @@ export default function LandingPage() {
       <HowItWorks />
       <Features />
       <LiveWall />
+      <Differentiators />
       <Pricing />
       <FinalCTA />
     </MarketingLayout>
@@ -110,15 +111,20 @@ function Hero() {
 
       {/* Headline */}
       <h1 className="anim-fade-up text-center text-3xl sm:text-4xl md:text-6xl font-black tracking-tight text-white leading-[1.1] max-w-3xl px-2">
-        The easiest way to collect photos from everyone into your cloud storage.
+        Collect photos from everyone — straight into your cloud.
       </h1>
 
-      {/* Numbered steps — wrap gracefully on mobile */}
-      <div className="anim-fade-up anim-delay-1 mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4">
+      {/* Sub-headline */}
+      <p className="anim-fade-up anim-delay-1 text-center text-white/70 text-base sm:text-lg max-w-xl px-4 mt-3" style={{ lineHeight: 1.6 }}>
+        Guests scan a QR code, snap photos, and they land directly in your album. Perfect for families, trips, schools, clubs, weddings, and events.
+      </p>
+
+      {/* Numbered steps */}
+      <div className="anim-fade-up anim-delay-1 mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4">
         {[
-          { n: '1', text: 'Guests scan a QR code', grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
-          { n: '2', text: 'Snap a photo', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
-          { n: '3', text: 'It lands in your cloud', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
+          { n: '1', text: 'Scan a QR code',       grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
+          { n: '2', text: 'Snap &amp; contribute', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
+          { n: '3', text: 'Photos land in your cloud', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
         ].map(({ n, text, grad }, i, arr) => (
           <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
             <span style={{
@@ -127,7 +133,7 @@ function Hero() {
               background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
               color: '#fff', fontSize: 10, fontWeight: 800,
             }}>{n}</span>
-            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500 }}>{text}</span>
+            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500 }} dangerouslySetInnerHTML={{ __html: text }} />
             {i < arr.length - 1 && (
               <span className="hidden sm:inline" style={{ color: 'rgba(255,255,255,0.3)', marginLeft: 4, fontSize: 18, lineHeight: 1 }}>·</span>
             )}
@@ -135,13 +141,17 @@ function Hero() {
         ))}
       </div>
 
-      {/* CTA */}
-      <div className="anim-fade-up anim-delay-2 mt-7">
+      {/* CTAs */}
+      <div className="anim-fade-up anim-delay-2 mt-7 flex flex-col sm:flex-row gap-3 items-center">
         <Link to="/dashboard"
               className="px-8 py-4 text-base rounded-full font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-lg"
               style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 20px rgba(34,197,94,0.4)' }}>
-          Get started for free
+          Create your first event — free
         </Link>
+        <a href="#how-it-works"
+           className="text-white/60 text-sm font-semibold hover:text-white transition-colors">
+          See how it works ↓
+        </a>
       </div>
 
       {/* Hero animated scene */}
@@ -763,7 +773,7 @@ function Logos() {
     <section className="py-8 px-6 bg-white border-b border-gray-100">
       <div className="max-w-4xl mx-auto">
         <p className="text-center text-gray-400 text-xs font-semibold uppercase tracking-widest mb-6">
-          Works with your favourite cloud storage
+          Photos go straight into the storage you already use
         </p>
         <div className="flex items-center justify-center gap-10 flex-wrap">
           {[
@@ -787,26 +797,45 @@ function Logos() {
 /* ── How It Works ─────────────────────────────────────────────────────────── */
 function HowItWorks() {
   const steps = [
-    { n: '01', icon: '📋', title: 'Create your event', desc: 'Sign up, connect your cloud storage, and name your event. Takes 60 seconds.' },
-    { n: '02', icon: '📲', title: 'Share the QR code', desc: 'Print it, display it on a screen, or text the link. No app install for guests.' },
-    { n: '03', icon: '📸', title: 'Guests snap & upload', desc: 'One tap to take a photo. Uploads directly to your cloud at full resolution.' },
-    { n: '04', icon: '☁️', title: 'Your cloud, your folder', desc: 'Every image lands neatly in a named event folder. You own it, forever.' },
+    {
+      n: '01', icon: '☁️',
+      title: 'Connect your cloud',
+      desc: 'Link Google Drive, OneDrive, or Dropbox. Picachoo creates a dedicated folder for your event automatically.',
+    },
+    {
+      n: '02', icon: '🔗',
+      title: 'Share a QR code or link',
+      desc: 'Print it, display it on screen, or drop it in a message. Anyone can join instantly — no app download, no sign-up.',
+    },
+    {
+      n: '03', icon: '📸',
+      title: 'Guests snap & contribute',
+      desc: 'One tap opens the camera. Photos upload directly to your storage at the quality you choose.',
+    },
+    {
+      n: '04', icon: '🎉',
+      title: 'Relive & display memories',
+      desc: 'Every photo lands in your folder, yours to keep forever. Stream them live on a photo wall at your event.',
+    },
   ];
 
   return (
-    <section id="how-it-works" className="py-14 px-6 bg-white">
+    <section id="how-it-works" className="py-16 px-6 bg-white">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-10">
+        <div className="text-center mb-12">
           <span className="badge-grad text-xs font-semibold px-3 py-1.5 inline-block mb-3">Simple by design</span>
           <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
-            From QR to cloud in{' '}
-            <span className="grad-text">10 seconds flat</span>
+            Set up in under{' '}
+            <span className="grad-text">60 seconds</span>
           </h2>
+          <p className="mt-3 text-gray-500 text-lg max-w-xl mx-auto">
+            No app installs. No platform lock-in. Your photos, in your storage, from everyone who was there.
+          </p>
         </div>
         <div className="grid md:grid-cols-4 gap-5">
           {steps.map((s, i) => (
-            <div key={s.n} className="relative feature-card p-5 flex flex-col gap-3">
-              <span className="text-3xl">{s.icon}</span>
+            <div key={s.n} className="relative feature-card p-6 flex flex-col gap-3">
+              <div className="icon-badge w-11 h-11 flex items-center justify-center text-2xl">{s.icon}</div>
               <div>
                 <span className="text-gray-300 text-xs font-bold tracking-widest">{s.n}</span>
                 <h3 className="text-gray-900 font-bold text-base mt-0.5">{s.title}</h3>
@@ -823,29 +852,57 @@ function HowItWorks() {
   );
 }
 
-/* ── Features ─────────────────────────────────────────────────────────────── */
+/* ── Use Cases ────────────────────────────────────────────────────────────── */
 function Features() {
-  const features = [
-    { icon: '🖼️', title: 'Full-resolution uploads', desc: 'Pro hosts get raw, uncompressed originals. Every pixel captured, nothing lost.' },
-    { icon: '⚡', title: 'Direct-to-cloud uploads', desc: "Files fly straight to Google Drive or OneDrive — your guests' photos never touch our servers." },
-    { icon: '📺', title: 'Live photo wall', desc: 'Real-time mosaic of every photo as it lands. Perfect for big screens at weddings and conferences.' },
-    { icon: '📱', title: 'QR code sharing', desc: 'One scannable code. No SMS campaigns, no WhatsApp groups. Print it and forget it.' },
-    { icon: '☁️', title: 'Multi-cloud flexibility', desc: 'Google Drive, Microsoft OneDrive, or Dropbox — the storage your team already uses.' },
-    { icon: '📊', title: 'Analytics dashboard', desc: 'See photo counts, last upload times, and storage status across all your events.' },
+  const useCases = [
+    {
+      icon: '👨‍👩‍👧‍👦',
+      title: 'Families',
+      desc: 'Stop chasing photos after every gathering. Everyone contributes, and all the memories live in one shared place — in your cloud, not someone else\'s app.',
+    },
+    {
+      icon: '✈️',
+      title: 'Trips & Friend Groups',
+      desc: 'Collect every angle from the whole group, automatically. No more "can you send me your photos?" messages weeks later.',
+    },
+    {
+      icon: '💍',
+      title: 'Weddings & Events',
+      desc: 'Guests contribute candid moments you\'d never capture yourself — and watch them appear live on screen as the night unfolds.',
+    },
+    {
+      icon: '🏫',
+      title: 'Schools & Clubs',
+      desc: 'Build community galleries without the admin. Each event creates its own folder. Share with everyone, own it forever.',
+    },
+    {
+      icon: '📸',
+      title: 'Photography Communities',
+      desc: 'Gather shots from multiple contributors, display them live, and elevate your service with a professional photo wall experience.',
+    },
+    {
+      icon: '🎤',
+      title: 'Conferences & Meetups',
+      desc: 'Capture the energy of the room. Attendees contribute photos in real time while the live wall keeps the buzz going on screen.',
+    },
   ];
 
   return (
-    <section id="features" className="py-14 px-6 bg-gray-50">
+    <section id="features" className="py-16 px-6 bg-gray-50">
       <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-10">
+        <div className="text-center mb-12">
+          <span className="badge-grad text-xs font-semibold px-3 py-1.5 inline-block mb-3">Who it's for</span>
           <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
-            Built for <span className="grad-text">collaboration</span>
+            Built for <span className="grad-text">every occasion</span>
           </h2>
+          <p className="mt-3 text-gray-500 text-lg max-w-xl mx-auto">
+            Wherever people gather and memories are made, Picachoo makes sure you collect them all.
+          </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-5">
-          {features.map(f => (
-            <div key={f.title} className="feature-card p-5 flex flex-col gap-3">
-              <div className="icon-badge w-10 h-10 flex items-center justify-center text-xl">{f.icon}</div>
+        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
+          {useCases.map(f => (
+            <div key={f.title} className="feature-card p-6 flex flex-col gap-3">
+              <div className="icon-badge w-11 h-11 flex items-center justify-center text-2xl">{f.icon}</div>
               <h3 className="text-gray-900 font-bold text-base">{f.title}</h3>
               <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
             </div>
@@ -866,24 +923,24 @@ function LiveWall() {
   const names = ['Sarah K.', 'Marcus R.', 'Anna T.', 'James L.', 'Priya M.', 'Tom B.', 'Lily C.', 'Omar S.', 'Zoe P.'];
 
   return (
-    <section className="py-14 px-6 bg-white">
+    <section className="py-16 px-6 bg-white">
       <div className="max-w-5xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
+        <div className="grid md:grid-cols-2 gap-14 items-center">
           <div>
-            <span className="badge-grad text-xs font-semibold px-3 py-1.5 inline-block mb-3">Live photo wall</span>
+            <span className="badge-grad text-xs font-semibold px-3 py-1.5 inline-block mb-4">Live photo wall</span>
             <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight leading-tight">
-              Watch the memories{' '}
-              <span className="grad-text">roll in live</span>
+              Guests see their photo<br />
+              <span className="grad-text">appear live on screen</span>
             </h2>
             <p className="mt-4 text-gray-500 text-lg leading-relaxed">
-              Display a real-time photo mosaic on any screen. Every upload appears instantly — no refresh, no delay.
+              Display a real-time photo wall on any TV, projector, or screen. Every upload appears the moment it lands — no refresh, no delay, no friction.
             </p>
-            <ul className="mt-5 space-y-2.5">
+            <ul className="mt-6 space-y-3">
               {[
-                'Auto-populating grid updates in real time',
-                'Works on any screen — TV, tablet, laptop',
-                'Guests love seeing their photo appear live',
-                'Host controls display from the dashboard',
+                'Real-time updates — photos appear within seconds',
+                'Display on any screen: TV, laptop, or projector',
+                'Guests love seeing their shot go live instantly',
+                'Toggle on or off from your host dashboard',
               ].map(item => (
                 <li key={item} className="flex items-start gap-3 text-gray-600 text-sm">
                   <svg viewBox="0 0 20 20" fill="#6045f4" className="w-5 h-5 mt-0.5 flex-shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
@@ -891,14 +948,14 @@ function LiveWall() {
                 </li>
               ))}
             </ul>
-            <div className="mt-6">
-              <Link to="/dashboard" className="btn-purple px-7 py-3 inline-block text-sm">
-                Try it at your next event
+            <div className="mt-8">
+              <Link to="/dashboard" className="btn-purple px-8 py-3.5 inline-block text-sm font-bold">
+                Try it at your next event →
               </Link>
             </div>
           </div>
           <div className="relative">
-            <div className="grid grid-cols-3 gap-2 rounded-2xl overflow-hidden p-3 bg-gray-50 border border-gray-100 shadow-lg">
+            <div className="grid grid-cols-3 gap-2 rounded-2xl overflow-hidden p-3 bg-gray-900 shadow-2xl">
               {photos.map((p, i) => (
                 <div key={i} className="rounded-xl aspect-square relative overflow-hidden flex items-end" style={{ background: p.color }}>
                   <span className="block text-[9px] font-semibold text-gray-500/60 p-1.5 truncate w-full">{names[i]}</span>
@@ -910,11 +967,66 @@ function LiveWall() {
                 </div>
               ))}
             </div>
+            <div className="absolute -top-3 left-4 right-4 bg-gray-900 rounded-xl px-4 py-2 flex items-center justify-between">
+              <span className="text-xs font-bold">
+                <span className="text-violet-400">pica</span><span className="text-teal-300">choo</span>
+                <span className="text-gray-500 mx-2">·</span>
+                <span className="text-gray-300 font-semibold">Phil &amp; Jane's Wedding</span>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="text-emerald-400 text-[10px] font-bold tracking-wide">LIVE</span>
+              </div>
+            </div>
             <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 bg-white rounded-full px-4 py-1.5 flex items-center gap-2 shadow-md border border-gray-100">
               <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-gray-800 text-xs font-semibold">9 photos · Live</span>
+              <span className="text-gray-800 text-xs font-semibold">47 photos live</span>
             </div>
           </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ── Differentiators ──────────────────────────────────────────────────────── */
+function Differentiators() {
+  return (
+    <section className="py-16 px-6 bg-gray-50">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-12">
+          <span className="badge-grad text-xs font-semibold px-3 py-1.5 inline-block mb-3">Why Picachoo</span>
+          <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
+            Photos stay <span className="grad-text">yours, forever</span>
+          </h2>
+          <p className="mt-3 text-gray-500 text-lg max-w-xl mx-auto">
+            Unlike other sharing apps, Picachoo doesn't hold your photos hostage. They flow directly into storage you already own.
+          </p>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          {[
+            {
+              icon: '🔐',
+              title: 'Direct-to-cloud ownership',
+              desc: 'Photos belong to you, not us. They\'re uploaded straight to your Google Drive, OneDrive, or Dropbox — in a named event folder, ready to share or archive.',
+              tag: 'You own your data',
+            },
+            {
+              icon: '📲',
+              title: 'Zero friction for guests',
+              desc: 'No app download. No account. Guests scan a QR code, enter their name, and start contributing in seconds. The simpler it is, the more photos you collect.',
+              tag: 'Just scan & shoot',
+            },
+          ].map(d => (
+            <div key={d.title} className="feature-card p-7 flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <div className="icon-badge w-12 h-12 flex items-center justify-center text-2xl">{d.icon}</div>
+                <span className="badge-grad text-xs font-bold px-3 py-1">{d.tag}</span>
+              </div>
+              <h3 className="text-gray-900 font-black text-xl">{d.title}</h3>
+              <p className="text-gray-500 text-sm leading-relaxed">{d.desc}</p>
+            </div>
+          ))}
         </div>
       </div>
     </section>
@@ -924,61 +1036,80 @@ function LiveWall() {
 /* ── Pricing ──────────────────────────────────────────────────────────────── */
 function Pricing() {
   return (
-    <section id="pricing" className="py-14 px-6 bg-gray-50">
+    <section id="pricing" className="py-16 px-6 bg-white">
       <div className="max-w-3xl mx-auto">
-        <div className="text-center mb-10">
+        <div className="text-center mb-12">
           <span className="badge-grad text-xs font-semibold px-3 py-1.5 inline-block mb-3">Pricing</span>
           <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
             Start free. <span className="grad-text">Upgrade when ready.</span>
           </h2>
+          <p className="mt-3 text-gray-500 text-base max-w-md mx-auto">
+            No credit card required. No hidden fees. Cancel any time.
+          </p>
         </div>
         <div className="grid md:grid-cols-2 gap-6">
-          <div className="pricing-free p-7 flex flex-col gap-4">
+          {/* Free */}
+          <div className="pricing-free p-7 flex flex-col gap-5">
             <div>
-              <p className="text-gray-500 text-xs font-semibold uppercase tracking-widest">Standard</p>
+              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Standard</p>
               <div className="flex items-end gap-1 mt-2">
                 <span className="text-5xl font-black text-gray-900">Free</span>
               </div>
-              <p className="text-gray-500 text-sm mt-1">For individuals and casual events.</p>
+              <p className="text-gray-500 text-sm mt-1.5">For families, friends, and casual events.</p>
             </div>
-            <ul className="space-y-2 flex-1">
-              {['Unlimited events & guests', 'Up to 2 MB compressed upload', 'Google Drive, OneDrive, Dropbox', 'Live photo wall', 'QR code sharing', 'Photo analytics'].map(f => (
-                <li key={f} className="flex items-center gap-2.5 text-gray-600 text-sm">
-                  <svg viewBox="0 0 20 20" fill="#6045f4" className="w-4 h-4 flex-shrink-0"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+            <ul className="space-y-2.5 flex-1">
+              {[
+                'Unlimited events & unlimited guests',
+                'Optimised photo uploads (up to 2.5 MB)',
+                'Google Drive, OneDrive & Dropbox',
+                'Live photo wall',
+                'QR code & event link sharing',
+                'Event dashboard & photo count',
+              ].map(f => (
+                <li key={f} className="flex items-start gap-2.5 text-gray-600 text-sm">
+                  <svg viewBox="0 0 20 20" fill="#6045f4" className="w-4 h-4 flex-shrink-0 mt-0.5"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
                   {f}
                 </li>
               ))}
             </ul>
-            <Link to="/dashboard" className="w-full py-3 rounded-full border-2 border-gray-200 text-gray-700 font-semibold text-sm text-center hover:border-violet-300 hover:text-violet-600 transition-colors">
-              Get started free
+            <Link to="/dashboard" className="w-full py-3.5 rounded-full border-2 border-gray-200 text-gray-700 font-bold text-sm text-center hover:border-violet-300 hover:text-violet-600 transition-colors">
+              Get started for free
             </Link>
           </div>
-          <div className="pricing-pro p-7 flex flex-col gap-4">
+          {/* Pro */}
+          <div className="pricing-pro p-7 flex flex-col gap-5">
             <div className="inline-flex self-start">
-              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-white/20 text-white">Most popular</span>
+              <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-white/20 text-white tracking-wide">Most popular</span>
             </div>
             <div>
-              <p className="text-white/70 text-xs font-semibold uppercase tracking-widest">Pro</p>
+              <p className="text-white/60 text-xs font-bold uppercase tracking-widest">Pro</p>
               <div className="flex items-end gap-1 mt-2">
                 <span className="text-5xl font-black text-white">£9</span>
-                <span className="text-white/60 text-base mb-2">/mo</span>
+                <span className="text-white/50 text-base mb-2">/mo</span>
               </div>
-              <p className="text-white/70 text-sm mt-1">For photographers and professional hosts.</p>
+              <p className="text-white/70 text-sm mt-1.5">For photographers and professional event hosts.</p>
             </div>
-            <ul className="space-y-2 flex-1">
-              {['Everything in Standard', 'Full-resolution originals (25 MB+)', 'No browser compression', 'Branded event pages', 'Priority upload queue', 'Priority support'].map(f => (
-                <li key={f} className="flex items-center gap-2.5 text-white text-sm">
-                  <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4 flex-shrink-0 opacity-80"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+            <ul className="space-y-2.5 flex-1">
+              {[
+                'Everything in Standard',
+                'Full-resolution originals — no compression',
+                'Direct-to-cloud at 25 MB+ per photo',
+                'Branded event pages',
+                'Priority upload queue',
+                'Priority support',
+              ].map(f => (
+                <li key={f} className="flex items-start gap-2.5 text-white text-sm">
+                  <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4 flex-shrink-0 mt-0.5 opacity-80"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
                   {f}
                 </li>
               ))}
             </ul>
-            <Link to="/pricing" className="btn-white w-full py-3 text-center text-sm">
-              Get started free
+            <Link to="/pricing" className="btn-white w-full py-3.5 text-center text-sm font-bold">
+              Start free — upgrade later
             </Link>
           </div>
         </div>
-        <p className="text-center text-gray-400 text-sm mt-6">No credit card required for Standard. Cancel Pro any time.</p>
+        <p className="text-center text-gray-400 text-sm mt-6">No credit card required. Cancel Pro any time.</p>
       </div>
     </section>
   );
@@ -990,19 +1121,20 @@ function FinalCTA() {
     <section className="bezl-hero relative py-20 px-6 overflow-hidden">
       <div className="max-w-3xl mx-auto relative z-10 text-center">
         <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.1]">
-          Created for Collaboration<br />and Memorable Moments.
+          Every moment captured.<br />Every photo in your cloud.
         </h2>
-        <p className="mt-5 text-white/70 text-lg">
-          Create your first event in 60 seconds. No credit card. No app store.
+        <p className="mt-5 text-white/70 text-lg max-w-xl mx-auto leading-relaxed">
+          Picachoo lets groups contribute photos directly into your cloud storage through a QR code — with optional live displays for events. Set up in 60 seconds.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <Link to="/dashboard" className="btn-white px-10 py-4 text-lg">
-            Start for free
+          <Link to="/dashboard" className="btn-white px-10 py-4 text-base font-bold">
+            Create your first event — free
           </Link>
-          <Link to="/pricing" className="btn-outline-white px-10 py-4 text-lg">
+          <Link to="/pricing" className="btn-outline-white px-10 py-4 text-base font-bold">
             See pricing
           </Link>
         </div>
+        <p className="mt-5 text-white/40 text-sm">No credit card. No app download for guests. No platform lock-in.</p>
       </div>
     </section>
   );
