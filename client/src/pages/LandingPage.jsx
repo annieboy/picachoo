@@ -39,48 +39,46 @@ function Hero() {
     <section className="bezl-hero relative flex flex-col items-center px-6 overflow-hidden"
              style={{ minHeight: '88vh', paddingTop: '96px', paddingBottom: '64px' }}>
 
-      {/* ── Two-tone join capsule (Slido-style) ── */}
-      <div className="anim-fade-up mb-10" style={{ filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.25))' }}>
+      {/* ── Two-tone join capsule ── */}
+      <div className="anim-fade-up mb-8 w-full max-w-sm md:max-w-none md:w-auto"
+           style={{ filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.25))' }}>
         <form onSubmit={handleJoin}
               style={{
                 display: 'flex', flexDirection: 'row', alignItems: 'stretch',
                 borderRadius: '9999px', overflow: 'hidden',
                 border: '2.5px solid rgba(255,255,255,0.45)',
-                height: '54px',
+                height: '52px', width: '100%',
               }}>
-          {/* Left: solid dark label */}
-          <div style={{
-            display: 'flex', alignItems: 'center',
-            padding: '0 24px',
+          {/* Left label — hidden on very small screens */}
+          <div className="hidden sm:flex" style={{
+            alignItems: 'center',
+            padding: '0 20px',
             background: 'rgba(20,10,60,0.65)',
             whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}>
-            <span style={{ color: '#fff', fontWeight: 700, fontSize: '15px' }}>Joining an event?</span>
+            <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px' }}>Joining an event?</span>
           </div>
-          {/* Right: white input pill inset */}
+          {/* Input side */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '6px 6px 6px 16px',
+            padding: '6px 6px 6px 14px',
             background: 'rgba(255,255,255,0.18)',
+            flex: 1,
           }}>
-            <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 700, fontSize: '15px' }}>#</span>
+            <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 700, fontSize: '15px', flexShrink: 0 }}>#</span>
             <input
               type="text"
               value={code}
               onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="Enter code here"
+              placeholder="Enter event code"
               maxLength={12}
               autoCapitalize="characters"
               autoCorrect="off"
               style={{
-                background: 'transparent',
-                border: 'none',
-                outline: 'none',
-                color: '#fff',
-                fontSize: '15px',
-                fontWeight: 500,
-                width: '140px',
-                caretColor: '#fff',
+                background: 'transparent', border: 'none', outline: 'none',
+                color: '#fff', fontSize: '15px', fontWeight: 500,
+                minWidth: 0, flex: 1, caretColor: '#fff',
               }}
             />
             <button
@@ -111,12 +109,12 @@ function Hero() {
       </div>
 
       {/* Headline */}
-      <h1 className="anim-fade-up text-center text-4xl md:text-6xl font-black tracking-tight text-white leading-[1.1] max-w-3xl">
+      <h1 className="anim-fade-up text-center text-3xl sm:text-4xl md:text-6xl font-black tracking-tight text-white leading-[1.1] max-w-3xl px-2">
         The easiest way to share photos and videos to your cloud.
       </h1>
 
-      {/* Numbered steps — single horizontal line, no wrapping */}
-      <div className="anim-fade-up anim-delay-1 mt-8 flex flex-nowrap items-center justify-center gap-3">
+      {/* Numbered steps — wrap gracefully on mobile */}
+      <div className="anim-fade-up anim-delay-1 mt-6 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4">
         {[
           { n: '1', text: 'Guests scan a QR code', grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
           { n: '2', text: 'Snap a photo', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
@@ -124,21 +122,21 @@ function Hero() {
         ].map(({ n, text, grad }, i, arr) => (
           <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
             <span style={{
-              width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-              color: '#fff', fontSize: 11, fontWeight: 800,
+              color: '#fff', fontSize: 10, fontWeight: 800,
             }}>{n}</span>
-            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: 500 }}>{text}</span>
+            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500 }}>{text}</span>
             {i < arr.length - 1 && (
-              <span style={{ color: 'rgba(255,255,255,0.3)', marginLeft: 6, fontSize: 18, lineHeight: 1 }}>·</span>
+              <span className="hidden sm:inline" style={{ color: 'rgba(255,255,255,0.3)', marginLeft: 4, fontSize: 18, lineHeight: 1 }}>·</span>
             )}
           </div>
         ))}
       </div>
 
       {/* CTA */}
-      <div className="anim-fade-up anim-delay-2 mt-8">
+      <div className="anim-fade-up anim-delay-2 mt-7">
         <Link to="/dashboard"
               className="px-8 py-4 text-base rounded-full font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-lg"
               style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 20px rgba(34,197,94,0.4)' }}>
@@ -147,7 +145,7 @@ function Hero() {
       </div>
 
       {/* Hero animated scene */}
-      <div className="anim-fade-up anim-delay-3 relative z-10 mt-12 w-full max-w-5xl px-4">
+      <div className="anim-fade-up anim-delay-3 relative z-10 mt-10 w-full max-w-2xl px-2 sm:px-4">
         <HeroScene />
       </div>
 
@@ -212,10 +210,10 @@ function HeroScene() {
       </div>
 
       {/* Phone + side elements */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, width: '100%', maxWidth: 680 }}>
+      <div className="phone-story-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, width: '100%', maxWidth: 680 }}>
 
         {/* Left side: context cards */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, opacity: stage >= 4 ? 1 : 0, transition: 'opacity 0.6s ease' }}>
+        <div className="hidden md:flex" style={{ flex: 1, flexDirection: 'column', gap: 10, opacity: stage >= 4 ? 1 : 0, transition: 'opacity 0.6s ease' }}>
           {stage >= 4 && REAL_PHOTOS.slice(0, 3).map((src, i) => (
             <div key={i} style={{
               display: 'flex', alignItems: 'center', gap: 8,
@@ -246,7 +244,7 @@ function HeroScene() {
 
         {/* Phone mockup */}
         <div style={{
-          width: 220, flexShrink: 0,
+          width: 'min(220px, 72vw)', flexShrink: 0,
           background: '#0f0f14',
           borderRadius: 36,
           padding: '10px 8px',
@@ -263,7 +261,7 @@ function HeroScene() {
           {/* Screen */}
           <div style={{
             borderRadius: 28, overflow: 'hidden',
-            height: 420,
+            height: 'min(420px, 130vw)',
             background: 'linear-gradient(160deg,#1a1030 0%,#0d0820 100%)',
             position: 'relative',
           }}>
@@ -303,7 +301,7 @@ function HeroScene() {
         </div>
 
         {/* Right side: cloud / live wall context */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div className="hidden md:flex" style={{ flex: 1, flexDirection: 'column', gap: 10 }}>
           {/* Cloud upload indicator (stages 4) */}
           <div style={{
             opacity: stage === 4 ? 1 : 0,
