@@ -180,7 +180,7 @@ const REAL_PHOTOS = [
  * Stage order: 0=QR, 1=Welcome, 2=Camera, 3=Joining, 4=LiveWall(TV), 5=Dashboard
  * Each stage: phone slides IN from right → holds → slides OUT to left → next stage slides in from right
  */
-const STAGE_DURATIONS = [3400, 3000, 3000, 2800, 3800, 3200];
+const STAGE_DURATIONS = [3400, 3000, 3000, 2800, 3800];
 const TOTAL_STAGES = STAGE_DURATIONS.length;
 const EXIT_MS = 420; /* slide-out duration before next stage mounts */
 
@@ -200,7 +200,7 @@ function HeroScene() {
     return () => clearTimeout(timerRef.current);
   }, [stage]);
 
-  const stageLabels = ['QR scan', 'Welcome', 'Camera', 'Uploading', 'Live wall', 'Dashboard'];
+  const stageLabels = ['QR scan', 'Welcome', 'Camera', 'Uploading', 'Live wall'];
   const showMonitor = stage === 4;
   /* key changes → React remounts the element → CSS entry animation fires again */
   const phoneKey    = `phone-${stage}-${exiting ? 'out' : 'in'}`;
@@ -297,11 +297,10 @@ function HeroScene() {
                 </div>
               )}
 
-              <StageQR        active={stage === 0} />
-              <StageWelcome   active={stage === 1} />
-              <StageCamera    active={stage === 2} />
-              <StageJoining   active={stage === 3} />
-              <StageDashboard active={stage === 5} />
+              <StageQR      active={stage === 0} />
+              <StageWelcome active={stage === 1} />
+              <StageCamera  active={stage === 2} />
+              <StageJoining active={stage === 3} />
             </div>
             {/* Home bar */}
             <div style={{ height: 3, margin: '6px auto 0', width: 46, borderRadius: 99, background: 'rgba(0,0,0,0.18)' }} />
