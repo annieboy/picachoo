@@ -30,6 +30,7 @@ export function useCamera() {
   const [torchSupported, setTorchSupported] = useState(false);
   const [zoom,           setZoom]           = useState(1);
   const [zoomRange,      setZoomRange]      = useState({ min: 1, max: 1 });
+  const modeRef          = useRef('photo'); // track current mode for capture
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -38,7 +39,7 @@ export function useCamera() {
 
   useEffect(() => () => stopStream(), [stopStream]);
 
-  const startCameraFacing = useCallback(async (facing) => {
+  const startCameraFacing = useCallback(async (facing, mode = modeRef.current) => {
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraState('unavailable');
       return;
@@ -48,12 +49,18 @@ export function useCamera() {
     setZoom(1);
 
     try {
-      // Try to get exact device ID first (fixes iOS flip)
       const deviceId = await getDeviceIdForFacing(facing);
 
+      // Photo mode: request 4:3 aspect ratio at high resolution
+      // Video mode: keep 16:9 (wide)
+      const isPhoto = mode === 'photo';
+      const sizeConstraints = isPhoto
+        ? { width: { ideal: 4096 }, height: { ideal: 3072 }, aspectRatio: { ideal: 4 / 3 } }
+        : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16 / 9 } };
+
       const videoConstraints = deviceId
-        ? { deviceId: { exact: deviceId }, width: { ideal: 3840 }, height: { ideal: 2160 } }
-        : { facingMode: { ideal: facing }, width: { ideal: 3840 }, height: { ideal: 2160 } };
+        ? { deviceId: { exact: deviceId }, ...sizeConstraints }
+        : { facingMode: { ideal: facing }, ...sizeConstraints };
 
       const stream = await navigator.mediaDevices.getUserMedia({
         video: videoConstraints,
@@ -86,7 +93,13 @@ export function useCamera() {
     }
   }, [stopStream]);
 
-  const startCamera = useCallback(() => startCameraFacing(facingMode), [startCameraFacing, facingMode]);
+  const startCamera = useCallback((mode) => startCameraFacing(facingMode, mode), [startCameraFacing, facingMode]);
+
+  const switchMode = useCallback((mode) => {
+    modeRef.current = mode;
+    stopStream();
+    startCameraFacing(facingMode, mode);
+  }, [facingMode, stopStream, startCameraFacing]);
 
   const flipCamera = useCallback(() => {
     const next = facingMode === 'environment' ? 'user' : 'environment';
@@ -142,10 +155,25 @@ export function useCamera() {
 
     if (!blob) {
       blob = await new Promise(resolve => {
+        const vw = video.videoWidth;
+        const vh = video.videoHeight;
+        // Crop to 4:3 from the centre if the stream is wider
+        const targetAR = 4 / 3;
+        const streamAR = vw / vh;
+        let sx = 0, sy = 0, sw = vw, sh = vh;
+        if (streamAR > targetAR) {
+          // wider than 4:3 — crop sides
+          sw = Math.round(vh * targetAR);
+          sx = Math.round((vw - sw) / 2);
+        } else if (streamAR < targetAR) {
+          // taller than 4:3 — crop top/bottom
+          sh = Math.round(vw / targetAR);
+          sy = Math.round((vh - sh) / 2);
+        }
         const canvas = document.createElement('canvas');
-        canvas.width  = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
+        canvas.width  = sw;
+        canvas.height = sh;
+        canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
         canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95);
       });
       setCaptureMethod('canvas');
@@ -164,6 +192,6 @@ export function useCamera() {
   return {
     videoRef, cameraState, capturedBlob, flashVisible, captureMethod,
     facingMode, torchOn, torchSupported, zoom, zoomRange,
-    startCamera, snapPhoto, retake, stopStream, flipCamera, toggleTorch, applyZoom,
+    startCamera, snapPhoto, retake, stopStream, flipCamera, toggleTorch, applyZoom, switchMode,
   };
 }

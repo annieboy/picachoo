@@ -6,7 +6,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
     videoRef, cameraState, capturedBlob, flashVisible,
     startCamera, snapPhoto, stopStream,
     flipCamera, torchOn, torchSupported, toggleTorch,
-    zoom, zoomRange, applyZoom,
+    zoom, zoomRange, applyZoom, switchMode,
   } = useCamera();
 
   const fileInputRef = useRef(null);
@@ -19,7 +19,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const [recordSecs, setRecordSecs] = useState(0);
   const timerRef     = useRef(null);
 
-  useEffect(() => { startCamera(); return stopStream; }, [startCamera, stopStream]);
+  useEffect(() => { startCamera('photo'); return stopStream; }, [startCamera, stopStream]);
   useEffect(() => { if (capturedBlob) onCapture(capturedBlob); }, [capturedBlob, onCapture]);
 
   // ── Pinch-to-zoom ──────────────────────────────────────────────────────────
@@ -89,6 +89,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   function handleModeChange(m) {
     if (recording) stopRecording();
     setMode(m);
+    switchMode(m);
   }
 
   function handleShutter() {
@@ -121,6 +122,12 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
             autoPlay playsInline muted
             className="absolute inset-0 w-full h-full object-cover"
           />
+
+          {/* 4:3 crop guide — photo mode only */}
+          {mode === 'photo' && isActive && (
+            <CropGuide />
+          )}
+
           {flashVisible && (
             <div className="absolute inset-0 bg-white pointer-events-none animate-shutter-flash" />
           )}
@@ -303,6 +310,41 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
         className="sr-only"
         onChange={handleGalleryChange}
       />
+    </div>
+  );
+}
+
+// Shows a 4:3 frame guide with darkened bars outside the crop area
+function CropGuide() {
+  return (
+    <div className="absolute inset-0 pointer-events-none z-10">
+      {/* The 4:3 frame is centred; we calculate via CSS aspect-ratio */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <div
+          className="relative w-full"
+          style={{ aspectRatio: '4/3', maxHeight: '100%', maxWidth: '100%' }}
+        >
+          {/* Corner brackets */}
+          {[
+            'top-0 left-0 border-t border-l',
+            'top-0 right-0 border-t border-r',
+            'bottom-0 left-0 border-b border-l',
+            'bottom-0 right-0 border-b border-r',
+          ].map((cls, i) => (
+            <div
+              key={i}
+              className={`absolute w-6 h-6 border-white/70 ${cls}`}
+              style={{ borderWidth: '2px' }}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Dark mask above and below the 4:3 frame */}
+      <div className="absolute inset-x-0 top-0 bg-black/40"
+           style={{ height: 'calc((100% - min(100vw * 3/4, 100vh)) / 2)', minHeight: 0 }} />
+      <div className="absolute inset-x-0 bottom-0 bg-black/40"
+           style={{ height: 'calc((100% - min(100vw * 3/4, 100vh)) / 2)', minHeight: 0 }} />
     </div>
   );
 }
