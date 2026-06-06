@@ -122,8 +122,8 @@ function Hero() {
       {/* Numbered steps */}
       <div className="anim-fade-up anim-delay-1 mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4">
         {[
-          { n: '1', text: 'Scan a QR code',       grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
-          { n: '2', text: 'Snap &amp; contribute', grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
+          { n: '1', text: 'Scan a QR code',        grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
+          { n: '2', text: 'Snap & contribute',     grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
           { n: '3', text: 'Photos land in your cloud', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
         ].map(({ n, text, grad }, i, arr) => (
           <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
@@ -133,7 +133,7 @@ function Hero() {
               background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
               color: '#fff', fontSize: 10, fontWeight: 800,
             }}>{n}</span>
-            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500 }} dangerouslySetInnerHTML={{ __html: text }} />
+            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500 }}>{text}</span>
             {i < arr.length - 1 && (
               <span className="hidden sm:inline" style={{ color: 'rgba(255,255,255,0.3)', marginLeft: 4, fontSize: 18, lineHeight: 1 }}>·</span>
             )}

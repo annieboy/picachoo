@@ -24,7 +24,7 @@ async function findFolder(driveClient, name, parentId) {
     `name = '${safeName}'`,
     `mimeType = 'application/vnd.google-apps.folder'`,
     `trashed = false`,
-    parentId ? `'${parentId}' in parents` : `'root' in parents`,
+    parentId ? `'${parentId.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}' in parents` : `'root' in parents`,
   ].join(' and ');
 
   const res = await driveClient.files.list({

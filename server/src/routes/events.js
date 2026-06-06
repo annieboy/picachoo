@@ -22,6 +22,12 @@ async function createEvent(req, res, next) {
       return next(err);
     }
 
+    if (startsAt && endsAt && new Date(startsAt) >= new Date(endsAt)) {
+      const err = new Error('startsAt must be before endsAt');
+      err.status = 400;
+      return next(err);
+    }
+
     // Resolve the host row from the authenticated user
     const { rows: hostRows } = await pool.query(
       `SELECT id, tier FROM hosts WHERE auth_id = $1`,
@@ -104,7 +110,8 @@ router.get('/by-code/:joinCode', async (req, res, next) => {
 });
 
 // ─── GET /api/events/:eventId ─────────────────────────────────────────────────
-router.get('/:eventId', async (req, res, next) => {
+// Requires authentication — only the event owner (or co-host) can fetch details.
+router.get('/:eventId', requireAuth, async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT
@@ -114,8 +121,9 @@ router.get('/:eventId', async (req, res, next) => {
          ct.provider_account_email AS linked_account
        FROM events e
        LEFT JOIN cloud_tokens ct ON ct.event_id = e.id
-       WHERE e.id = $1`,
-      [req.params.eventId],
+       WHERE e.id = $1
+         AND e.host_id = (SELECT id FROM hosts WHERE auth_id = $2)`,
+      [req.params.eventId, req.user.authId],
     );
     if (!rows.length) {
       const err = new Error('Event not found');

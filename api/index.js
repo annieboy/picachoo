@@ -21,7 +21,13 @@ const cohostsRouter  = require('../server/src/routes/cohosts');
 const app = express();
 
 // ─── Security headers ─────────────────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  hsts: {
+    maxAge:            63072000, // 2 years in seconds
+    includeSubDomains: true,
+    preload:           true,
+  },
+}));
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 // In production on Vercel the frontend is served from the same origin, so the

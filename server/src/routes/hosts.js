@@ -61,6 +61,9 @@ router.patch('/me', requireAuth, async (req, res, next) => {
     if (!displayName?.trim()) {
       return res.status(400).json({ error: 'displayName is required' });
     }
+    if (displayName.trim().length > 255) {
+      return res.status(400).json({ error: 'displayName must be 255 characters or fewer' });
+    }
     const { rows } = await pool.query(
       `UPDATE hosts SET display_name = $1, updated_at = NOW()
        WHERE auth_id = $2

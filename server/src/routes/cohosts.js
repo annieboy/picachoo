@@ -49,7 +49,8 @@ router.post('/:eventId/cohosts', requireAuth, requireEventOwner, async (req, res
     }
 
     const { email } = req.body;
-    if (!email || !email.includes('@')) {
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+    if (!email || !EMAIL_RE.test(email.trim())) {
       const err = new Error('Valid email is required');
       err.status = 400;
       return next(err);

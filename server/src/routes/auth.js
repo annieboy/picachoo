@@ -19,7 +19,9 @@ async function createState({ hostId, eventId, provider }) {
     [state, hostId, eventId, provider],
   );
   // Best-effort cleanup of expired rows on each write
-  pool.query(`DELETE FROM oauth_states WHERE expires_at < NOW()`).catch(() => {});
+  pool.query(`DELETE FROM oauth_states WHERE expires_at < NOW()`).catch(e => {
+    console.warn('[oauth_states] cleanup failed:', e.message);
+  });
   return state;
 }
 
