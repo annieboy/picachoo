@@ -397,7 +397,7 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
               <EventRow
                 key={ev.id}
                 event={ev}
-                isPro={isPro}
+                isPro={isPro || (ev.is_premium_pass && ev.pass_expires_at && new Date(ev.pass_expires_at) > new Date())}
                 token={session?.access_token}
                 loginHint={session?.user?.app_metadata?.provider === 'google' ? session?.user?.email : undefined}
                 onUpdate={handleEventUpdate}
