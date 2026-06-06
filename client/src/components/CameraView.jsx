@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useCamera } from '../hooks/useCamera';
 
-export default function CameraView({ guestName, onCapture, onGalleryFiles }) {
+export default function CameraView({ guestName, eventName, onCapture, onGalleryFiles }) {
   const {
     videoRef, cameraState, capturedBlob, flashVisible,
     startCamera, snapPhoto, stopStream,
@@ -161,8 +161,24 @@ export default function CameraView({ guestName, onCapture, onGalleryFiles }) {
         className="absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5"
         style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
       >
-        {/* Guest name */}
-        <span className="text-white/70 text-sm font-medium truncate max-w-[55%] drop-shadow">{guestName}</span>
+        {/* Event name — freehand lettering style */}
+        <div className="flex flex-col leading-none">
+          {eventName && (
+            <span
+              className="text-white drop-shadow-lg truncate max-w-[55vw]"
+              style={{
+                fontFamily: "'Caveat', 'Segoe Script', 'Comic Sans MS', cursive",
+                fontSize: '1.35rem',
+                fontWeight: 700,
+                letterSpacing: '0.01em',
+                textShadow: '0 1px 8px rgba(0,0,0,0.5)',
+              }}
+            >
+              {eventName}
+            </span>
+          )}
+          <span className="text-white/50 text-xs font-medium">{guestName}</span>
+        </div>
 
         <div className="flex items-center gap-2">
           {/* Recording timer */}

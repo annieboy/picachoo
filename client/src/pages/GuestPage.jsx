@@ -96,6 +96,7 @@ export default function GuestPage() {
       {screen === SCREENS.CAMERA && (
         <CameraView
           guestName={guestName}
+          eventName={event?.name}
           onCapture={handleCapture}
           onGalleryFiles={handleGalleryFiles}
         />
