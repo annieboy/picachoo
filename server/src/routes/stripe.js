@@ -72,6 +72,8 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
       return res.status(500).json({ error: 'Stripe price not configured for this plan' });
     }
 
+    const { promoCodeId } = req.body ?? {};
+
     const subscription = await stripe.subscriptions.create({
       customer:         customerId,
       items:            [{ price: priceId }],
@@ -79,6 +81,7 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
       payment_settings: { save_default_payment_method: 'on_subscription' },
       expand:           ['latest_invoice.payment_intent'],
       metadata:         { hostId: host.id, type },
+      ...(promoCodeId ? { promotion_code: promoCodeId } : {}),
     });
 
     const clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
@@ -86,6 +89,30 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
       return res.status(500).json({ error: 'Could not initialise subscription payment' });
     }
     return res.json({ clientSecret, subscriptionId: subscription.id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /api/stripe/apply-promo ────────────────────────────────────────────
+router.post('/apply-promo', requireAuth, async (req, res, next) => {
+  try {
+    const stripe = getStripe();
+    const { code } = req.body ?? {};
+    if (!code) return res.status(400).json({ error: 'code is required' });
+
+    const promoCodes = await stripe.promotionCodes.list({ code: code.trim().toUpperCase(), active: true, limit: 1 });
+    if (!promoCodes.data.length) return res.status(404).json({ error: 'Invalid or expired promo code' });
+
+    const promoCode = promoCodes.data[0];
+    const coupon = promoCode.coupon;
+    const discount = coupon.percent_off
+      ? `${coupon.percent_off}% off`
+      : coupon.amount_off
+        ? `£${(coupon.amount_off / 100).toFixed(2)} off`
+        : 'Discount applied';
+
+    return res.json({ valid: true, promoCodeId: promoCode.id, discount, message: `✓ ${discount}` });
   } catch (err) {
     next(err);
   }

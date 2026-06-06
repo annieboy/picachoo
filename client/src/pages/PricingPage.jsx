@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import MarketingLayout from '../components/MarketingLayout';
 
@@ -26,7 +26,6 @@ function BillingToggle({ value, onChange }) {
 }
 
 // ── Checkout helper ───────────────────────────────────────────────────────────
-// Route to /checkout (our custom page) or /dashboard?intent= if not logged in
 
 function useCheckout() {
   const navigate = useNavigate();
@@ -50,96 +49,16 @@ function useCheckout() {
   return { startCheckout, loading, error: '' };
 }
 
-// ── Event picker modal (for one-time pass) ───────────────────────────────────
-
-function EventPickerModal({ events, onPick, onClose }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4"
-         style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-6">
-        <h3 className="text-gray-900 font-black text-xl mb-1">Select an event</h3>
-        <p className="text-gray-500 text-sm mb-5">
-          Choose which event to apply the one-time Pro Pass to.
-        </p>
-        {events.length === 0 ? (
-          <div className="text-center py-6">
-            <p className="text-gray-500 text-sm mb-4">You don't have any events yet.</p>
-            <Link to="/dashboard" className="btn-purple text-sm px-5 py-2.5">Create an event first</Link>
-          </div>
-        ) : (
-          <ul className="space-y-2 max-h-72 overflow-y-auto pr-1">
-            {events.map(ev => (
-              <li key={ev.id}>
-                <button
-                  onClick={() => onPick(ev.id)}
-                  className="w-full text-left flex items-center justify-between px-4 py-3.5 rounded-2xl border border-gray-100 hover:border-violet-300 hover:bg-violet-50 transition-colors group"
-                >
-                  <div>
-                    <p className="font-semibold text-gray-900 text-sm group-hover:text-violet-700">{ev.name}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 capitalize">{ev.status}</p>
-                  </div>
-                  <svg viewBox="0 0 20 20" fill="#6B5CE7" className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/>
-                  </svg>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <button onClick={onClose}
-                className="mt-4 w-full text-center text-gray-400 text-sm py-2 hover:text-gray-600 transition-colors">
-          Cancel
-        </button>
-      </div>
-    </div>
-  );
-}
-
 // ── Main pricing page ─────────────────────────────────────────────────────────
 
 export default function PricingPage() {
   const [billing, setBilling] = useState('one_time');
-  const [showPicker, setShowPicker] = useState(false);
-  const [hostEvents,  setHostEvents] = useState([]);
   const { startCheckout, loading, error } = useCheckout();
-
-  // Pre-load host events so the event picker is snappy
-  useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
-      setAuthToken(session.access_token);
-      try {
-        const res = await fetch('/api/hosts/me', {
-          headers: { Authorization: `Bearer ${session.access_token}` },
-        });
-        if (res.ok) {
-          const d = await res.json();
-          setHostEvents(d.events ?? []);
-        }
-      } catch { /* ignore */ }
-    });
-  }, []);
-
-  function handleOneTimePassCTA() {
-    setShowPicker(true);
-  }
-
-  function handlePickEvent(eventId) {
-    setShowPicker(false);
-    startCheckout('one_time_pass', eventId);
-  }
 
   const isOneTime = billing === 'one_time';
 
   return (
     <MarketingLayout>
-      {showPicker && (
-        <EventPickerModal
-          events={hostEvents}
-          onPick={handlePickEvent}
-          onClose={() => setShowPicker(false)}
-        />
-      )}
 
       {/* Hero banner */}
       <div className="bezl-hero relative pt-28 pb-24 px-6 text-center overflow-hidden">
@@ -215,8 +134,8 @@ export default function PricingPage() {
                 'Priority support',
               ]}
               unavailable={[]}
-              cta={isOneTime ? 'Buy One Time Use' : 'Get Pro Annual'}
-              onCta={() => isOneTime ? handleOneTimePassCTA() : startCheckout('pro_annual')}
+              cta={isOneTime ? 'Get One-Time Pass' : 'Get Pro Annual'}
+              onCta={() => isOneTime ? startCheckout('one_time_pass') : startCheckout('pro_annual')}
               ctaLoading={loading === (isOneTime ? 'one_time_pass' : 'pro_annual')}
               popular={true}
             />

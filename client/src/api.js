@@ -129,6 +129,14 @@ export function createCheckoutIntent({ type, eventId }) {
   });
 }
 
+export function applyPromoCode({ code, type }) {
+  return apiFetch('/api/stripe/apply-promo', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code, type }),
+  });
+}
+
 // ── Google Drive auto-link ────────────────────────────────────────────────────
 // Called after creating an event when the host signed in with Google.
 // provider_token comes from the Supabase session (drive.file scope was requested).
