@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-export default function PreviewScreen({ blob, onUpload, onRetake }) {
+export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
   const objectUrl = useRef(URL.createObjectURL(blob));
   useEffect(() => () => URL.revokeObjectURL(objectUrl.current), []);
 
@@ -11,6 +11,26 @@ export default function PreviewScreen({ blob, onUpload, onRetake }) {
 
       {/* ── Photo / Video fills all remaining space ── */}
       <div className="flex-1 relative overflow-hidden bg-zinc-900">
+
+        {/* Event name overlay — top left */}
+        {eventName && (
+          <div
+            className="absolute top-0 left-0 z-10 px-4"
+            style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+          >
+            <span
+              className="text-white drop-shadow-lg"
+              style={{
+                fontFamily: "'Caveat', 'Segoe Script', cursive",
+                fontSize: '1.35rem',
+                fontWeight: 700,
+                textShadow: '0 1px 8px rgba(0,0,0,0.55)',
+              }}
+            >
+              {eventName}
+            </span>
+          </div>
+        )}
         {isVideo ? (
           <video
             src={objectUrl.current}

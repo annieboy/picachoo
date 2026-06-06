@@ -105,6 +105,7 @@ export default function GuestPage() {
       {screen === SCREENS.PREVIEW && pendingBlob && (
         <PreviewScreen
           blob={pendingBlob}
+          eventName={event?.name}
           onUpload={handlePreviewUpload}
           onRetake={handleRetake}
         />
