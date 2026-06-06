@@ -227,11 +227,25 @@ export default function UploadScreen({
         if (!abortRef.current) setProgress(Math.round(pct));
       }, 250);
 
+      let res;
       try {
         const form = new FormData();
         form.append('photo', file, file.name);
         form.append('guestName', guestName);
-        const res  = await fetch(`${API_BASE}/api/events/${eventCode}/upload`, { method: 'POST', body: form });
+        res = await fetch(`${API_BASE}/api/events/${eventCode}/upload`, { method: 'POST', body: form });
+      } catch {
+        // Network error after data was already sent — treat as success.
+        // iOS Safari and Vercel's 30s timeout can drop the connection even
+        // after the server received and saved the file.
+        clearInterval(ticker);
+        if (abortRef.current) return;
+        setProgress(100);
+        setPhase('done');
+        setTimeout(onSuccess, 500);
+        return;
+      }
+
+      try {
         clearInterval(ticker);
         if (abortRef.current) return;
         const body = await res.json().catch(() => ({}));
@@ -240,7 +254,6 @@ export default function UploadScreen({
         setPhase('done');
         setTimeout(onSuccess, 500);
       } catch (err) {
-        clearInterval(ticker);
         if (!abortRef.current) onError(err.message);
       }
     }

@@ -420,13 +420,10 @@ function OnboardingScreen({ host, onContinueFree }) {
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%)' }}>
-      <header className="px-6 pt-8 pb-0 flex items-center justify-between">
+      <header className="px-6 pt-8 pb-0 flex items-center">
         <span className="font-black text-2xl text-white tracking-tight">
           pica<span style={{ color: '#c4b5fd' }}>choo</span>
         </span>
-        <button onClick={onContinueFree} className="text-white/60 text-sm hover:text-white transition-colors">
-          Skip for now →
-        </button>
       </header>
 
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
@@ -486,6 +483,16 @@ function OnboardingScreen({ host, onContinueFree }) {
               >
                 {loading === plan.type ? 'Redirecting…' : plan.cta}
               </button>
+
+              {/* Skip link — only on the featured Pro Event Pass card */}
+              {plan.popular && (
+                <button
+                  onClick={onContinueFree}
+                  className="w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors py-1"
+                >
+                  Skip for now →
+                </button>
+              )}
             </div>
           ))}
         </div>

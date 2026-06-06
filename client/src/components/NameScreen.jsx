@@ -37,60 +37,53 @@ export default function NameScreen({ eventName, onConfirm }) {
   const showBanner = !isStandalone && !dismissed && (isIOS || !!deferredPrompt);
 
   return (
-    <div className="relative flex flex-col min-h-full overflow-hidden" style={BG}>
+    <div className="fixed inset-0 flex flex-col overflow-hidden" style={BG}>
 
-      {/* Highlight overlay */}
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0"
-           style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 0%, rgba(255,255,255,0.12) 0%, transparent 70%)' }} />
-
-      {/* PWA install banner */}
+      {/* Compact PWA install banner */}
       {showBanner && (
-        <div className="relative z-10 mx-4 mt-4 flex items-start gap-3 rounded-2xl px-4 py-3"
-             style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)' }}>
-          <span className="text-lg mt-0.5">📲</span>
+        <div className="shrink-0 mx-4 mt-3 flex items-center gap-2 rounded-2xl px-4 py-2.5"
+             style={{ background: 'rgba(255,255,255,0.13)', border: '1px solid rgba(255,255,255,0.25)' }}>
           <div className="flex-1 min-w-0">
             {isIOS ? (
-              <p className="text-white text-sm leading-snug">
-                <span className="font-semibold">Add to Home Screen</span> — tap{' '}
-                <span className="inline-flex items-center gap-0.5 font-semibold">Share <ShareIcon /></span>{' '}
-                then "Add to Home Screen" for the best experience.
+              <p className="text-white/80 text-xs leading-snug">
+                Tap <span className="inline-flex items-center gap-0.5 font-semibold text-white">
+                  <ShareIcon />{' '}Share
+                </span>{' '}then <strong className="text-white">"Add to Home Screen"</strong> for the best experience.
               </p>
             ) : (
-              <p className="text-white text-sm leading-snug">
-                <span className="font-semibold">Install Picachoo</span> for quick access without a browser.
+              <p className="text-white/80 text-xs leading-snug">
+                <button onClick={triggerInstall} className="font-semibold text-white underline underline-offset-2">
+                  Install Picachoo
+                </button>{' '}for quick access without a browser.
               </p>
             )}
           </div>
-          {!isIOS && deferredPrompt && (
-            <button onClick={triggerInstall}
-                    className="shrink-0 text-xs font-semibold text-white border border-white/40 rounded-lg px-3 py-1.5 active:scale-95 transition-transform">
-              Install
-            </button>
-          )}
           <button onClick={() => setDismissed(true)} aria-label="Dismiss"
-                  className="shrink-0 text-white/70 hover:text-white transition-colors text-lg leading-none">
+                  className="shrink-0 text-white/40 hover:text-white/70 text-base leading-none px-1">
             ×
           </button>
         </div>
       )}
 
-      {/* Main card */}
-      <div className="flex flex-col items-center justify-center flex-1 px-6 py-12">
+      {/* Main — vertically centred, no internal scroll */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 overflow-hidden"
+           style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
 
         {/* Wordmark */}
-        <div className="mb-10 text-center">
+        <div className="mb-4 text-center">
           <span className="text-2xl font-black tracking-tight text-white">
-            pica<span style={{ color: '#c4b5fd' }}>choo</span>
+            pica<span style={{ color: '#53e6d4' }}>choo</span>
           </span>
           <p className="text-white/50 text-[10px] uppercase tracking-widest mt-0.5">made for memorable moments</p>
         </div>
 
-        {/* Welcome copy */}
-        <div className="mb-10 text-center space-y-3 w-full max-w-sm">
+        {/* Invitation */}
+        <div className="mb-6 text-center space-y-2 w-full max-w-sm">
           <p className="text-white/60 text-xs uppercase tracking-[0.18em] font-semibold">
             You're invited to
           </p>
-          <h1 className="text-white text-3xl font-black leading-tight tracking-tight px-2">
+          <h1 className="text-white font-black leading-tight tracking-tight px-2"
+              style={{ fontSize: 'clamp(1.6rem, 7vw, 2.2rem)' }}>
             {eventName || 'This Event'}
           </h1>
           <p className="text-white/60 text-sm leading-relaxed">
@@ -100,18 +93,15 @@ export default function NameScreen({ eventName, onConfirm }) {
 
         {/* Name form */}
         <div className="w-full max-w-sm space-y-3">
-          <p className="text-white/70 text-sm font-medium text-center">
-            What should we call you?
-          </p>
           <input
             type="text"
             value={name}
             onChange={e => setName(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && trimmed && onConfirm(trimmed)}
-            placeholder="Your name"
+            placeholder="Enter name to proceed"
             maxLength={50}
             autoFocus
-            className="w-full rounded-2xl px-5 py-4 text-lg text-white placeholder:text-white/30 focus:outline-none transition-all caret-white"
+            className="w-full rounded-2xl px-5 py-4 text-base text-white placeholder:text-white/40 focus:outline-none transition-all caret-white"
             style={{
               background: 'rgba(255,255,255,0.15)',
               border: '1.5px solid rgba(255,255,255,0.3)',
@@ -133,6 +123,11 @@ export default function NameScreen({ eventName, onConfirm }) {
             Open Camera
           </button>
         </div>
+
+        {/* Footer */}
+        <p className="mt-6 text-white/25 text-[10px] font-semibold tracking-widest uppercase">
+          Photobook
+        </p>
       </div>
     </div>
   );
