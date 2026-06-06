@@ -85,7 +85,9 @@ export function useCamera() {
     const next = facingMode === 'environment' ? 'user' : 'environment';
     setFacingMode(next);
     stopStream();
-    startCameraFacing(next);
+    // iOS needs ~200ms to release the camera hardware before a new
+    // getUserMedia call can succeed on the other lens.
+    setTimeout(() => startCameraFacing(next), 200);
   }, [facingMode, stopStream, startCameraFacing]);
 
   const toggleTorch = useCallback(async () => {
