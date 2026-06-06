@@ -1,21 +1,30 @@
 const { Pool } = require('pg');
 
-// Supabase (and most hosted Postgres providers) require SSL.
-// We enable it whenever DATABASE_URL contains "supabase" or NODE_ENV is production.
-const isSupabase = (process.env.DATABASE_URL ?? '').includes('supabase');
+const dbUrl  = process.env.DATABASE_URL ?? '';
+const isSupabase = dbUrl.includes('supabase');
 const useSSL = isSupabase || process.env.NODE_ENV === 'production';
 
-// Vercel serverless: each function instance is short-lived, so keep the pool
-// small. PgBouncer (transaction mode) sits in front of Postgres — it multiplexes
-// thousands of app connections onto a small set of real DB connections, so we
-// only need 1–2 connections per function instance.
-// Set DATABASE_URL to your Supabase PgBouncer URL (port 6543) in production.
+// PgBouncer transaction mode (port 6543) does not support server-side prepared
+// statements. Appending ?prepared_statements=false (or pgbouncer=true for older
+// drivers) disables them so every query uses the simple protocol instead.
+function buildConnectionString(url) {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    u.searchParams.set('prepared_statements', 'false');
+    return u.toString();
+  } catch {
+    // URL parse failed — return as-is and hope for the best
+    return url;
+  }
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
+  connectionString: buildConnectionString(dbUrl),
   ssl: useSSL ? { rejectUnauthorized: false } : false,
-  max:              process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 2,
-  idleTimeoutMillis: 10_000,   // release idle connections quickly — functions are short-lived
-  connectionTimeoutMillis: 5_000,  // fail fast rather than queue indefinitely
+  max:                    process.env.DB_POOL_MAX ? parseInt(process.env.DB_POOL_MAX, 10) : 2,
+  idleTimeoutMillis:      10_000,
+  connectionTimeoutMillis: 5_000,
 });
 
 pool.on('error', (err) => {
