@@ -3,7 +3,7 @@ import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { supabase } from '../lib/supabase';
-import { setAuthToken, createCheckoutIntent, applyPromoCode } from '../api';
+import { setAuthToken, createCheckoutIntent, applyPromoCode, activateCheckout } from '../api';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
@@ -42,6 +42,7 @@ export default function CheckoutPage() {
   const plan    = PLAN_META[type];
 
   const [clientSecret,   setClientSecret]   = useState(null);
+  const [subscriptionId, setSubscriptionId] = useState(null);
   const [userEmail,      setUserEmail]      = useState('');
   const [loading,        setLoading]        = useState(true);
   const [initError,      setInitError]      = useState('');
@@ -83,8 +84,9 @@ export default function CheckoutPage() {
       }
 
       try {
-        const { clientSecret: cs } = await createCheckoutIntent({ type, eventId: eventId ?? selectedEvent });
-        setClientSecret(cs);
+        const result = await createCheckoutIntent({ type, eventId: eventId ?? selectedEvent });
+        setClientSecret(result.clientSecret);
+        if (result.subscriptionId) setSubscriptionId(result.subscriptionId);
       } catch (err) {
         setInitError(err.message ?? 'Could not initialise checkout. Please try again.');
       } finally {
@@ -99,8 +101,9 @@ export default function CheckoutPage() {
     setPickingEvent(false);
     setLoading(true);
     try {
-      const { clientSecret: cs } = await createCheckoutIntent({ type, eventId: evId });
-      setClientSecret(cs);
+      const result = await createCheckoutIntent({ type, eventId: evId });
+      setClientSecret(result.clientSecret);
+      if (result.subscriptionId) setSubscriptionId(result.subscriptionId);
     } catch (err) {
       setInitError(err.message ?? 'Could not initialise checkout. Please try again.');
     } finally {
@@ -203,7 +206,12 @@ export default function CheckoutPage() {
           <Section number="2" title="Payment details">
             {clientSecret && (
               <Elements stripe={stripePromise} options={{ clientSecret, appearance }}>
-                <PaymentForm plan={plan} type={type} />
+                <PaymentForm
+                  plan={plan}
+                  type={type}
+                  subscriptionId={subscriptionId}
+                  eventId={selectedEvent ?? eventId}
+                />
               </Elements>
             )}
           </Section>
@@ -218,7 +226,7 @@ export default function CheckoutPage() {
 
 // ── Payment form (inside Elements context) ────────────────────────────────────
 
-function PaymentForm({ plan, type }) {
+function PaymentForm({ plan, type, subscriptionId, eventId }) {
   const stripe   = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
@@ -253,7 +261,7 @@ function PaymentForm({ plan, type }) {
 
     const successType = type === 'one_time_pass' ? 'pass' : 'subscription';
 
-    const { error: confirmErr } = await stripe.confirmPayment({
+    const { error: confirmErr, paymentIntent } = await stripe.confirmPayment({
       elements,
       redirect: 'if_required',
       confirmParams: {
@@ -264,9 +272,22 @@ function PaymentForm({ plan, type }) {
     if (confirmErr) {
       setError(confirmErr.message ?? 'Payment failed. Please try again.');
       setProcessing(false);
-    } else {
-      navigate(`/dashboard?checkout=success&type=${successType}`);
+      return;
     }
+
+    // Payment succeeded — immediately activate on the backend (don't rely on webhook alone)
+    try {
+      await activateCheckout({
+        type,
+        paymentIntentId: paymentIntent?.id,
+        subscriptionId,
+        eventId,
+      });
+    } catch {
+      // Non-fatal: webhook will still apply the upgrade if this call fails
+    }
+
+    navigate(`/dashboard?checkout=success&type=${successType}`);
   }
 
   return (

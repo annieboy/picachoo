@@ -135,6 +135,14 @@ export function cancelSubscription() {
   return apiFetch('/api/stripe/cancel-subscription', { method: 'POST' });
 }
 
+export function activateCheckout({ type, paymentIntentId, subscriptionId, eventId }) {
+  return apiFetch('/api/stripe/activate', {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body:    JSON.stringify({ type, paymentIntentId, subscriptionId, eventId }),
+  });
+}
+
 export function applyPromoCode({ code, type }) {
   return apiFetch('/api/stripe/apply-promo', {
     method: 'POST',

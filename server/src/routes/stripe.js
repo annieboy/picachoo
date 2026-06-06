@@ -86,9 +86,71 @@ router.post('/checkout', requireAuth, async (req, res, next) => {
 
     const clientSecret = subscription.latest_invoice?.payment_intent?.client_secret;
     if (!clientSecret) {
-      return res.status(500).json({ error: 'Could not initialise subscription payment' });
+      const diagStatus = subscription.latest_invoice?.status;
+      const diagPiStatus = subscription.latest_invoice?.payment_intent?.status;
+      console.error('[stripe] subscription missing clientSecret — invoice.status:', diagStatus, 'pi.status:', diagPiStatus, 'sub.status:', subscription.status);
+      return res.status(500).json({
+        error: `Could not initialise subscription payment (invoice: ${diagStatus ?? 'null'}, sub: ${subscription.status}). Check that STRIPE_PRICE_PRO_ANNUAL / STRIPE_PRICE_BUSINESS_ANNUAL are set and match your Stripe mode (test vs live).`,
+      });
     }
     return res.json({ clientSecret, subscriptionId: subscription.id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ─── POST /api/stripe/activate ───────────────────────────────────────────────
+// Called by the frontend immediately after a successful payment to apply the
+// tier / pass without waiting for a webhook.  Verifies with Stripe directly.
+router.post('/activate', requireAuth, async (req, res, next) => {
+  try {
+    const stripe = getStripe();
+    const { type, paymentIntentId, subscriptionId, eventId } = req.body ?? {};
+    const { authId } = req.user;
+
+    const { rows } = await pool.query(`SELECT id FROM hosts WHERE auth_id = $1`, [authId]);
+    if (!rows.length) return res.status(404).json({ error: 'Host not found' });
+    const hostId = rows[0].id;
+
+    // ── One-time event pass ───────────────────────────────────────────────────
+    if (type === 'one_time_pass') {
+      if (!paymentIntentId || !eventId) {
+        return res.status(400).json({ error: 'paymentIntentId and eventId required' });
+      }
+      const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (pi.status !== 'succeeded') {
+        return res.status(400).json({ error: `Payment not completed (status: ${pi.status})` });
+      }
+      if (pi.metadata?.hostId !== hostId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      const passExpires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      await pool.query(
+        `UPDATE events SET is_premium_pass = TRUE, pass_expires_at = $1
+         WHERE id = $2 AND host_id = $3`,
+        [passExpires.toISOString(), eventId, hostId],
+      );
+      return res.json({ activated: true });
+    }
+
+    // ── Annual subscriptions ──────────────────────────────────────────────────
+    if (type === 'pro_annual' || type === 'business_annual') {
+      if (!subscriptionId) return res.status(400).json({ error: 'subscriptionId required' });
+      const sub = await stripe.subscriptions.retrieve(subscriptionId);
+      if (!['active', 'trialing'].includes(sub.status)) {
+        return res.status(400).json({ error: `Subscription not active (status: ${sub.status})` });
+      }
+      if (sub.metadata?.hostId !== hostId) {
+        return res.status(403).json({ error: 'Forbidden' });
+      }
+      await pool.query(
+        `UPDATE hosts SET tier = $1, stripe_subscription_id = $2 WHERE id = $3`,
+        [type, sub.id, hostId],
+      );
+      return res.json({ activated: true, tier: type });
+    }
+
+    return res.status(400).json({ error: 'Invalid activation request' });
   } catch (err) {
     next(err);
   }
