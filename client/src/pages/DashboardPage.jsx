@@ -6,7 +6,7 @@ import {
   googleAuthUrl, dropboxAuthUrl, oneDriveAuthUrl,
   disconnectStorage, getStorageInfo,
   updateEvent, deleteEvent,
-  updateHostProfile, deleteAccount,
+  updateHostProfile, deleteAccount, cancelSubscription,
 } from '../api';
 import QRCard from '../components/QRCard';
 
@@ -505,6 +505,9 @@ function AccountPanel({ host, setHost, signOut, onUpgrade }) {
   const [deleting,    setDeleting]    = useState(false);
   const [deleteErr,   setDeleteErr]   = useState('');
   const [deleteInput, setDeleteInput] = useState('');
+  const [cancelConfirm, setCancelConfirm] = useState(false);
+  const [cancelling,    setCancelling]    = useState(false);
+  const [cancelMsg,     setCancelMsg]     = useState('');
 
   const tier     = host?.tier ?? 'free';
   const tierMeta = TIER_LABEL[tier] ?? TIER_LABEL.free;
@@ -536,6 +539,23 @@ function AccountPanel({ host, setHost, signOut, onUpgrade }) {
     } catch (err) {
       setDeleteErr(err.message ?? 'Delete failed. Please try again.');
       setDeleting(false);
+    }
+  }
+
+  async function handleCancelSubscription() {
+    setCancelling(true); setCancelMsg('');
+    try {
+      const { currentPeriodEnd } = await cancelSubscription();
+      const date = currentPeriodEnd
+        ? new Date(currentPeriodEnd * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+        : null;
+      setHost(h => ({ ...h, tier: 'free' }));
+      setCancelMsg(date ? `Cancelled. You keep Pro access until ${date}.` : 'Subscription cancelled.');
+      setCancelConfirm(false);
+    } catch (err) {
+      setCancelMsg(err.message ?? 'Cancellation failed. Please try again.');
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -596,6 +616,43 @@ function AccountPanel({ host, setHost, signOut, onUpgrade }) {
             </button>
           )}
         </div>
+
+        {/* Cancel subscription flow */}
+        {isPro && (
+          <div style={{ marginTop: '12px', borderTop: '1px solid #f3f4f6', paddingTop: '12px' }}>
+            {cancelMsg && (
+              <p style={{ fontSize: '12px', color: cancelMsg.includes('failed') ? '#dc2626' : '#059669', marginBottom: '8px' }}>
+                {cancelMsg}
+              </p>
+            )}
+            {!cancelConfirm ? (
+              <button
+                onClick={() => setCancelConfirm(true)}
+                style={{ fontSize: '12px', color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+              >
+                Cancel subscription
+              </button>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <p style={{ fontSize: '12px', color: '#374151' }}>
+                  You'll keep Pro access until the end of your current billing period. Are you sure?
+                </p>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className="btn-ghost btn-sm" onClick={() => setCancelConfirm(false)} disabled={cancelling}>
+                    Keep subscription
+                  </button>
+                  <button
+                    onClick={handleCancelSubscription}
+                    disabled={cancelling}
+                    style={{ background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '999px', padding: '6px 14px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', opacity: cancelling ? 0.5 : 1 }}
+                  >
+                    {cancelling ? 'Cancelling…' : 'Yes, cancel'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Danger zone */}

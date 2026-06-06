@@ -118,6 +118,46 @@ router.post('/apply-promo', requireAuth, async (req, res, next) => {
   }
 });
 
+// ─── POST /api/stripe/cancel-subscription ────────────────────────────────────
+// Cancels the host's active subscription at period end (graceful cancellation).
+router.post('/cancel-subscription', requireAuth, async (req, res, next) => {
+  try {
+    const stripe = getStripe();
+    const { authId } = req.user;
+
+    const { rows } = await pool.query(
+      `SELECT id, stripe_customer_id FROM hosts WHERE auth_id = $1`,
+      [authId],
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Host not found' });
+    const { id: hostId, stripe_customer_id: customerId } = rows[0];
+    if (!customerId) return res.status(400).json({ error: 'No billing account found' });
+
+    // Find the active subscription for this customer
+    const subs = await stripe.subscriptions.list({
+      customer: customerId,
+      status:   'active',
+      limit:    5,
+    });
+
+    const active = subs.data.find(s => s.metadata?.hostId === hostId);
+    if (!active) return res.status(404).json({ error: 'No active subscription found' });
+
+    // Cancel at period end — user keeps access until the billing period expires
+    const cancelled = await stripe.subscriptions.update(active.id, {
+      cancel_at_period_end: true,
+    });
+
+    res.json({
+      ok: true,
+      cancelAt: cancelled.cancel_at,           // Unix timestamp
+      currentPeriodEnd: cancelled.current_period_end,
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // ─── POST /api/stripe/webhook ─────────────────────────────────────────────────
 router.post('/webhook', async (req, res) => {
   const stripe = getStripe();

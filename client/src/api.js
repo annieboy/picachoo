@@ -129,6 +129,10 @@ export function createCheckoutIntent({ type, eventId }) {
   });
 }
 
+export function cancelSubscription() {
+  return apiFetch('/api/stripe/cancel-subscription', { method: 'POST' });
+}
+
 export function applyPromoCode({ code, type }) {
   return apiFetch('/api/stripe/apply-promo', {
     method: 'POST',
