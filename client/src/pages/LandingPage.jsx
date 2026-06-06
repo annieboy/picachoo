@@ -196,156 +196,99 @@ function HeroScene() {
     'Event dashboard',
   ];
 
+  /* phone stages: 0–4 and 6 | monitor stage: 5 */
+  const showMonitor = stage === 5;
+  const phoneKey    = `phone-${stage}`;   /* remount phone on each stage → whole phone animates in */
+
   return (
-    <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+    <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+
       {/* Stage indicator pills */}
-      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: 5, alignItems: 'center' }}>
         {stageLabels.map((label, i) => (
           <div key={i} title={label} style={{
             height: 4, borderRadius: 99,
-            width: i === stage ? 28 : 8,
+            width: i === stage ? 24 : 7,
             background: i === stage ? '#fff' : 'rgba(255,255,255,0.3)',
             transition: 'all 0.4s ease',
           }} />
         ))}
       </div>
 
-      {/* Phone + side elements */}
-      <div className="phone-story-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, width: '100%', maxWidth: 680 }}>
-
-        {/* Left side: context cards */}
-        <div className="hidden md:flex" style={{ flex: 1, flexDirection: 'column', gap: 10, opacity: stage >= 4 ? 1 : 0, transition: 'opacity 0.6s ease' }}>
-          {stage >= 4 && REAL_PHOTOS.slice(0, 3).map((src, i) => (
-            <div key={i} style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-              borderRadius: 12, padding: '8px 10px',
-              animation: `heroFadeIn 0.5s ease ${i * 0.3}s both`,
-            }}>
-              <div style={{ width: 32, height: 32, borderRadius: 7, overflow: 'hidden', flexShrink: 0 }}>
-                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 600 }}>Guest {i + 1}</p>
-                <div style={{ marginTop: 3, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.1)' }}>
-                  <div style={{
-                    height: '100%', borderRadius: 99,
-                    background: 'linear-gradient(90deg,#6045f4,#53e6d4)',
-                    animation: 'progressGrow 2.5s ease infinite',
-                  }} />
-                </div>
-              </div>
-              <svg viewBox="0 0 24 24" fill="none" stroke="#53e6d4" strokeWidth="2.5" width="14" height="14" style={{ animation: 'spin 1.2s linear infinite', flexShrink: 0 }}>
-                <circle cx="12" cy="12" r="9" strokeOpacity="0.2"/>
-                <path d="M12 3a9 9 0 019 9" strokeLinecap="round"/>
-              </svg>
-            </div>
-          ))}
-        </div>
-
-        {/* Phone mockup — light theme like Slido */}
-        <div style={{
-          width: 'min(200px, 68vw)', flexShrink: 0,
-          background: '#e8e8ee',
-          borderRadius: 38,
-          padding: '10px 7px 14px',
-          boxShadow: '0 2px 0 #bbb, 0 24px 60px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(0,0,0,0.08)',
-          position: 'relative',
-        }}>
+      {/* ── Phone (stages 0–4, 6) ── */}
+      {!showMonitor && (
+        <div
+          key={phoneKey}
+          style={{
+            width: 'min(210px, 70vw)', flexShrink: 0,
+            background: '#d8d8de',
+            borderRadius: 44,
+            padding: '12px 8px 16px',
+            boxShadow: '0 2px 0 rgba(0,0,0,0.25), 0 32px 64px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.5), inset 0 0 0 1px rgba(0,0,0,0.12)',
+            animation: 'phoneSlideIn 0.55s cubic-bezier(0.34,1.4,0.64,1) both',
+          }}>
           {/* Dynamic island */}
           <div style={{
-            margin: '0 auto 6px', width: 72, height: 24,
-            background: '#1a1a1a', borderRadius: 99, position: 'relative', zIndex: 10,
+            margin: '0 auto 8px', width: 74, height: 26,
+            background: '#111', borderRadius: 99, zIndex: 10,
           }} />
           {/* Screen */}
           <div style={{
-            borderRadius: 26, overflow: 'hidden',
-            height: 'min(400px, 124vw)',
+            borderRadius: 30, overflow: 'hidden',
+            height: 'min(420px, 128vw)',
             background: '#f5f5f7',
             position: 'relative',
           }}>
             {/* Status bar */}
             <div style={{
               position: 'absolute', top: 0, left: 0, right: 0, height: 28,
-              background: stage === 3 ? 'transparent' : '#fff',
+              background: stage === 3 ? 'rgba(0,0,0,0.01)' : '#fff',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0 14px', zIndex: 6, transition: 'background 0.3s',
+              padding: '0 16px', zIndex: 8, transition: 'background 0.3s',
             }}>
-              <span style={{ fontSize: 9, fontWeight: 700, color: '#1a1a1a' }}>9:41</span>
+              <span style={{ fontSize: 9, fontWeight: 700, color: stage === 3 ? '#fff' : '#1a1a1a' }}>9:41</span>
               <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                <div style={{ width: 12, height: 7, borderRadius: 2, border: '1px solid #1a1a1a', position: 'relative' }}>
-                  <div style={{ position: 'absolute', inset: '1px 1px 1px 1px', background: '#1a1a1a', borderRadius: 1, width: '70%' }} />
+                <div style={{ width: 13, height: 7, borderRadius: 2, border: `1.5px solid ${stage === 3 ? '#fff' : '#1a1a1a'}`, position: 'relative' }}>
+                  <div style={{ position: 'absolute', top: 1, left: 1, bottom: 1, background: stage === 3 ? '#fff' : '#1a1a1a', borderRadius: 1, width: '65%' }} />
                 </div>
               </div>
             </div>
 
-            {/* Picachoo top bar (shown on non-camera screens) */}
-            <div style={{
-              position: 'absolute', top: 28, left: 0, right: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              gap: 5, zIndex: 5, height: 36,
-              background: '#fff',
-              borderBottom: '1px solid #f0f0f0',
-              opacity: (stage === 0 || stage === 3) ? 0 : 1, transition: 'opacity 0.3s',
-            }}>
-              <div style={{ width: 16, height: 16, borderRadius: 5, background: 'linear-gradient(135deg,#6045f4,#53e6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <svg viewBox="0 0 24 24" fill="white" width="10" height="10"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
-              </div>
-              <span style={{ color: '#1a1a1a', fontWeight: 800, fontSize: 12 }}>Picachoo</span>
-            </div>
-
-            {/* ── Stage 0: Invite Card ── */}
-            <StageInvite active={stage === 0} entering={entering && stage === 0} />
-            {/* ── Stage 1: QR Scan ── */}
-            <StageQR active={stage === 1} entering={entering && stage === 1} />
-            {/* ── Stage 2: Welcome / Enter name ── */}
-            <StageWelcome active={stage === 2} entering={entering && stage === 2} />
-            {/* ── Stage 3: Camera ── */}
-            <StageCamera active={stage === 3} entering={entering && stage === 3} />
-            {/* ── Stage 4: Guests uploading ── */}
-            <StageJoining active={stage === 4} entering={entering && stage === 4} />
-            {/* ── Stage 6: Dashboard (event card) ── */}
-            <StageDashboard active={stage === 6} entering={entering && stage === 6} />
-            {/* ── Stage 5: Live wall shown as TV screen below ── */}
-          </div>
-          {/* Home indicator */}
-          <div style={{ height: 4, margin: '8px auto 0', width: 56, borderRadius: 99, background: 'rgba(0,0,0,0.2)' }} />
-        </div>
-
-        {/* Right side: cloud context (stage 4) */}
-        <div className="hidden md:flex" style={{ flex: 1, flexDirection: 'column', gap: 10 }}>
-          <div style={{
-            opacity: stage === 4 ? 1 : 0,
-            transition: 'opacity 0.6s ease',
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-          }}>
-            <div style={{
-              width: 44, height: 44, borderRadius: '50%',
-              background: 'linear-gradient(135deg,#6045f4,#53e6d4)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 0 0 8px rgba(96,69,244,0.18)',
-            }}>
-              <svg viewBox="0 0 24 24" fill="white" width="22" height="22"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
-            </div>
-            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 600, textAlign: 'center' }}>Saved to your cloud</p>
-            {['Google Drive', 'OneDrive', 'Dropbox'].map((s, i) => (
-              <div key={s} style={{
-                display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-                background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-                borderRadius: 10, padding: '6px 10px',
-                animation: `heroFadeIn 0.4s ease ${i * 0.25}s both`,
+            {/* Picachoo nav bar (hidden on invite + camera) */}
+            {stage !== 0 && stage !== 3 && (
+              <div style={{
+                position: 'absolute', top: 28, left: 0, right: 0, height: 38,
+                background: '#fff', borderBottom: '1px solid #f0f0f0',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                gap: 6, zIndex: 7,
               }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#34d399', animation: 'ping 1.5s infinite' }} />
-                <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 600 }}>{s}</span>
+                <div style={{ width: 18, height: 18, borderRadius: 6, background: 'linear-gradient(135deg,#6045f4,#53e6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <svg viewBox="0 0 24 24" fill="white" width="11" height="11"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '-0.01em' }}>
+                  <span style={{ color: '#6045f4' }}>Pica</span><span style={{ color: '#1a1a1a' }}>choo</span>
+                </span>
               </div>
-            ))}
-          </div>
-        </div>
-      </div>
+            )}
 
-      {/* ── Stage 5: Live Wall TV screen ── */}
-      {stage === 5 && (
-        <div style={{ width: '100%', maxWidth: 560, animation: 'heroFadeIn 0.5s ease both' }}>
+            <StageInvite  active={stage === 0} />
+            <StageQR      active={stage === 1} />
+            <StageWelcome active={stage === 2} />
+            <StageCamera  active={stage === 3} />
+            <StageJoining active={stage === 4} />
+            <StageDashboard active={stage === 6} />
+          </div>
+          {/* Home bar */}
+          <div style={{ height: 4, margin: '8px auto 0', width: 60, borderRadius: 99, background: 'rgba(0,0,0,0.18)' }} />
+        </div>
+      )}
+
+      {/* ── Monitor / TV screen (stage 5) ── */}
+      {showMonitor && (
+        <div style={{
+          width: '100%', maxWidth: 580,
+          animation: 'monitorSlideIn 0.6s cubic-bezier(0.34,1.3,0.64,1) both',
+        }}>
           <TVScreen />
         </div>
       )}
@@ -355,14 +298,13 @@ function HeroScene() {
 
 /* ── Phone screen stages ──────────────────────────────────────────────────── */
 
-function StageInvite({ active, entering }) {
+function StageInvite({ active }) {
   if (!active) return null;
   return (
     <div style={{
       position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', padding: 18,
       background: '#f5f5f7',
-      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
     }}>
       {/* Invite card — brand gradient top, warm body */}
       <div style={{
@@ -405,14 +347,13 @@ function StageInvite({ active, entering }) {
   );
 }
 
-function StageQR({ active, entering }) {
+function StageQR({ active }) {
   if (!active) return null;
   return (
     <div style={{
       position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
       alignItems: 'center', justifyContent: 'center', gap: 12, padding: '64px 20px 20px',
       background: '#f5f5f7',
-      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
     }}>
       <p style={{ fontSize: 11, fontWeight: 700, color: '#1a1a1a', textAlign: 'center' }}>Scan to join the event</p>
       <div style={{ padding: 12, background: '#fff', borderRadius: 16, boxShadow: '0 4px 20px rgba(96,69,244,0.15)', border: '1px solid #ede9fe' }}>
@@ -427,13 +368,12 @@ function StageQR({ active, entering }) {
   );
 }
 
-function StageWelcome({ active, entering }) {
+function StageWelcome({ active }) {
   if (!active) return null;
   return (
     <div style={{
       position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
       background: '#f5f5f7',
-      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
     }}>
       {/* Purple brand top band */}
       <div style={{
@@ -480,7 +420,7 @@ function StageWelcome({ active, entering }) {
   );
 }
 
-function StageJoining({ active, entering }) {
+function StageJoining({ active }) {
   if (!active) return null;
   const guests = [
     { name: 'Alex',   photo: REAL_PHOTOS[0] },
@@ -493,7 +433,6 @@ function StageJoining({ active, entering }) {
     <div style={{
       position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
       background: '#f5f5f7',
-      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
     }}>
       {/* Header bar */}
       <div style={{
@@ -545,7 +484,7 @@ function StageJoining({ active, entering }) {
   );
 }
 
-function StageCamera({ active, entering }) {
+function StageCamera({ active }) {
   const [flash, setFlash] = useState(false);
   useEffect(() => {
     if (!active) return;
@@ -555,10 +494,7 @@ function StageCamera({ active, entering }) {
 
   if (!active) return null;
   return (
-    <div style={{
-      position: 'absolute', inset: 0, overflow: 'hidden',
-      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
-    }}>
+    <div style={{ position: 'absolute', inset: 0, overflow: 'hidden' }}>
       {/* Camera viewfinder — real photo as background */}
       <img src={REAL_PHOTOS[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       {/* Viewfinder overlay */}
@@ -606,82 +542,105 @@ function StageCamera({ active, entering }) {
   );
 }
 
-/* ── TV / big-screen Live Wall ───────────────────────────────────────────── */
+/* ── Monitor / Live Wall screen ─────────────────────────────────────────── */
 function TVScreen() {
   return (
-    <div style={{
-      borderRadius: 16, overflow: 'hidden',
-      boxShadow: '0 4px 0 rgba(0,0,0,0.35), 0 24px 60px rgba(0,0,0,0.5)',
-      background: '#0a0a0a',
-      border: '3px solid #1a1a1a',
-    }}>
-      {/* Top bar — exactly like the WallPage screenshot */}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      {/* Monitor bezel */}
       <div style={{
-        background: '#0a0a0a',
-        padding: '10px 16px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        borderBottom: '1px solid rgba(255,255,255,0.07)',
+        width: '100%',
+        background: '#1c1c1e',
+        borderRadius: 16,
+        padding: '8px 8px 10px',
+        boxShadow: '0 0 0 1.5px rgba(255,255,255,0.08), 0 32px 80px rgba(0,0,0,0.7)',
       }}>
-        {/* Left: pica·choo wordmark + event name */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '-0.02em' }}>
-            <span style={{ color: '#6045f4' }}>pica</span>
-            <span style={{ color: '#53e6d4' }}>choo</span>
-          </span>
-          <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 12 }}>·</span>
-          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: 600 }}>Phil &amp; Jane's Wedding</span>
-        </div>
-        {/* Right: LIVE indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-          <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#34d399', animation: 'ping 1.5s infinite' }} />
-          <span style={{ color: '#34d399', fontSize: 11, fontWeight: 700, letterSpacing: '0.06em' }}>LIVE</span>
-        </div>
-      </div>
+        {/* Screen */}
+        <div style={{ borderRadius: 10, overflow: 'hidden', background: '#000' }}>
 
-      {/* Photo grid */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: 2, background: '#000',
-      }}>
-        {REAL_PHOTOS.slice(0, 4).map((src, i) => (
-          <div key={i} style={{
-            aspectRatio: '4/3', overflow: 'hidden',
-            animation: `wallPop 0.45s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.2}s both`,
-            position: 'relative',
+          {/* Top bar — logo left, LIVE right */}
+          <div style={{
+            background: '#0a0a0a',
+            padding: '9px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
           }}>
-            <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            {/* Photo count badge on first */}
-            {i === 0 && (
-              <div style={{
-                position: 'absolute', bottom: 6, left: 6,
-                background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)',
-                borderRadius: 6, padding: '2px 7px',
-                display: 'flex', alignItems: 'center', gap: 4,
-              }}>
-                <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d399' }} />
-                <span style={{ color: '#fff', fontSize: 8, fontWeight: 700 }}>47 photos</span>
-              </div>
-            )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 900, letterSpacing: '-0.02em' }}>
+                <span style={{ color: '#6045f4' }}>pica</span><span style={{ color: '#53e6d4' }}>choo</span>
+              </span>
+              <span style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>·</span>
+              <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12, fontWeight: 600 }}>Phil &amp; Jane's Wedding</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+              <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#34d399', animation: 'ping 1.5s infinite' }} />
+              <span style={{ color: '#34d399', fontSize: 11, fontWeight: 800, letterSpacing: '0.08em' }}>LIVE</span>
+            </div>
           </div>
-        ))}
+
+          {/* Photo wall — 2 rows × 3 cols (smaller photos as user asked) */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateRows: 'repeat(2, 1fr)',
+            gap: 3, padding: 3,
+            background: '#0a0a0a',
+          }}>
+            {REAL_PHOTOS.slice(0, 6).map((src, i) => (
+              <div key={i} style={{
+                aspectRatio: '4/3', overflow: 'hidden', borderRadius: 6, position: 'relative',
+                animation: `wallPop 0.4s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.15}s both`,
+              }}>
+                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                {/* Guest name overlay on a couple */}
+                {i < 2 && (
+                  <div style={{
+                    position: 'absolute', bottom: 5, left: 5,
+                    background: 'rgba(0,0,0,0.55)', backdropFilter: 'blur(4px)',
+                    borderRadius: 5, padding: '2px 6px',
+                  }}>
+                    <span style={{ color: '#fff', fontSize: 8, fontWeight: 600 }}>{['Alex','Maria'][i]}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Bottom bar */}
+          <div style={{
+            background: '#0a0a0a', padding: '7px 14px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+          }}>
+            <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              picachoo.vercel.app/e/WEDDING25
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9, fontWeight: 600 }}>47 photos</span>
+          </div>
+        </div>
       </div>
 
-      {/* TV stand */}
-      <div style={{ height: 8, background: '#111', display: 'flex', justifyContent: 'center', alignItems: 'flex-end' }}>
-        <div style={{ width: 48, height: 4, background: '#222', borderRadius: '0 0 4px 4px' }} />
-      </div>
+      {/* Monitor neck */}
+      <div style={{
+        width: 3, height: 18, background: 'linear-gradient(180deg,#2a2a2e,#1a1a1c)',
+        boxShadow: '1px 0 0 rgba(255,255,255,0.05)',
+      }} />
+      {/* Monitor base */}
+      <div style={{
+        width: 120, height: 12, borderRadius: '0 0 12px 12px',
+        background: 'linear-gradient(180deg,#2a2a2e,#1c1c1e)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.07)',
+      }} />
     </div>
   );
 }
 
 /* ── Dashboard event card stage ──────────────────────────────────────────── */
-function StageDashboard({ active, entering }) {
+function StageDashboard({ active }) {
   if (!active) return null;
   return (
     <div style={{
       position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
       background: '#f5f5f7', overflowY: 'hidden',
-      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
     }}>
       {/* Top nav */}
       <div style={{

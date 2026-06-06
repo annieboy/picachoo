@@ -196,6 +196,16 @@ body.mkt #root {
 .anim-delay-3 { animation-delay: 0.3s; }
 .anim-delay-4 { animation-delay: 0.45s; }
 
+/* ── Phone / monitor entry animations ── */
+@keyframes phoneSlideIn {
+  from { opacity: 0; transform: translateY(36px) scale(0.88) rotate(-3deg); }
+  to   { opacity: 1; transform: translateY(0)    scale(1)    rotate(0deg); }
+}
+@keyframes monitorSlideIn {
+  from { opacity: 0; transform: translateY(44px) scale(0.88); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
 /* ── Phone story scene transitions ── */
 @keyframes slideInRight {
   from { opacity: 0; transform: translateX(40px) scale(0.97); }
