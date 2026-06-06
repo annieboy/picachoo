@@ -108,7 +108,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           {/* Single video element always mounted — wrapper changes shape per mode */}
           <div style={mode === 'photo' ? {
             position: 'absolute',
-            top: '52px',
+            top: '8px',
             left: 0,
             right: 0,
             height: 'calc(100vw * 4 / 3)',
@@ -119,6 +119,34 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           }}>
             <video ref={videoRef} autoPlay playsInline muted
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+
+            {/* Title + flash overlaid inside the photo box */}
+            <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center px-4 pt-3 pb-2"
+                 style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 100%)' }}>
+              {eventName && (
+                <span
+                  className="text-white drop-shadow-lg truncate max-w-[70vw] text-center"
+                  style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
+                >
+                  {eventName}
+                </span>
+              )}
+              <div className="absolute right-3 flex items-center gap-2">
+                {recording && (
+                  <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-semibold tabular-nums">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                    {fmtSecs(recordSecs)}
+                  </span>
+                )}
+                {torchSupported && !recording && (
+                  <button onClick={toggleTorch}
+                    className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
+                    style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}>
+                    <FlashIcon on={torchOn} />
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
           {flashVisible && (
             <div className="absolute inset-0 bg-white pointer-events-none z-30 animate-shutter-flash" />
@@ -154,36 +182,6 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           </button>
         </div>
       )}
-
-      {/* Top bar */}
-      <div
-        className="absolute inset-x-0 top-0 z-20 flex items-center justify-center px-5"
-        style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
-      >
-        {eventName && (
-          <span
-            className="text-white drop-shadow-lg truncate max-w-[70vw] text-center"
-            style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
-          >
-            {eventName}
-          </span>
-        )}
-        <div className="absolute right-4 flex items-center gap-2">
-          {recording && (
-            <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-semibold tabular-nums">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              {fmtSecs(recordSecs)}
-            </span>
-          )}
-          {torchSupported && !recording && (
-            <button onClick={toggleTorch}
-              className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
-              style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}>
-              <FlashIcon on={torchOn} />
-            </button>
-          )}
-        </div>
-      </div>
 
       {/* Bottom controls */}
       <div

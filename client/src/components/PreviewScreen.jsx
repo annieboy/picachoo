@@ -19,7 +19,7 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
           /* Photo: 3:4 frame matching camera viewfinder */
           <div style={{
             position: 'absolute',
-            top: '52px',
+            top: '8px',
             left: 0,
             right: 0,
             height: 'calc(100vw * 4 / 3)',
@@ -27,19 +27,19 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
           }}>
             <img src={objectUrl.current} alt="Preview"
                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-          </div>
-        )}
 
-        {/* Event name */}
-        {eventName && (
-          <div className="absolute inset-x-0 top-0 z-10 flex justify-center px-4"
-               style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }}>
-            <span
-              className="text-white drop-shadow-lg"
-              style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
-            >
-              {eventName}
-            </span>
+            {/* Event name overlaid inside the photo box */}
+            {eventName && (
+              <div className="absolute inset-x-0 top-0 z-10 flex justify-center px-4 pt-3 pb-2"
+                   style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 100%)' }}>
+                <span
+                  className="text-white drop-shadow-lg"
+                  style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
+                >
+                  {eventName}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
