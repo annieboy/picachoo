@@ -106,46 +106,27 @@ export function useCamera() {
     setTimeout(() => setFlashVisible(false), 350);
     setCameraState('capturing');
 
-    const videoTrack = stream.getVideoTracks()[0];
-    let blob = null;
-
-    if (videoTrack && typeof ImageCapture !== 'undefined') {
-      try {
-        const ic = new ImageCapture(videoTrack);
-        let settings = {};
-        try {
-          const caps = await ic.getPhotoCapabilities();
-          if (caps.imageWidth?.max && caps.imageHeight?.max)
-            settings = { imageWidth: caps.imageWidth.max, imageHeight: caps.imageHeight.max };
-        } catch { /* skip */ }
-        blob = await ic.takePhoto(settings);
-        setCaptureMethod('imagecapture');
-      } catch { blob = null; }
-    }
-
-    if (!blob) {
-      // Canvas fallback: centre-crop to 3:4 portrait
-      blob = await new Promise(resolve => {
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
-        const targetAR = 3 / 4; // portrait
-        const streamAR = vw / vh;
-        let sx = 0, sy = 0, sw = vw, sh = vh;
-        if (streamAR > targetAR) {
-          sw = Math.round(vh * targetAR);
-          sx = Math.round((vw - sw) / 2);
-        } else if (streamAR < targetAR) {
-          sh = Math.round(vw / targetAR);
-          sy = Math.round((vh - sh) / 2);
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width  = sw;
-        canvas.height = sh;
-        canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
-        canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95);
-      });
-      setCaptureMethod('canvas');
-    }
+    // Always use canvas so we control the 3:4 crop precisely
+    const blob = await new Promise(resolve => {
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      const targetAR = 3 / 4;
+      const streamAR = vw / vh;
+      let sx = 0, sy = 0, sw = vw, sh = vh;
+      if (streamAR > targetAR) {
+        sw = Math.round(vh * targetAR);
+        sx = Math.round((vw - sw) / 2);
+      } else if (streamAR < targetAR) {
+        sh = Math.round(vw / targetAR);
+        sy = Math.round((vh - sh) / 2);
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width  = sw;
+      canvas.height = sh;
+      canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+      canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95);
+    });
+    setCaptureMethod('canvas');
 
     stopStream();
     setCapturedBlob(blob);
