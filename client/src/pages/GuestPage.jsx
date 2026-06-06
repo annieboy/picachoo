@@ -127,7 +127,8 @@ export default function GuestPage() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-black">
+    <div className="fixed inset-x-0 top-0 flex flex-col overflow-hidden bg-black"
+         style={{ height: '100dvh' }}>
       {screen === SCREENS.NAME && (
         <NameScreen
           eventName={event?.name ?? eventCode}

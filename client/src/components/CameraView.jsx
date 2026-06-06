@@ -13,7 +13,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const {
     videoRef, cameraState, capturedBlob, flashVisible,
     startCamera, snapPhoto, stopStream,
-    flipCamera, torchOn, torchSupported, toggleTorch,
+    flipCamera, facingMode, torchOn, torchSupported, toggleTorch,
     zoom, zoomRange, applyZoom, switchMode, switchRatio,
   } = useCamera();
 
@@ -109,7 +109,8 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const isActive      = cameraState === 'active';
   const isStarting    = cameraState === 'starting';
   const isPhotoMode   = mode === 'photo';
-  const showGuide     = isPhotoMode && isActive && ratio.value !== null;
+  // Keep guide mounted during 'starting' too so it doesn't flicker on flip
+  const showGuide     = isPhotoMode && (isActive || isStarting) && ratio.value !== null;
 
   return (
     <div
@@ -162,9 +163,9 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
         </div>
       )}
 
-      {/* Crop guide — pitch-black masks with JS-calculated sizes */}
+      {/* Crop guide — force remount on every camera flip so dims are fresh */}
       {showGuide && (
-        <CropGuide ratio={ratio.value} eventName={eventName} />
+        <CropGuide key={`${facingMode}-${ratio.value}`} ratio={ratio.value} eventName={eventName} />
       )}
 
       {/* Top bar — only when no crop guide (Full or video mode) */}
@@ -312,8 +313,15 @@ function CropGuide({ ratio, eventName }) {
 
   useEffect(() => {
     const update = () => setDims({ w: window.innerWidth, h: window.innerHeight });
+    // iOS fires orientationchange before dimensions update; delay gives correct values
+    const onOrient = () => setTimeout(update, 120);
+    update(); // measure immediately on mount
     window.addEventListener('resize', update);
-    return () => window.removeEventListener('resize', update);
+    window.addEventListener('orientationchange', onOrient);
+    return () => {
+      window.removeEventListener('resize', update);
+      window.removeEventListener('orientationchange', onOrient);
+    };
   }, []);
 
   // Calculate where the crop frame sits on screen.
