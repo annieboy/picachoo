@@ -30,24 +30,33 @@ export function useCamera() {
     setZoom(1);
 
     try {
-      const sizeConstraints = { width: { ideal: 2448 }, height: { ideal: 3264 } };
+      // Progressive constraint fallback — iOS Safari is strict about combining
+      // facingMode with resolution constraints, especially on the front camera.
+      const attempts = [
+        { facingMode: { exact: facing }, width: { ideal: 2448 }, height: { ideal: 3264 } },
+        { facingMode: { ideal: facing }, width: { ideal: 2448 }, height: { ideal: 3264 } },
+        { facingMode: { exact: facing } },
+        { facingMode: { ideal: facing } },
+        true, // last resort: let the browser pick any camera
+      ];
 
-      // Try exact facingMode first (guarantees correct lens + mirroring).
-      // Fall back to ideal if the browser throws OverconstrainedError — some
-      // browsers can't satisfy 'exact' even when the camera exists.
       let stream;
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: facing }, ...sizeConstraints },
-          audio: false,
-        });
-      } catch (innerErr) {
-        if (innerErr.name !== 'OverconstrainedError' && innerErr.name !== 'ConstraintNotSatisfiedError') throw innerErr;
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: facing }, ...sizeConstraints },
-          audio: false,
-        });
+      let lastErr;
+      for (const constraints of attempts) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: constraints,
+            audio: false,
+          });
+          break;
+        } catch (err) {
+          lastErr = err;
+          const name = err.name;
+          // Only retry on constraint-related errors; permission errors are final
+          if (name === 'NotAllowedError' || name === 'PermissionDeniedError') throw err;
+        }
       }
+      if (!stream) throw lastErr;
       streamRef.current = stream;
 
       try {
