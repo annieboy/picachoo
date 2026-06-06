@@ -1,12 +1,21 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useCamera } from '../hooks/useCamera';
 
+// Available photo aspect ratios (portrait-first)
+const RATIOS = [
+  { label: '3:4',  value: 3 / 4 },
+  { label: '1:1',  value: 1 },
+  { label: '4:3',  value: 4 / 3 },
+  { label: 'Full', value: null },
+];
+const DEFAULT_RATIO = RATIOS[0]; // 3:4
+
 export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const {
     videoRef, cameraState, capturedBlob, flashVisible,
     startCamera, snapPhoto, stopStream,
     flipCamera, torchOn, torchSupported, toggleTorch,
-    zoom, zoomRange, applyZoom, switchMode,
+    zoom, zoomRange, applyZoom, switchMode, switchRatio,
   } = useCamera();
 
   const fileInputRef = useRef(null);
@@ -14,12 +23,13 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const recordChunks = useRef([]);
   const pinchRef     = useRef({ active: false, startDist: 0, startZoom: 1 });
 
-  const [mode,       setMode]       = useState('photo');
-  const [recording,  setRecording]  = useState(false);
-  const [recordSecs, setRecordSecs] = useState(0);
-  const timerRef     = useRef(null);
+  const [mode,        setMode]        = useState('photo');
+  const [ratio,       setRatio]       = useState(DEFAULT_RATIO);
+  const [recording,   setRecording]   = useState(false);
+  const [recordSecs,  setRecordSecs]  = useState(0);
+  const timerRef = useRef(null);
 
-  useEffect(() => { startCamera('photo'); return stopStream; }, [startCamera, stopStream]);
+  useEffect(() => { startCamera('photo', DEFAULT_RATIO.value); return stopStream; }, [startCamera, stopStream]);
   useEffect(() => { if (capturedBlob) onCapture(capturedBlob); }, [capturedBlob, onCapture]);
 
   // ── Pinch-to-zoom ──────────────────────────────────────────────────────────
@@ -36,14 +46,12 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
     e.preventDefault();
     const dx = e.touches[0].clientX - e.touches[1].clientX;
     const dy = e.touches[0].clientY - e.touches[1].clientY;
-    const dist  = Math.hypot(dx, dy);
-    const scale = dist / pinchRef.current.startDist;
+    const scale = Math.hypot(dx, dy) / pinchRef.current.startDist;
     const next  = Math.min(zoomRange.max, Math.max(zoomRange.min, pinchRef.current.startZoom * scale));
     applyZoom(next);
   }
   function handleTouchEnd() { pinchRef.current.active = false; }
 
-  // ── Zoom button levels ─────────────────────────────────────────────────────
   const zoomLevels = hasZoom
     ? [1, 2, Math.min(5, zoomRange.max)].filter((v, i, a) => v <= zoomRange.max && a.indexOf(v) === i)
     : [];
@@ -67,11 +75,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
     const mr = new MediaRecorder(stream, { mimeType });
     recordChunks.current = [];
     mr.ondataavailable = e => { if (e.data.size > 0) recordChunks.current.push(e.data); };
-    mr.onstop = () => {
-      const blob = new Blob(recordChunks.current, { type: mimeType });
-      stopStream();
-      onCapture(blob);
-    };
+    mr.onstop = () => { stopStream(); onCapture(new Blob(recordChunks.current, { type: mimeType })); };
     mr.start(250);
     mediaRecRef.current = mr;
     setRecording(true);
@@ -92,6 +96,11 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
     switchMode(m);
   }
 
+  function handleRatioChange(r) {
+    setRatio(r);
+    switchRatio(r.value);
+  }
+
   function handleShutter() {
     if (mode === 'video') recording ? stopRecording() : startRecording();
     else snapPhoto().catch(console.error);
@@ -104,9 +113,9 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   const needsFallback = cameraState === 'denied' || cameraState === 'unavailable';
   const isActive      = cameraState === 'active';
   const isStarting    = cameraState === 'starting';
+  const isPhotoMode   = mode === 'photo';
 
   return (
-    /* Full-screen, no-scroll container */
     <div
       className="relative w-full h-full bg-black select-none overflow-hidden touch-none"
       style={{ minHeight: 0 }}
@@ -114,7 +123,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* ── Full-screen video ── */}
+      {/* ── Video feed ── */}
       {!needsFallback && (
         <>
           <video
@@ -122,24 +131,18 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
             autoPlay playsInline muted
             className="absolute inset-0 w-full h-full object-cover"
           />
-
-          {/* 4:3 crop guide — photo mode only */}
-          {mode === 'photo' && isActive && (
-            <CropGuide />
-          )}
-
           {flashVisible && (
-            <div className="absolute inset-0 bg-white pointer-events-none animate-shutter-flash" />
+            <div className="absolute inset-0 bg-white pointer-events-none animate-shutter-flash z-30" />
           )}
           {isStarting && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
+            <div className="absolute inset-0 flex items-center justify-center bg-black/70 z-20">
               <CameraSpinner />
             </div>
           )}
         </>
       )}
 
-      {/* ── Permission / hardware error ── */}
+      {/* ── Permission / unavailable fallback ── */}
       {needsFallback && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-6 text-center z-10">
           <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/10">
@@ -163,52 +166,64 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
         </div>
       )}
 
-      {/* ── Top bar (overlaid) ── */}
-      <div
-        className="absolute inset-x-0 top-0 z-20 flex items-center justify-center px-5"
-        style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
-      >
-        {/* Event name — centred handwriting */}
-        {eventName && (
-          <span
-            className="text-white drop-shadow-lg truncate max-w-[70vw] text-center"
-            style={{
-              fontFamily: "'Caveat', 'Segoe Script', cursive",
-              fontSize: '1.4rem',
-              fontWeight: 700,
-              textShadow: '0 1px 8px rgba(0,0,0,0.55)',
-            }}
-          >
-            {eventName}
-          </span>
-        )}
+      {/* ── Crop guide with pitch-black masks ── */}
+      {!needsFallback && isActive && isPhotoMode && ratio.value !== null && (
+        <CropGuide ratio={ratio.value} eventName={eventName} />
+      )}
 
-        {/* Flash / timer — absolute right so they don't offset the centred name */}
-        <div className="absolute right-4 flex items-center gap-2">
-          {recording && (
-            <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-semibold tabular-nums">
-              <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-              {fmtSecs(recordSecs)}
+      {/* ── Top bar (overlaid on video when no crop guide, or sits above guide) ── */}
+      {(ratio.value === null || !isPhotoMode) && (
+        <div
+          className="absolute inset-x-0 top-0 z-20 flex items-center justify-center px-5"
+          style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))', paddingBottom: '0.5rem' }}
+        >
+          {eventName && (
+            <span
+              className="text-white drop-shadow-lg truncate max-w-[70vw] text-center"
+              style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
+            >
+              {eventName}
             </span>
           )}
-          {torchSupported && !recording && (
-            <button
-              onClick={toggleTorch}
-              className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
-              style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}
-              aria-label={torchOn ? 'Flash off' : 'Flash on'}
-            >
-              <FlashIcon on={torchOn} />
-            </button>
-          )}
+          <div className="absolute right-4 flex items-center gap-2">
+            {recording && (
+              <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-semibold tabular-nums">
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                {fmtSecs(recordSecs)}
+              </span>
+            )}
+            {torchSupported && !recording && (
+              <button
+                onClick={toggleTorch}
+                className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
+                style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}
+              >
+                <FlashIcon on={torchOn} />
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* ── Bottom controls (overlaid) ── */}
+      {/* Torch button when crop guide is active (positioned in top mask by CropGuide) */}
+      {isPhotoMode && ratio.value !== null && torchSupported && !recording && (
+        <div className="absolute top-0 right-4 z-30 flex items-center"
+             style={{ top: 'max(0.75rem, env(safe-area-inset-top))' }}>
+          <button
+            onClick={toggleTorch}
+            className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
+            style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(255,255,255,0.15)', color: '#fff' }}
+          >
+            <FlashIcon on={torchOn} />
+          </button>
+        </div>
+      )}
+
+      {/* ── Bottom controls ── */}
       <div
         className="absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-3"
         style={{ paddingBottom: 'max(2.5rem, env(safe-area-inset-bottom))', paddingTop: '1rem',
-                 background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)' }}
+                 background: 'linear-gradient(to top, rgba(0,0,0,0.75) 0%, transparent 100%)' }}
       >
         {/* Zoom level buttons */}
         {hasZoom && isActive && !recording && (
@@ -224,14 +239,32 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
                     ? { background: 'rgba(255,255,255,0.25)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.6)' }
                     : { background: 'rgba(0,0,0,0.3)', color: 'rgba(255,255,255,0.6)', border: '1.5px solid rgba(255,255,255,0.15)' }}
                 >
-                  {level === 1 ? '1×' : level === 2 ? '2×' : `${level}×`}
+                  {level === 1 ? '1×' : `${level}×`}
                 </button>
               );
             })}
           </div>
         )}
 
-        {/* Mode toggle — Photo / Video */}
+        {/* Ratio toggle — photo mode only */}
+        {isPhotoMode && !needsFallback && !recording && (
+          <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm p-1 rounded-full">
+            {RATIOS.map(r => (
+              <button
+                key={r.label}
+                onClick={() => handleRatioChange(r)}
+                className="px-4 py-1 rounded-full text-xs font-semibold transition-all active:scale-95"
+                style={ratio.label === r.label
+                  ? { background: 'rgba(255,255,255,0.22)', color: '#fff' }
+                  : { color: 'rgba(255,255,255,0.45)' }}
+              >
+                {r.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Mode toggle */}
         {!needsFallback && (
           <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm p-1 rounded-full">
             {['photo', 'video'].map(m => (
@@ -249,25 +282,20 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           </div>
         )}
 
-        {/* Main controls row: flip · shutter · gallery */}
+        {/* Main row: flip · shutter · gallery */}
         <div className="flex items-center justify-between w-full px-10">
-
-          {/* Flip */}
           <button
             onClick={flipCamera}
             disabled={recording}
             className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-30 backdrop-blur-sm"
             style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.2)' }}
-            aria-label="Flip camera"
           >
             <FlipIcon />
           </button>
 
-          {/* Shutter */}
           <button
             disabled={!isActive}
             onClick={handleShutter}
-            aria-label={mode === 'video' ? (recording ? 'Stop' : 'Record') : 'Snap'}
             className="relative flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40 focus:outline-none"
             style={{ width: 80, height: 80 }}
           >
@@ -289,11 +317,9 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
             )}
           </button>
 
-          {/* Gallery */}
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={recording}
-            aria-label="Gallery"
             className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-30 backdrop-blur-sm"
             style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.2)' }}
           >
@@ -314,37 +340,83 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   );
 }
 
-// Shows a 4:3 frame guide with darkened bars outside the crop area
-function CropGuide() {
+// ── Crop guide with pitch-black masks ─────────────────────────────────────────
+// The live area uses CSS aspect-ratio centred in the viewport.
+// Everything outside is solid black. Event name sits centred in the top mask.
+
+function CropGuide({ ratio, eventName }) {
+  // ratio is w/h — e.g. 3/4 = 0.75 (portrait), 1 (square), 4/3 (landscape)
+  const isPortrait  = ratio < 1;
+  const isSquare    = ratio === 1;
+  const isLandscape = ratio > 1;
+
+  // For portrait ratios on a phone: the frame is full-width, with top/bottom masks.
+  // For landscape/square: the frame is full-height with side masks (or just top/bottom).
+  // We let CSS handle it via aspect-ratio + object-contain logic.
+
   return (
-    <div className="absolute inset-0 pointer-events-none z-10">
-      {/* The 4:3 frame is centred; we calculate via CSS aspect-ratio */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div
-          className="relative w-full"
-          style={{ aspectRatio: '4/3', maxHeight: '100%', maxWidth: '100%' }}
-        >
-          {/* Corner brackets */}
-          {[
-            'top-0 left-0 border-t border-l',
-            'top-0 right-0 border-t border-r',
-            'bottom-0 left-0 border-b border-l',
-            'bottom-0 right-0 border-b border-r',
-          ].map((cls, i) => (
-            <div
-              key={i}
-              className={`absolute w-6 h-6 border-white/70 ${cls}`}
-              style={{ borderWidth: '2px' }}
-            />
-          ))}
-        </div>
+    <div className="absolute inset-0 z-10 pointer-events-none flex flex-col">
+      {/* Top mask — pitch black, contains event name */}
+      <div
+        className="flex-shrink-0 w-full bg-black flex items-center justify-center relative"
+        style={{
+          // Height = (screen - frame) / 2
+          // Frame height when portrait: width * (1/ratio) capped at screen height
+          height: isPortrait
+            ? `calc((100% - 100vw * ${1 / ratio}) / 2)`
+            : isSquare
+            ? `calc((100% - 100vw) / 2)`
+            : `calc((100% - 100vh * ${ratio}) / 2)`,
+          minHeight: 0,
+          paddingTop: 'env(safe-area-inset-top)',
+        }}
+      >
+        {eventName && (
+          <span
+            className="text-white truncate max-w-[70vw] text-center"
+            style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.35rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.8)' }}
+          >
+            {eventName}
+          </span>
+        )}
       </div>
 
-      {/* Dark mask above and below the 4:3 frame */}
-      <div className="absolute inset-x-0 top-0 bg-black/40"
-           style={{ height: 'calc((100% - min(100vw * 3/4, 100vh)) / 2)', minHeight: 0 }} />
-      <div className="absolute inset-x-0 bottom-0 bg-black/40"
-           style={{ height: 'calc((100% - min(100vw * 3/4, 100vh)) / 2)', minHeight: 0 }} />
+      {/* Live frame row — side masks + clear centre */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left mask (landscape only) */}
+        {isLandscape && (
+          <div className="bg-black flex-shrink-0"
+               style={{ width: `calc((100% - 100vh * ${ratio}) / 2)`, minWidth: 0 }} />
+        )}
+
+        {/* The frame itself — transparent, just corner brackets */}
+        <div className="flex-1 relative min-w-0">
+          {/* Corner brackets */}
+          <div className="absolute top-0 left-0 w-7 h-7 border-t-2 border-l-2 border-white/60" />
+          <div className="absolute top-0 right-0 w-7 h-7 border-t-2 border-r-2 border-white/60" />
+          <div className="absolute bottom-0 left-0 w-7 h-7 border-b-2 border-l-2 border-white/60" />
+          <div className="absolute bottom-0 right-0 w-7 h-7 border-b-2 border-r-2 border-white/60" />
+        </div>
+
+        {/* Right mask (landscape only) */}
+        {isLandscape && (
+          <div className="bg-black flex-shrink-0"
+               style={{ width: `calc((100% - 100vh * ${ratio}) / 2)`, minWidth: 0 }} />
+        )}
+      </div>
+
+      {/* Bottom mask — pitch black */}
+      <div
+        className="flex-shrink-0 w-full bg-black"
+        style={{
+          height: isPortrait
+            ? `calc((100% - 100vw * ${1 / ratio}) / 2)`
+            : isSquare
+            ? `calc((100% - 100vw) / 2)`
+            : `calc((100% - 100vh * ${ratio}) / 2)`,
+          minHeight: 0,
+        }}
+      />
     </div>
   );
 }

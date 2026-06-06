@@ -5,17 +5,29 @@ async function getDeviceIdForFacing(facing) {
     const devices = await navigator.mediaDevices.enumerateDevices();
     const videos   = devices.filter(d => d.kind === 'videoinput');
     if (videos.length <= 1) return null;
-
-    // iOS labels contain "front" / "back"; Android labels vary
     const label = facing === 'user' ? 'front' : 'back';
     const match = videos.find(d => d.label.toLowerCase().includes(label));
     if (match) return match.deviceId;
-
-    // Fallback: assume index 0 = back, 1 = front (common on iOS)
     return facing === 'user' ? videos[videos.length - 1].deviceId : videos[0].deviceId;
   } catch {
     return null;
   }
+}
+
+// Crop a video frame to the target aspect ratio (w/h), centred
+function cropToRatio(video, targetAR) {
+  const vw = video.videoWidth;
+  const vh = video.videoHeight;
+  const streamAR = vw / vh;
+  let sx = 0, sy = 0, sw = vw, sh = vh;
+  if (streamAR > targetAR) {
+    sw = Math.round(vh * targetAR);
+    sx = Math.round((vw - sw) / 2);
+  } else if (streamAR < targetAR) {
+    sh = Math.round(vw / targetAR);
+    sy = Math.round((vh - sh) / 2);
+  }
+  return { sx, sy, sw, sh };
 }
 
 export function useCamera() {
@@ -30,7 +42,10 @@ export function useCamera() {
   const [torchSupported, setTorchSupported] = useState(false);
   const [zoom,           setZoom]           = useState(1);
   const [zoomRange,      setZoomRange]      = useState({ min: 1, max: 1 });
-  const modeRef          = useRef('photo'); // track current mode for capture
+
+  // Refs so callbacks always see latest values without re-creating
+  const modeRef  = useRef('photo');
+  const ratioRef = useRef(3 / 4); // default 3:4 portrait
 
   const stopStream = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
@@ -39,7 +54,10 @@ export function useCamera() {
 
   useEffect(() => () => stopStream(), [stopStream]);
 
-  const startCameraFacing = useCallback(async (facing, mode = modeRef.current) => {
+  const startCameraFacing = useCallback(async (facing, mode, ratio) => {
+    const resolvedMode  = mode  ?? modeRef.current;
+    const resolvedRatio = ratio ?? ratioRef.current;
+
     if (!navigator.mediaDevices?.getUserMedia) {
       setCameraState('unavailable');
       return;
@@ -51,33 +69,32 @@ export function useCamera() {
     try {
       const deviceId = await getDeviceIdForFacing(facing);
 
-      // Photo mode: request 4:3 aspect ratio at high resolution
-      // Video mode: keep 16:9 (wide)
-      const isPhoto = mode === 'photo';
-      const sizeConstraints = isPhoto
-        ? { width: { ideal: 4096 }, height: { ideal: 3072 }, aspectRatio: { ideal: 4 / 3 } }
-        : { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16 / 9 } };
+      let sizeConstraints;
+      if (resolvedMode === 'video') {
+        sizeConstraints = { width: { ideal: 1920 }, height: { ideal: 1080 }, aspectRatio: { ideal: 16 / 9 } };
+      } else if (resolvedRatio === null) {
+        // "Full" — let browser/device decide, no crop constraint
+        sizeConstraints = { width: { ideal: 3840 }, height: { ideal: 2160 } };
+      } else {
+        // Photo with specific ratio (e.g. 3/4, 1, 4/3)
+        const isPortrait = resolvedRatio <= 1;
+        const w = isPortrait ? 3072 : 4096;
+        const h = isPortrait ? Math.round(w / resolvedRatio) : Math.round(w * resolvedRatio);
+        sizeConstraints = { width: { ideal: w }, height: { ideal: h }, aspectRatio: { ideal: resolvedRatio } };
+      }
 
       const videoConstraints = deviceId
         ? { deviceId: { exact: deviceId }, ...sizeConstraints }
         : { facingMode: { ideal: facing }, ...sizeConstraints };
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: videoConstraints,
-        audio: false,   // audio requested only when recording starts
-      });
-
+      const stream = await navigator.mediaDevices.getUserMedia({ video: videoConstraints, audio: false });
       streamRef.current = stream;
 
       try {
         const track = stream.getVideoTracks()[0];
         const caps   = track?.getCapabilities?.();
         setTorchSupported(!!(caps?.torch));
-        if (caps?.zoom) {
-          setZoomRange({ min: caps.zoom.min ?? 1, max: caps.zoom.max ?? 1 });
-        } else {
-          setZoomRange({ min: 1, max: 1 });
-        }
+        setZoomRange(caps?.zoom ? { min: caps.zoom.min ?? 1, max: caps.zoom.max ?? 1 } : { min: 1, max: 1 });
       } catch { setTorchSupported(false); }
 
       if (videoRef.current) {
@@ -93,38 +110,42 @@ export function useCamera() {
     }
   }, [stopStream]);
 
-  const startCamera = useCallback((mode) => startCameraFacing(facingMode, mode), [startCameraFacing, facingMode]);
+  const startCamera = useCallback((mode, ratio) => {
+    if (mode  !== undefined) modeRef.current  = mode;
+    if (ratio !== undefined) ratioRef.current = ratio;
+    return startCameraFacing(facingMode, mode, ratio);
+  }, [startCameraFacing, facingMode]);
 
   const switchMode = useCallback((mode) => {
     modeRef.current = mode;
     stopStream();
-    startCameraFacing(facingMode, mode);
+    startCameraFacing(facingMode, mode, ratioRef.current);
+  }, [facingMode, stopStream, startCameraFacing]);
+
+  const switchRatio = useCallback((ratio) => {
+    ratioRef.current = ratio;
+    stopStream();
+    startCameraFacing(facingMode, modeRef.current, ratio);
   }, [facingMode, stopStream, startCameraFacing]);
 
   const flipCamera = useCallback(() => {
     const next = facingMode === 'environment' ? 'user' : 'environment';
     setFacingMode(next);
     stopStream();
-    startCameraFacing(next);
+    startCameraFacing(next, modeRef.current, ratioRef.current);
   }, [facingMode, stopStream, startCameraFacing]);
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
     const next = !torchOn;
-    try {
-      await track.applyConstraints({ advanced: [{ torch: next }] });
-      setTorchOn(next);
-    } catch { /* not supported */ }
+    try { await track.applyConstraints({ advanced: [{ torch: next }] }); setTorchOn(next); } catch { /* unsupported */ }
   }, [torchOn]);
 
   const applyZoom = useCallback(async (level) => {
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
-    try {
-      await track.applyConstraints({ advanced: [{ zoom: level }] });
-      setZoom(level);
-    } catch { /* not supported */ }
+    try { await track.applyConstraints({ advanced: [{ zoom: level }] }); setZoom(level); } catch { /* unsupported */ }
   }, []);
 
   const snapPhoto = useCallback(async () => {
@@ -154,26 +175,19 @@ export function useCamera() {
     }
 
     if (!blob) {
+      const targetAR = ratioRef.current; // null = no crop
       blob = await new Promise(resolve => {
-        const vw = video.videoWidth;
-        const vh = video.videoHeight;
-        // Crop to 4:3 from the centre if the stream is wider
-        const targetAR = 4 / 3;
-        const streamAR = vw / vh;
-        let sx = 0, sy = 0, sw = vw, sh = vh;
-        if (streamAR > targetAR) {
-          // wider than 4:3 — crop sides
-          sw = Math.round(vh * targetAR);
-          sx = Math.round((vw - sw) / 2);
-        } else if (streamAR < targetAR) {
-          // taller than 4:3 — crop top/bottom
-          sh = Math.round(vw / targetAR);
-          sy = Math.round((vh - sh) / 2);
-        }
         const canvas = document.createElement('canvas');
-        canvas.width  = sw;
-        canvas.height = sh;
-        canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+        if (targetAR === null) {
+          canvas.width  = video.videoWidth;
+          canvas.height = video.videoHeight;
+          canvas.getContext('2d').drawImage(video, 0, 0);
+        } else {
+          const { sx, sy, sw, sh } = cropToRatio(video, targetAR);
+          canvas.width  = sw;
+          canvas.height = sh;
+          canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+        }
         canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95);
       });
       setCaptureMethod('canvas');
@@ -186,12 +200,13 @@ export function useCamera() {
   const retake = useCallback(() => {
     setCapturedBlob(null);
     setCaptureMethod(null);
-    startCameraFacing(facingMode);
+    startCameraFacing(facingMode, modeRef.current, ratioRef.current);
   }, [startCameraFacing, facingMode]);
 
   return {
     videoRef, cameraState, capturedBlob, flashVisible, captureMethod,
     facingMode, torchOn, torchSupported, zoom, zoomRange,
-    startCamera, snapPhoto, retake, stopStream, flipCamera, toggleTorch, applyZoom, switchMode,
+    startCamera, snapPhoto, retake, stopStream, flipCamera, toggleTorch, applyZoom,
+    switchMode, switchRatio,
   };
 }
