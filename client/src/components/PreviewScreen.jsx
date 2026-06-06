@@ -11,19 +11,23 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
 
       {/* ── Photo / Video fills all remaining space ── */}
       <div className="flex-1 relative overflow-hidden bg-zinc-900">
+        {isVideo ? (
+          <video src={objectUrl.current} className="absolute inset-0 w-full h-full object-cover"
+                 autoPlay loop muted playsInline />
+        ) : (
+          <img src={objectUrl.current} alt="Preview"
+               className="absolute inset-0 w-full h-full object-cover" />
+        )}
 
-        {/* Event name overlay — top left */}
+        {/* Event name — centred top overlay */}
         {eventName && (
-          <div
-            className="absolute top-0 left-0 z-10 px-4"
-            style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
-          >
+          <div className="absolute inset-x-0 top-0 z-10 flex justify-center px-4"
+               style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
             <span
               className="text-white drop-shadow-lg"
               style={{
-                fontFamily: "'Caveat', 'Segoe Script', cursive",
-                fontSize: '1.35rem',
-                fontWeight: 700,
+                fontFamily: "'Caveat','Segoe Script',cursive",
+                fontSize: '1.4rem', fontWeight: 700,
                 textShadow: '0 1px 8px rgba(0,0,0,0.55)',
               }}
             >
@@ -31,30 +35,17 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
             </span>
           </div>
         )}
-        {isVideo ? (
-          <video
-            src={objectUrl.current}
-            className="absolute inset-0 w-full h-full object-cover"
-            autoPlay loop muted playsInline
-          />
-        ) : (
-          <img
-            src={objectUrl.current}
-            alt="Preview"
-            className="absolute inset-0 w-full h-full object-cover"
-          />
-        )}
       </div>
 
-      {/* ── Bottom bar: Retake (left) · Upload (right) ── */}
+      {/* ── Bottom controls: Retake · Shutter-style Upload · (spacer) ── */}
       <div
-        className="shrink-0 flex items-center justify-between px-6 py-4 bg-black"
-        style={{ paddingBottom: 'max(1.25rem, env(safe-area-inset-bottom))' }}
+        className="shrink-0 flex items-center justify-between px-10 py-4 bg-black"
+        style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
       >
-        {/* Retake */}
+        {/* Retake — left */}
         <button
           onClick={onRetake}
-          className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
+          className="flex flex-col items-center gap-1.5 active:scale-90 transition-transform"
           aria-label="Retake"
         >
           <span className="w-12 h-12 rounded-full flex items-center justify-center"
@@ -64,18 +55,22 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
           <span className="text-white/50 text-[11px] font-medium">Retake</span>
         </button>
 
-        {/* Upload */}
+        {/* Upload — centre, shutter-sized */}
         <button
           onClick={onUpload}
-          className="flex flex-col items-center gap-1 active:scale-90 transition-transform"
-          aria-label="Upload"
+          aria-label="Upload photo"
+          className="relative flex items-center justify-center active:scale-90 transition-transform focus:outline-none"
+          style={{ width: 80, height: 80 }}
         >
-          <span className="w-12 h-12 rounded-full flex items-center justify-center"
+          <span className="absolute inset-0 rounded-full border-[3.5px] border-white/70" />
+          <span className="flex items-center justify-center w-[64px] h-[64px] rounded-full"
                 style={{ background: 'linear-gradient(135deg,#5B52E8,#29BFBF)' }}>
             <UploadIcon />
           </span>
-          <span className="text-white/50 text-[11px] font-medium">Upload</span>
         </button>
+
+        {/* Spacer — keeps shutter centred */}
+        <div className="w-12 h-12" />
       </div>
     </div>
   );
@@ -92,8 +87,8 @@ function RetakeIcon() {
 }
 function UploadIcon() {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.2"
-         strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"
+         strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
       <path d="M5 12l7-7 7 7"/><path d="M12 5v14"/>
     </svg>
   );
