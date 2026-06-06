@@ -11,7 +11,6 @@ export default function LandingPage() {
       <Features />
       <LiveWall />
       <Pricing />
-      <Testimonials />
       <FinalCTA />
     </MarketingLayout>
   );
@@ -44,51 +43,35 @@ function Hero() {
   return (
     <section className="bezl-hero relative min-h-screen flex flex-col items-center justify-center pt-24 pb-32 px-6 overflow-hidden">
 
-      {/* ── Slido-style join bar ── */}
-      <div className="anim-fade-up relative z-10 mb-12 w-full max-w-xl">
+      {/* ── Join bar — narrow pill like Slido ── */}
+      <div className="anim-fade-up relative z-10 mb-12">
         <form onSubmit={handleJoin}
-              className="flex items-center rounded-2xl overflow-hidden shadow-2xl"
-              style={{ background: 'rgba(255,255,255,0.12)', border: '1.5px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(12px)' }}>
-          {/* Label half */}
-          <div className="flex items-center gap-2.5 px-5 py-4 shrink-0">
-            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-4 h-4 opacity-70">
-              <path strokeLinecap="round" strokeLinejoin="round"
-                    d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"/>
-            </svg>
-            <span className="text-white font-semibold text-sm whitespace-nowrap">Joining an event?</span>
-          </div>
-
-          {/* Divider */}
-          <div className="w-px self-stretch" style={{ background: 'rgba(255,255,255,0.2)' }} />
-
-          {/* Input half */}
-          <div className="flex items-center flex-1 px-4">
-            <span className="text-white/50 font-bold mr-1.5">#</span>
-            <input
-              type="text"
-              value={code}
-              onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="Enter event code"
-              maxLength={12}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              className="flex-1 bg-transparent text-white placeholder-white/35 font-semibold text-sm focus:outline-none py-4"
-            />
-          </div>
-
-          {/* Arrow button */}
+              className="inline-flex items-center rounded-full shadow-xl"
+              style={{ background: 'rgba(255,255,255,0.13)', border: '1.5px solid rgba(255,255,255,0.3)', backdropFilter: 'blur(12px)' }}>
+          <span className="pl-5 pr-3 text-white font-semibold text-sm whitespace-nowrap">Joining an event?</span>
+          <div className="w-px h-6" style={{ background: 'rgba(255,255,255,0.25)' }} />
+          <span className="pl-3 text-white/50 font-bold text-sm">#</span>
+          <input
+            type="text"
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            placeholder="Enter code here"
+            maxLength={12}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            className="bg-transparent text-white placeholder-white/35 font-medium text-sm focus:outline-none py-3 px-2 w-36"
+          />
           <button type="submit"
-                  className="m-2 w-10 h-10 rounded-xl flex items-center justify-center transition-all hover:scale-105 active:scale-95"
-                  style={{ background: 'rgba(255,255,255,0.25)' }}
+                  className="m-1.5 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:scale-105 active:scale-95"
+                  style={{ background: 'rgba(255,255,255,0.3)' }}
                   aria-label="Join event">
             {checking ? (
-              <svg className="w-4 h-4 animate-spin text-white" viewBox="0 0 24 24" fill="none">
+              <svg className="w-3.5 h-3.5 animate-spin text-white" viewBox="0 0 24 24" fill="none">
                 <circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.3)" strokeWidth="3"/>
                 <path d="M12 3a9 9 0 019 9" stroke="white" strokeWidth="3" strokeLinecap="round"/>
               </svg>
             ) : (
-              <svg viewBox="0 0 20 20" fill="white" className="w-5 h-5">
+              <svg viewBox="0 0 20 20" fill="white" className="w-4 h-4">
                 <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
               </svg>
             )}
@@ -96,35 +79,21 @@ function Hero() {
         </form>
       </div>
 
-      {/* Badge */}
-      <div className="anim-fade-up relative z-10 mb-8">
-        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/30">
-          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-          No app install · Instant photo sharing
-        </span>
-      </div>
-
       {/* Headline */}
       <h1 className="anim-fade-up anim-delay-1 relative z-10 text-center text-5xl md:text-7xl font-black tracking-tight text-white leading-[1.05] max-w-4xl">
-        Your memories,<br />
+        Collect photos and memories,<br />
         straight to your cloud.
       </h1>
 
       <p className="anim-fade-up anim-delay-2 relative z-10 mt-6 text-center text-white/75 text-lg md:text-xl max-w-2xl leading-relaxed">
-        Guests scan a QR code, snap a photo, and it lands directly in your Google Drive, OneDrive, or Dropbox — in full resolution. No app. No account. No friction.
+        No app. No account. No friction. Guests scan a QR code, snap a photo, and it lands directly in your Google Drive, OneDrive, or Dropbox.
       </p>
 
-      {/* CTAs */}
-      <div className="anim-fade-up anim-delay-3 relative z-10 mt-10 flex flex-col sm:flex-row gap-3 items-center">
+      {/* CTA */}
+      <div className="anim-fade-up anim-delay-3 relative z-10 mt-10">
         <Link to="/dashboard" className="btn-white px-8 py-4 text-base">
           Get started for free
         </Link>
-        <a href="#how-it-works" className="btn-outline-white px-8 py-4 text-base flex items-center gap-2">
-          See how it works
-          <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 opacity-70">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm.75-11.25a.75.75 0 00-1.5 0v4.59L7.3 9.24a.75.75 0 00-1.1 1.02l3.25 3.5a.75.75 0 001.1 0l3.25-3.5a.75.75 0 10-1.1-1.02l-1.95 2.1V6.75z" clipRule="evenodd"/>
-          </svg>
-        </a>
       </div>
 
       {/* Hero mockup */}
@@ -213,7 +182,7 @@ function Logos() {
     <section className="py-14 px-6 bg-white border-b border-gray-100">
       <div className="max-w-4xl mx-auto">
         <p className="text-center text-gray-400 text-xs font-semibold uppercase tracking-widest mb-8">
-          Photos land directly in the clouds you already use
+          Currently works with
         </p>
         <div className="flex items-center justify-center gap-10 flex-wrap">
           {[
@@ -292,10 +261,9 @@ function Features() {
     <section id="features" className="py-24 px-6 bg-gray-50">
       <div className="max-w-5xl mx-auto">
         <div className="text-center mb-16">
-          <span className="badge-grad text-xs font-semibold px-3 py-1.5 inline-block mb-4">Everything you need</span>
           <h2 className="text-4xl md:text-5xl font-black text-gray-900 tracking-tight">
             Built for{' '}
-            <span className="grad-text">real events</span>
+            <span className="grad-text">collaboration</span>
           </h2>
         </div>
 
@@ -496,7 +464,7 @@ function FinalCTA() {
     <section className="bezl-hero relative py-28 px-6 overflow-hidden">
       <div className="max-w-3xl mx-auto relative z-10 text-center">
         <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.1]">
-          Get out of the way<br />and let the memories flow.
+          Created for Collaboration<br />and Memorable Moments.
         </h2>
         <p className="mt-6 text-white/70 text-lg">
           Create your first event in 60 seconds. No credit card. No app store.
