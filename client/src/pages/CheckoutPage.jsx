@@ -146,7 +146,7 @@ export default function CheckoutPage() {
                       <p className="font-semibold text-gray-900 text-sm group-hover:text-violet-700">{ev.name}</p>
                       <p className="text-xs text-gray-400 mt-0.5 capitalize">{ev.status}</p>
                     </div>
-                    <svg viewBox="0 0 20 20" fill="#6B5CE7" className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                    <svg viewBox="0 0 20 20" fill="#6045f4" className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
                       <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd"/>
                     </svg>
                   </button>
@@ -162,7 +162,7 @@ export default function CheckoutPage() {
   const appearance = {
     theme: 'stripe',
     variables: {
-      colorPrimary:     '#6B5CE7',
+      colorPrimary:     '#6045f4',
       colorBackground:  '#ffffff',
       colorText:        '#1f1f2e',
       colorDanger:      '#ef4444',
@@ -173,7 +173,7 @@ export default function CheckoutPage() {
     },
     rules: {
       '.Input': { border: '1.5px solid #e5e7eb', padding: '12px 14px' },
-      '.Input:focus': { border: '1.5px solid #6B5CE7', boxShadow: '0 0 0 3px rgba(107,92,231,0.15)' },
+      '.Input:focus': { border: '1.5px solid #6045f4', boxShadow: '0 0 0 3px rgba(107,92,231,0.15)' },
       '.Label': { fontSize: '13px', fontWeight: '500', color: '#4b5563', marginBottom: '6px' },
     },
   };
@@ -326,7 +326,7 @@ function PaymentForm({ plan, type }) {
         type="submit"
         disabled={!stripe || !ready || processing}
         className="w-full py-4 rounded-2xl font-bold text-white text-base transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        style={{ background: 'linear-gradient(135deg, #5B52E8 0%, #29BFBF 100%)' }}
+        style={{ background: 'linear-gradient(135deg, #6045f4 0%, #53e6d4 100%)' }}
       >
         {processing ? (
           <span className="inline-flex items-center gap-2 justify-center">
@@ -346,7 +346,7 @@ function PaymentForm({ plan, type }) {
         type="button"
         onClick={() => window.history.length > 1 ? window.history.back() : navigate('/dashboard')}
         className="w-full py-3.5 rounded-2xl font-semibold text-sm border transition-colors hover:bg-gray-50 active:bg-gray-100"
-        style={{ color: '#6B5CE7', borderColor: '#e0deff', background: '#fff' }}
+        style={{ color: '#6045f4', borderColor: '#e0deff', background: '#fff' }}
       >
         Cancel transaction
       </button>
@@ -376,7 +376,7 @@ function PlanSummary({ plan }) {
       <ul className="space-y-3 mb-6">
         {plan.features.map(f => (
           <li key={f} className="flex items-start gap-2.5 text-sm text-gray-600">
-            <svg viewBox="0 0 20 20" fill="#6B5CE7" className="w-4 h-4 mt-0.5 flex-shrink-0 opacity-80">
+            <svg viewBox="0 0 20 20" fill="#6045f4" className="w-4 h-4 mt-0.5 flex-shrink-0 opacity-80">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
             </svg>
             {f}
@@ -397,7 +397,7 @@ function PlanSummary({ plan }) {
       <p className="text-gray-400 text-xs mb-4">{plan.billing}</p>
 
       <div className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-gray-50">
-        <svg viewBox="0 0 20 20" fill="#6B5CE7" className="w-4 h-4 flex-shrink-0">
+        <svg viewBox="0 0 20 20" fill="#6045f4" className="w-4 h-4 flex-shrink-0">
           <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"/>
         </svg>
         <span className="text-gray-600 text-xs font-medium">Secure payment · Cancel anytime</span>
@@ -415,7 +415,7 @@ function PageShell({ children }) {
       <header className="bg-white border-b border-gray-100 sticky top-0 z-10">
         <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
           <Link to="/" className="font-black text-xl tracking-tight text-gray-900">
-            pica<span style={{ color: '#6B5CE7' }}>choo</span>
+            pica<span style={{ color: '#6045f4' }}>choo</span>
           </Link>
           <div className="flex items-center gap-4">
             <a
@@ -455,7 +455,7 @@ function Section({ number, title, children }) {
 
 function InfoIcon() {
   return (
-    <svg viewBox="0 0 20 20" fill="#6B5CE7" className="w-3.5 h-3.5 flex-shrink-0">
+    <svg viewBox="0 0 20 20" fill="#6045f4" className="w-3.5 h-3.5 flex-shrink-0">
       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/>
     </svg>
   );
@@ -466,7 +466,7 @@ function Spinner() {
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#f8f7ff' }}>
       <svg className="animate-spin w-8 h-8" viewBox="0 0 24 24" fill="none">
         <circle cx="12" cy="12" r="10" stroke="#e9e6ff" strokeWidth="3"/>
-        <path d="M12 2a10 10 0 0 1 10 10" stroke="#6B5CE7" strokeWidth="3" strokeLinecap="round"/>
+        <path d="M12 2a10 10 0 0 1 10 10" stroke="#6045f4" strokeWidth="3" strokeLinecap="round"/>
       </svg>
     </div>
   );

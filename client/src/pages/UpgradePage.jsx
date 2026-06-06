@@ -67,7 +67,7 @@ export default function UpgradePage() {
                 <p className="text-gray-400 text-xs">Browser-compressed</p>
               </div>
               <div className="p-6 text-center">
-                <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#6B5CE7' }}>Pro ✦</p>
+                <p className="text-xs font-semibold uppercase tracking-widest mb-3" style={{ color: '#6045f4' }}>Pro ✦</p>
                 <div className="text-4xl font-black grad-text mb-2">25 MB+</div>
                 <p className="text-gray-500 text-xs">Raw original</p>
               </div>

@@ -9,7 +9,7 @@ const PIECES = Array.from({ length: 18 }, (_, i) => ({
   shape: i % 2 === 0 ? 'rounded-sm' : 'rounded-full',
 }));
 
-const BG = { background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%)' };
+const BG = { background: 'linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%)' };
 
 export default function SuccessScreen({ eventName, onSnapAnother }) {
   const headingRef = useRef(null);
@@ -64,7 +64,7 @@ export default function SuccessScreen({ eventName, onSnapAnother }) {
         <button
           onClick={onSnapAnother}
           className="w-full rounded-2xl py-4 text-lg font-bold active:scale-95 transition-transform duration-100 focus:outline-none"
-          style={{ background: '#fff', color: '#6B5CE7', boxShadow: '0 6px 24px rgba(0,0,0,0.2)' }}
+          style={{ background: '#fff', color: '#6045f4', boxShadow: '0 6px 24px rgba(0,0,0,0.2)' }}
         >
           Take another photo
         </button>

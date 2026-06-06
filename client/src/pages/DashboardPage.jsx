@@ -419,7 +419,7 @@ function OnboardingScreen({ host, onContinueFree }) {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%)' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: 'linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%)' }}>
       <header className="px-6 pt-8 pb-0 flex items-center justify-between">
         <span className="font-black text-2xl text-white tracking-tight">
           pica<span style={{ color: '#c4b5fd' }}>choo</span>
@@ -482,7 +482,7 @@ function OnboardingScreen({ host, onContinueFree }) {
                     ? 'text-white'
                     : 'text-white border border-white/40 hover:bg-white/10'
                 }`}
-                style={plan.popular ? { background: 'linear-gradient(135deg, #5B52E8, #29BFBF)' } : {}}
+                style={plan.popular ? { background: 'linear-gradient(135deg, #6045f4, #53e6d4)' } : {}}
               >
                 {loading === plan.type ? 'Redirecting…' : plan.cta}
               </button>
@@ -1019,7 +1019,7 @@ function UpgradeModal({ onClose }) {
       <div className="w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden">
         {/* Header */}
         <div className="px-8 pt-8 pb-6 text-center relative"
-             style={{ background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%)' }}>
+             style={{ background: 'linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%)' }}>
           <button
             onClick={onClose}
             className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-white/70 hover:text-white hover:bg-white/10 transition-colors"
@@ -1045,7 +1045,7 @@ function UpgradeModal({ onClose }) {
               {plan.badge && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                   <span className="px-3 py-0.5 rounded-full text-[11px] font-bold text-white whitespace-nowrap"
-                        style={{ background: 'linear-gradient(135deg, #5B52E8, #29BFBF)' }}>
+                        style={{ background: 'linear-gradient(135deg, #6045f4, #53e6d4)' }}>
                     {plan.badge}
                   </span>
                 </div>
@@ -1061,7 +1061,7 @@ function UpgradeModal({ onClose }) {
               <ul className="space-y-2 flex-1">
                 {plan.features.map(f => (
                   <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
-                    <svg viewBox="0 0 20 20" fill="#6B5CE7" className="w-4 h-4 mt-0.5 flex-shrink-0">
+                    <svg viewBox="0 0 20 20" fill="#6045f4" className="w-4 h-4 mt-0.5 flex-shrink-0">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
                     </svg>
                     {f}
@@ -1074,8 +1074,8 @@ function UpgradeModal({ onClose }) {
                 className="w-full py-2.5 rounded-xl font-semibold text-sm transition-all"
                 style={
                   plan.badge
-                    ? { background: 'linear-gradient(135deg, #5B52E8, #29BFBF)', color: '#fff' }
-                    : { background: '#f4f3ff', color: '#5B52E8' }
+                    ? { background: 'linear-gradient(135deg, #6045f4, #53e6d4)', color: '#fff' }
+                    : { background: '#f4f3ff', color: '#6045f4' }
                 }
               >
                 {plan.cta}

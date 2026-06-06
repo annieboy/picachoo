@@ -162,7 +162,7 @@ function Hero() {
           <span className="text-gray-800 text-xs font-semibold">24 photos uploaded</span>
         </div>
         <div className="absolute -top-4 right-4 md:right-8 bg-white rounded-xl px-4 py-2.5 flex items-center gap-2 shadow-lg">
-          <span className="text-xs font-semibold" style={{ color: '#6B5CE7' }}>✦ Full resolution · Pro</span>
+          <span className="text-xs font-semibold" style={{ color: '#6045f4' }}>✦ Full resolution · Pro</span>
         </div>
       </div>
 
@@ -300,7 +300,7 @@ function LiveWall() {
                 'Host controls display from the dashboard',
               ].map(item => (
                 <li key={item} className="flex items-start gap-3 text-gray-600 text-sm">
-                  <svg viewBox="0 0 20 20" fill="#6B5CE7" className="w-5 h-5 mt-0.5 flex-shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                  <svg viewBox="0 0 20 20" fill="#6045f4" className="w-5 h-5 mt-0.5 flex-shrink-0"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
                   {item}
                 </li>
               ))}
@@ -358,7 +358,7 @@ function Pricing() {
             <ul className="space-y-2 flex-1">
               {['Unlimited events & guests', 'Up to 2 MB compressed upload', 'Google Drive, OneDrive, Dropbox', 'Live photo wall', 'QR code sharing', 'Photo analytics'].map(f => (
                 <li key={f} className="flex items-center gap-2.5 text-gray-600 text-sm">
-                  <svg viewBox="0 0 20 20" fill="#6B5CE7" className="w-4 h-4 flex-shrink-0"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
+                  <svg viewBox="0 0 20 20" fill="#6045f4" className="w-4 h-4 flex-shrink-0"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
                   {f}
                 </li>
               ))}

@@ -85,7 +85,7 @@ export default function GuestPage() {
   if (uploadsLocked && screen !== SCREENS.NAME) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8 gap-6 text-center"
-           style={{ background: 'linear-gradient(140deg,#5B52E8 0%,#7B65EE 45%,#29BFBF 100%)' }}>
+           style={{ background: 'linear-gradient(140deg,#6045f4 0%,#7060f6 45%,#53e6d4 100%)' }}>
         <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/15">
           <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-7 h-7">
             <rect x="5" y="11" width="14" height="10" rx="2"/>
@@ -180,7 +180,7 @@ export default function GuestPage() {
           </div>
           <button onClick={handleRetake}
             className="w-full max-w-xs rounded-2xl py-4 text-lg font-semibold text-white active:scale-95 transition-transform"
-            style={{ background: 'linear-gradient(135deg, #5B52E8, #29BFBF)' }}>
+            style={{ background: 'linear-gradient(135deg, #6045f4, #53e6d4)' }}>
             Try again
           </button>
         </div>

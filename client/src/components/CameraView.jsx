@@ -149,7 +149,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           <button
             onClick={() => fileInputRef.current?.click()}
             className="mt-2 px-8 py-3.5 rounded-2xl text-base font-semibold text-white active:scale-95 transition-transform"
-            style={{ background: 'linear-gradient(135deg,#5B52E8,#29BFBF)' }}
+            style={{ background: 'linear-gradient(135deg,#6045f4,#53e6d4)' }}
           >
             Choose from gallery
           </button>

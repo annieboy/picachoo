@@ -278,7 +278,7 @@ export default function UploadScreen({
 
   return (
     <div className="flex flex-col items-center justify-center min-h-full px-6 gap-7"
-         style={{ background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%)' }}>
+         style={{ background: 'linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%)' }}>
 
       {eventName && (
         <p className="text-white/60 text-xs uppercase tracking-[0.16em] font-semibold text-center">

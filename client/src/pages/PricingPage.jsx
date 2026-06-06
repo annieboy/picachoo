@@ -14,7 +14,7 @@ function BillingToggle({ value, onChange }) {
           onClick={() => onChange(v)}
           className="relative px-5 py-2 rounded-full text-sm font-semibold transition-all duration-200 focus:outline-none"
           style={value === v
-            ? { background: 'linear-gradient(135deg, #5B52E8, #29BFBF)', color: '#fff', boxShadow: '0 2px 10px rgba(91,82,232,0.35)' }
+            ? { background: 'linear-gradient(135deg, #6045f4, #53e6d4)', color: '#fff', boxShadow: '0 2px 10px rgba(91,82,232,0.35)' }
             : { color: '#6b7280' }
           }
         >
@@ -175,7 +175,7 @@ export default function PricingPage() {
                   <tr className="border-b border-gray-100 bg-gray-50">
                     <th className="text-left px-6 py-4 text-gray-500 font-semibold">Feature</th>
                     <th className="px-6 py-4 text-gray-600 font-semibold text-center">Standard</th>
-                    <th className="px-6 py-4 font-semibold text-center" style={{ color: '#6B5CE7' }}>Pro</th>
+                    <th className="px-6 py-4 font-semibold text-center" style={{ color: '#6045f4' }}>Pro</th>
                     <th className="px-6 py-4 text-gray-600 font-semibold text-center">
                       {isOneTime ? 'Enterprise' : 'Business'}
                     </th>
@@ -197,7 +197,7 @@ export default function PricingPage() {
                     <tr key={label} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                       <td className="px-6 py-3.5 text-gray-600">{label}</td>
                       <td className="px-6 py-3.5 text-gray-500 text-center">{std}</td>
-                      <td className="px-6 py-3.5 text-center font-medium" style={{ color: '#6B5CE7' }}>{pro}</td>
+                      <td className="px-6 py-3.5 text-center font-medium" style={{ color: '#6045f4' }}>{pro}</td>
                       <td className="px-6 py-3.5 text-gray-500 text-center">{ent}</td>
                     </tr>
                   ))}
@@ -264,7 +264,7 @@ function Plan({ name, badge, price, priceNote, description, features, unavailabl
       <ul className="space-y-2 flex-1">
         {features.map(t => (
           <li key={t} className={`flex items-start gap-2 text-sm ${popular ? 'text-white' : 'text-gray-600'}`}>
-            <svg viewBox="0 0 20 20" fill={popular ? 'white' : '#6B5CE7'} className="w-4 h-4 mt-0.5 flex-shrink-0 opacity-80">
+            <svg viewBox="0 0 20 20" fill={popular ? 'white' : '#6045f4'} className="w-4 h-4 mt-0.5 flex-shrink-0 opacity-80">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/>
             </svg>
             {t}

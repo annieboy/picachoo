@@ -38,7 +38,7 @@ export default function JoinPage() {
 
   return (
     <div className="min-h-screen flex flex-col"
-         style={{ background: 'linear-gradient(140deg,#5B52E8 0%,#7B65EE 45%,#29BFBF 100%)' }}>
+         style={{ background: 'linear-gradient(140deg,#6045f4 0%,#7060f6 45%,#53e6d4 100%)' }}>
 
       {/* Nav */}
       <div className="flex items-center justify-between px-6 py-5">
@@ -122,7 +122,7 @@ export default function JoinPage() {
             type="submit"
             disabled={!code.trim() || loading}
             className="w-full py-4 rounded-2xl font-bold text-lg transition-all active:scale-95 disabled:opacity-40"
-            style={{ background: '#fff', color: '#6B5CE7' }}
+            style={{ background: '#fff', color: '#6045f4' }}
           >
             {loading ? 'Looking up event…' : 'Join event'}
           </button>

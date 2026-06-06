@@ -2,9 +2,9 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 :root {
-  --brand:      #6B5CE7;
-  --brand-dark: #5B4DD7;
-  --grad:       linear-gradient(135deg, #6B5CE7 0%, #8B6FF0 50%, #2ABFBF 100%);
+  --brand:      #6045f4;
+  --brand-dark: #5035e8;
+  --grad:       linear-gradient(135deg, #6045f4 0%, #7060f6 50%, #53e6d4 100%);
 }
 
 .dash-shell {

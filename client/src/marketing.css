@@ -14,11 +14,11 @@ body.mkt #root {
 
 /* ── Brand gradient (Bezl: purple → teal) ── */
 :root {
-  --grad-from: #6B5CE7;
-  --grad-mid:  #8B6FF0;
-  --grad-to:   #2ABFBF;
-  --grad:      linear-gradient(135deg, #6B5CE7 0%, #8B6FF0 50%, #2ABFBF 100%);
-  --grad-hero: linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%);
+  --grad-from: #6045f4;
+  --grad-mid:  #7060f6;
+  --grad-to:   #53e6d4;
+  --grad:      linear-gradient(135deg, #6045f4 0%, #7060f6 50%, #53e6d4 100%);
+  --grad-hero: linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%);
 }
 
 /* ── Hero gradient background ── */
@@ -37,7 +37,7 @@ body.mkt #root {
 /* ── Pill buttons ── */
 .btn-white {
   background: #fff;
-  color: #5B52E8;
+  color: #6045f4;
   border-radius: 999px;
   font-weight: 700;
   transition: all 0.2s;
@@ -63,14 +63,14 @@ body.mkt #root {
 }
 
 .btn-purple {
-  background: #6B5CE7;
+  background: #6045f4;
   color: #fff;
   border-radius: 999px;
   font-weight: 700;
   transition: all 0.2s;
 }
 .btn-purple:hover {
-  background: #5B4DD7;
+  background: #5035e8;
   transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(107,92,231,0.4);
 }
@@ -123,7 +123,7 @@ body.mkt #root {
 .badge-grad {
   background: linear-gradient(135deg, rgba(107,92,231,0.12), rgba(42,191,191,0.1));
   border: 1px solid rgba(107,92,231,0.25);
-  color: #6B5CE7;
+  color: #6045f4;
   border-radius: 999px;
 }
 

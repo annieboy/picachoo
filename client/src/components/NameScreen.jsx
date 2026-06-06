@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 
-const BG = { background: 'linear-gradient(140deg, #5B52E8 0%, #7B65EE 45%, #29BFBF 100%)' };
+const BG = { background: 'linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%)' };
 
 function useInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
@@ -125,7 +125,7 @@ export default function NameScreen({ eventName, onConfirm }) {
             className="w-full rounded-2xl py-4 text-base font-bold flex items-center justify-center gap-2.5 text-white transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed active:scale-95"
             style={{
               background: '#fff',
-              color: '#6B5CE7',
+              color: '#6045f4',
               boxShadow: trimmed ? '0 6px 24px rgba(0,0,0,0.2)' : 'none',
             }}
           >

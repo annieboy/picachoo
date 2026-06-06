@@ -60,7 +60,7 @@ function Nav({ heroNav }) {
         {/* Logo */}
         <Link to="/" className="flex flex-col items-start leading-none">
           <span className={`font-black text-2xl tracking-tight ${white ? 'text-white' : 'text-gray-900'}`}>
-            pica<span style={{ color: white ? '#c4b5fd' : '#6B5CE7' }}>choo</span>
+            pica<span style={{ color: white ? '#c4b5fd' : '#6045f4' }}>choo</span>
           </span>
           <span className={`text-[9px] font-medium tracking-widest uppercase mt-0.5 ${white ? 'text-white/60' : 'text-gray-400'}`}>
             made for memorable moments
@@ -138,7 +138,7 @@ function Footer() {
         <div className="col-span-2 md:col-span-1">
           <Link to="/" className="flex flex-col items-start mb-4">
             <span className="font-black text-xl text-gray-900 tracking-tight">
-              pica<span style={{ color: '#6B5CE7' }}>choo</span>
+              pica<span style={{ color: '#6045f4' }}>choo</span>
             </span>
             <span className="text-[9px] font-medium tracking-widest uppercase text-gray-400 mt-0.5">
               made for memorable moments

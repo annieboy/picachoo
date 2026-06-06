@@ -64,7 +64,7 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
         >
           <span className="absolute inset-0 rounded-full border-[3.5px] border-white/70" />
           <span className="flex items-center justify-center w-[64px] h-[64px] rounded-full"
-                style={{ background: 'linear-gradient(135deg,#5B52E8,#29BFBF)' }}>
+                style={{ background: 'linear-gradient(135deg,#6045f4,#53e6d4)' }}>
             <UploadIcon />
           </span>
         </button>
