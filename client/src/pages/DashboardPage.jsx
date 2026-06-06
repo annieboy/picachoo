@@ -653,8 +653,10 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
   const [deleting,     setDeleting]     = useState(false);
   const [mgmtError,    setMgmtError]    = useState('');
   const [copied,       setCopied]       = useState(false);
-  const [wallPicker,   setWallPicker]   = useState(false);
-  const [wallSaving,   setWallSaving]   = useState(false);
+  const [wallPicker,        setWallPicker]        = useState(false);
+  const [wallSaving,        setWallSaving]        = useState(false);
+  const [uploadPicker,      setUploadPicker]      = useState(false);
+  const [uploadSaving,      setUploadSaving]      = useState(false);
 
   const statusColors = { active: 'status-active', draft: 'status-draft', closed: 'status-closed' };
   const guestUrl = `${window.location.origin}/e/${ev.join_code}`;
@@ -705,6 +707,21 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
       setMgmtError(err.message);
     } finally {
       setWallSaving(false);
+    }
+  }
+
+  async function handleUploadMode(mode) {
+    setUploadSaving(true);
+    try {
+      const { event: updated } = await updateEvent(ev.id, { wallUploadMode: mode });
+      const merged = { ...ev, ...updated };
+      setEv(merged);
+      onUpdate?.(merged);
+      setUploadPicker(false);
+    } catch (err) {
+      setMgmtError(err.message);
+    } finally {
+      setUploadSaving(false);
     }
   }
 
@@ -773,30 +790,23 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
             disabled={wallSaving}
           >
             <span className={`wall-toggle-dot${ev.wall_mode !== 'off' ? ' wall-toggle-dot-on' : ''}`} />
-            {ev.wall_mode === 'off' ? 'Wall off' : ev.wall_mode === 'everyone' ? 'Visible to all' : 'Host only'}
+            {ev.wall_mode === 'off' ? 'Wall off' : ev.wall_mode === 'everyone' ? 'Visible to all' : 'Visible: host only'}
           </button>
         </div>
 
+        {/* View picker */}
         {wallPicker && (
           <div className="wall-picker">
-            <p className="wall-picker-label">Who can see the live wall?</p>
+            <p className="wall-picker-label">Who can view the live wall?</p>
             <div className="wall-picker-options">
-              <button
-                className="wall-picker-opt"
-                onClick={() => handleWallMode('everyone')}
-                disabled={wallSaving}
-              >
+              <button className="wall-picker-opt" onClick={() => handleWallMode('everyone')} disabled={wallSaving}>
                 <span className="wall-picker-opt-icon">🌐</span>
                 <div>
                   <strong>Everyone</strong>
-                  <p>Guests and hosts can view the live wall</p>
+                  <p>Guests and host can see the live wall</p>
                 </div>
               </button>
-              <button
-                className="wall-picker-opt"
-                onClick={() => handleWallMode('host_only')}
-                disabled={wallSaving}
-              >
+              <button className="wall-picker-opt" onClick={() => handleWallMode('host_only')} disabled={wallSaving}>
                 <span className="wall-picker-opt-icon">🔒</span>
                 <div>
                   <strong>Host only</strong>
@@ -806,6 +816,46 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
             </div>
             <button className="wall-picker-cancel" onClick={() => setWallPicker(false)}>Cancel</button>
           </div>
+        )}
+
+        {/* Contribute control — only shown when wall is on */}
+        {ev.wall_mode !== 'off' && (
+          <>
+            <div className="wall-section-row wall-section-row-sub">
+              <span className="wall-sub-label">Who can contribute photos?</span>
+              <button
+                className={`wall-toggle-btn${ev.wall_upload_mode === 'host_only' ? ' wall-toggle-on' : ''}`}
+                onClick={() => setUploadPicker(true)}
+                disabled={uploadSaving}
+              >
+                <span className={`wall-toggle-dot${ev.wall_upload_mode === 'host_only' ? ' wall-toggle-dot-on' : ''}`} />
+                {ev.wall_upload_mode === 'host_only' ? 'Host only' : 'Everyone'}
+              </button>
+            </div>
+
+            {uploadPicker && (
+              <div className="wall-picker">
+                <p className="wall-picker-label">Who can add photos to the wall?</p>
+                <div className="wall-picker-options">
+                  <button className="wall-picker-opt" onClick={() => handleUploadMode('everyone')} disabled={uploadSaving}>
+                    <span className="wall-picker-opt-icon">👥</span>
+                    <div>
+                      <strong>Everyone</strong>
+                      <p>All guests can submit photos to the live wall</p>
+                    </div>
+                  </button>
+                  <button className="wall-picker-opt" onClick={() => handleUploadMode('host_only')} disabled={uploadSaving}>
+                    <span className="wall-picker-opt-icon">🎛️</span>
+                    <div>
+                      <strong>Host only</strong>
+                      <p>Only you can add photos — curated wall</p>
+                    </div>
+                  </button>
+                </div>
+                <button className="wall-picker-cancel" onClick={() => setUploadPicker(false)}>Cancel</button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

@@ -46,7 +46,7 @@ async function createEvent(req, res, next) {
     const { rows } = await pool.query(
       `INSERT INTO events (host_id, name, description, join_code, status, starts_at, ends_at)
        VALUES ($1, $2, $3, $4, 'active', $5, $6)
-       RETURNING id, name, description, join_code, status, starts_at, ends_at, wall_mode, created_at`,
+       RETURNING id, name, description, join_code, status, starts_at, ends_at, wall_mode, wall_upload_mode, created_at`,
       [hostId, name.trim(), description?.trim() ?? null, joinCode, startsAt ?? null, endsAt ?? null],
     );
 
@@ -67,7 +67,7 @@ router.post('/create', requireAuth, createEvent);
 router.get('/by-code/:joinCode', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
-      `SELECT e.id, e.name, e.join_code, e.status, e.wall_mode,
+      `SELECT e.id, e.name, e.join_code, e.status, e.wall_mode, e.wall_upload_mode,
               h.tier AS host_tier,
               CASE WHEN e.is_premium_pass AND e.pass_expires_at > NOW()
                    THEN 'pro' ELSE h.tier END AS effective_tier
@@ -116,7 +116,7 @@ router.get('/:eventId', async (req, res, next) => {
 // ─── PATCH /api/events/:eventId ───────────────────────────────────────────────
 router.patch('/:eventId', requireAuth, async (req, res, next) => {
   try {
-    const { status, name, description, startsAt, endsAt, wallMode } = req.body;
+    const { status, name, description, startsAt, endsAt, wallMode, wallUploadMode } = req.body;
 
     if (status && !['draft', 'active', 'closed'].includes(status)) {
       const err = new Error('status must be draft, active, or closed');
@@ -128,21 +128,27 @@ router.patch('/:eventId', requireAuth, async (req, res, next) => {
       err.status = 400;
       return next(err);
     }
+    if (wallUploadMode && !['everyone', 'host_only'].includes(wallUploadMode)) {
+      const err = new Error('wallUploadMode must be everyone or host_only');
+      err.status = 400;
+      return next(err);
+    }
 
     // Verify ownership via auth_id
     const { rows } = await pool.query(
       `UPDATE events SET
-         name        = COALESCE($1, name),
-         description = COALESCE($2, description),
-         status      = COALESCE($3, status),
-         starts_at   = COALESCE($4, starts_at),
-         ends_at     = COALESCE($5, ends_at),
-         wall_mode   = COALESCE($8, wall_mode)
+         name             = COALESCE($1, name),
+         description      = COALESCE($2, description),
+         status           = COALESCE($3, status),
+         starts_at        = COALESCE($4, starts_at),
+         ends_at          = COALESCE($5, ends_at),
+         wall_mode        = COALESCE($8, wall_mode),
+         wall_upload_mode = COALESCE($9, wall_upload_mode)
        WHERE id = $6
          AND host_id = (SELECT id FROM hosts WHERE auth_id = $7)
-       RETURNING id, name, description, join_code, status, starts_at, ends_at, wall_mode`,
+       RETURNING id, name, description, join_code, status, starts_at, ends_at, wall_mode, wall_upload_mode`,
       [name ?? null, description ?? null, status ?? null, startsAt ?? null, endsAt ?? null,
-       req.params.eventId, req.user.authId, wallMode ?? null],
+       req.params.eventId, req.user.authId, wallMode ?? null, wallUploadMode ?? null],
     );
 
     if (!rows.length) {
