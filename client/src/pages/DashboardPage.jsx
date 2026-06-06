@@ -626,8 +626,7 @@ function AccountPanel({ host, setHost, signOut, onUpgrade }) {
       const date = currentPeriodEnd
         ? new Date(currentPeriodEnd * 1000).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
         : null;
-      setHost(h => ({ ...h, tier: 'free' }));
-      setCancelMsg(date ? `Cancelled. You keep Pro access until ${date}.` : 'Subscription cancelled.');
+      setCancelMsg(date ? `Cancelled. Your Pro access continues until ${date}.` : 'Subscription cancelled at period end.');
       setCancelConfirm(false);
     } catch (err) {
       setCancelMsg(err.message ?? 'Cancellation failed. Please try again.');
