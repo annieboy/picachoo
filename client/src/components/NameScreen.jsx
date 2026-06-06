@@ -74,7 +74,6 @@ export default function NameScreen({ eventName, onConfirm }) {
           <span className="text-2xl font-black tracking-tight text-white">
             pica<span style={{ color: '#53e6d4' }}>choo</span>
           </span>
-          <p className="text-white/50 text-[10px] uppercase tracking-widest mt-0.5">made for memorable moments</p>
         </div>
 
         {/* Invitation */}

@@ -387,9 +387,6 @@ function StageQR({ active }) {
       <p style={{ fontSize: 13, fontWeight: 900, letterSpacing: '-0.01em', marginBottom: 2 }}>
         <span style={{ color: '#fff' }}>pica</span><span style={{ color: '#a5f3e8' }}>choo</span>
       </p>
-      <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 6 }}>
-        made for memorable moments
-      </p>
       {/* QR card */}
       <div style={{
         padding: 10, background: '#fff', borderRadius: 14,
@@ -423,9 +420,6 @@ function StageWelcome({ active }) {
       {/* Logo */}
       <p style={{ fontSize: 13, fontWeight: 900, letterSpacing: '-0.01em', marginBottom: 2 }}>
         <span style={{ color: '#fff' }}>pica</span><span style={{ color: '#a5f3e8' }}>choo</span>
-      </p>
-      <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 14 }}>
-        made for memorable moments
       </p>
       {/* Invited label */}
       <p style={{ fontSize: 7, color: 'rgba(255,255,255,0.65)', textTransform: 'uppercase', letterSpacing: '0.14em', marginBottom: 4 }}>

@@ -56,14 +56,11 @@ function Nav({ heroNav }) {
         scrolled ? 'nav-white' : heroNav ? 'nav-transparent' : 'nav-white'
       }`}
     >
-      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
         {/* Logo */}
         <Link to="/" className="flex flex-col items-start leading-none">
-          <span className={`font-black text-2xl tracking-tight ${white ? 'text-white' : 'text-gray-900'}`}>
+          <span className={`font-black text-3xl tracking-tight ${white ? 'text-white' : 'text-gray-900'}`}>
             pica<span style={{ color: white ? '#c4b5fd' : '#6045f4' }}>choo</span>
-          </span>
-          <span className={`text-[9px] font-medium tracking-widest uppercase mt-0.5 ${white ? 'text-white/60' : 'text-gray-400'}`}>
-            made for memorable moments
           </span>
         </Link>
 
@@ -71,7 +68,7 @@ function Nav({ heroNav }) {
         <nav className="hidden md:flex items-center gap-8">
           {links.map(l => (
             <a key={l.href} href={l.href}
-               className={`text-sm font-medium transition-colors ${
+               className={`text-base font-medium transition-colors ${
                  white ? 'text-white/90 hover:text-white' : 'text-gray-600 hover:text-gray-900'
                }`}>
               {l.label}
@@ -137,11 +134,8 @@ function Footer() {
       <div className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-2 md:grid-cols-4 gap-10">
         <div className="col-span-2 md:col-span-1">
           <Link to="/" className="flex flex-col items-start mb-4">
-            <span className="font-black text-xl text-gray-900 tracking-tight">
+            <span className="font-black text-2xl text-gray-900 tracking-tight">
               pica<span style={{ color: '#6045f4' }}>choo</span>
-            </span>
-            <span className="text-[9px] font-medium tracking-widest uppercase text-gray-400 mt-0.5">
-              made for memorable moments
             </span>
           </Link>
           <p className="text-gray-500 text-sm leading-relaxed">
