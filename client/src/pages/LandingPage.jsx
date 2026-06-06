@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import MarketingLayout from '../components/MarketingLayout';
 
@@ -168,182 +168,497 @@ const REAL_PHOTOS = [
   '/photos/Picture9.jpg',
 ];
 
-const GUEST_ROWS = [
-  { src: '/photos/friends.jpg',           label: 'friends.jpg',   delay: 0   },
-  { src: '/photos/wedding-sparklers.jpg', label: 'sparklers.jpg', delay: 1.0 },
-  { src: '/photos/confetti.jpg',          label: 'confetti.jpg',  delay: 2.0 },
-];
+/* Stage durations in ms */
+const STAGE_DURATIONS = [3200, 3000, 2800, 2600, 3200, 3400];
+const TOTAL_STAGES = STAGE_DURATIONS.length;
 
 function HeroScene() {
+  const [stage, setStage] = useState(0);
+  const [entering, setEntering] = useState(true);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    setEntering(true);
+    timerRef.current = setTimeout(() => {
+      setEntering(false);
+      setTimeout(() => {
+        setStage(s => (s + 1) % TOTAL_STAGES);
+      }, 400);
+    }, STAGE_DURATIONS[stage] - 400);
+    return () => clearTimeout(timerRef.current);
+  }, [stage]);
+
+  const stageLabels = [
+    'Invite card shared',
+    'Guests scan QR',
+    'Guests join & enter name',
+    'Camera opens & captures',
+    'Photos fly to cloud',
+    'Live wall goes live',
+  ];
+
   return (
-    <div style={{ position: 'relative', width: '100%' }}>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 48px 1fr',
-        gap: '8px',
-        alignItems: 'center',
-        background: 'rgba(255,255,255,0.07)',
-        border: '1px solid rgba(255,255,255,0.18)',
-        borderRadius: '16px',
-        padding: '12px',
-        backdropFilter: 'blur(16px)',
-      }}>
+    <div style={{ position: 'relative', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+      {/* Stage indicator pills */}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        {stageLabels.map((label, i) => (
+          <div key={i} title={label} style={{
+            height: 4, borderRadius: 99,
+            width: i === stage ? 28 : 8,
+            background: i === stage ? '#fff' : 'rgba(255,255,255,0.3)',
+            transition: 'all 0.4s ease',
+          }} />
+        ))}
+      </div>
 
-        {/* LEFT: Guests snapping */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          <p style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 1 }}>
-            Guests snapping
-          </p>
-          {GUEST_ROWS.map((row, i) => (
-            <GuestPhone key={i} src={row.src} label={row.label} delay={row.delay} />
-          ))}
-        </div>
+      {/* Phone + side elements */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 24, width: '100%', maxWidth: 680 }}>
 
-        {/* CENTRE: Cloud hub with flying thumbnails */}
-        <div style={{ position: 'relative', height: 160, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <svg width="48" height="160" viewBox="0 0 48 160" style={{ position: 'absolute', inset: 0 }}>
-            {[20, 80, 140].map((y, i) => (
-              <path key={i} d={`M 0 ${y} Q 24 ${y} 24 80`}
-                fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeDasharray="4 5"/>
-            ))}
-            {[20, 80, 140].map((y, i) => (
-              <path key={`r${i}`} d={`M 24 80 Q 24 ${y} 48 ${y}`}
-                fill="none" stroke="rgba(255,255,255,0.18)" strokeWidth="1.5" strokeDasharray="4 5"/>
-            ))}
-          </svg>
-          {/* Flying photo chips */}
-          {REAL_PHOTOS.slice(0, 3).map((src, i) => (
+        {/* Left side: context cards */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, opacity: stage >= 4 ? 1 : 0, transition: 'opacity 0.6s ease' }}>
+          {stage >= 4 && REAL_PHOTOS.slice(0, 3).map((src, i) => (
             <div key={i} style={{
-              position: 'absolute',
-              left: i % 2 === 0 ? 0 : 'auto', right: i % 2 === 1 ? 0 : 'auto',
-              top: `${12 + i * 44}px`,
-              width: 20, height: 20, borderRadius: 5,
-              overflow: 'hidden',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-              animation: `flyAcross 3s cubic-bezier(0.4,0,0.2,1) ${i * 0.9}s infinite`,
-              border: '1.5px solid rgba(255,255,255,0.4)',
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
+              borderRadius: 12, padding: '8px 10px',
+              animation: `heroFadeIn 0.5s ease ${i * 0.3}s both`,
             }}>
-              <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <div style={{ width: 32, height: 32, borderRadius: 7, overflow: 'hidden', flexShrink: 0 }}>
+                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: 600 }}>Guest {i + 1}</p>
+                <div style={{ marginTop: 3, height: 3, borderRadius: 99, background: 'rgba(255,255,255,0.1)' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 99,
+                    background: 'linear-gradient(90deg,#6045f4,#53e6d4)',
+                    animation: 'progressGrow 2.5s ease infinite',
+                  }} />
+                </div>
+              </div>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#53e6d4" strokeWidth="2.5" width="14" height="14" style={{ animation: 'spin 1.2s linear infinite', flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="9" strokeOpacity="0.2"/>
+                <path d="M12 3a9 9 0 019 9" strokeLinecap="round"/>
+              </svg>
             </div>
           ))}
-          {/* Cloud centre */}
-          <div style={{
-            width: 36, height: 36, borderRadius: '50%', zIndex: 2,
-            background: 'linear-gradient(135deg,#6045f4,#53e6d4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 0 6px rgba(96,69,244,0.18), 0 4px 16px rgba(96,69,244,0.4)',
-          }}>
-            <svg viewBox="0 0 24 24" fill="white" width="18" height="18">
-              <path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/>
-            </svg>
-          </div>
         </div>
 
-        {/* RIGHT: Live wall + upload queue */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-          {/* Live photo wall */}
+        {/* Phone mockup */}
+        <div style={{
+          width: 220, flexShrink: 0,
+          background: '#0f0f14',
+          borderRadius: 36,
+          padding: '10px 8px',
+          boxShadow: '0 0 0 1px rgba(255,255,255,0.12), 0 32px 80px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.05)',
+          position: 'relative',
+        }}>
+          {/* Notch */}
           <div style={{
-            borderRadius: 12,
-            background: 'rgba(255,255,255,0.07)',
-            border: '1px solid rgba(255,255,255,0.15)',
-            padding: '8px',
-            overflow: 'hidden',
+            position: 'absolute', top: 10, left: '50%', transform: 'translateX(-50%)',
+            width: 70, height: 22, background: '#0f0f14',
+            borderRadius: '0 0 14px 14px', zIndex: 10,
+            boxShadow: 'inset 0 -1px 0 rgba(255,255,255,0.07)',
+          }} />
+          {/* Screen */}
+          <div style={{
+            borderRadius: 28, overflow: 'hidden',
+            height: 420,
+            background: 'linear-gradient(160deg,#1a1030 0%,#0d0820 100%)',
+            position: 'relative',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 6 }}>
-              <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d399', animation: 'ping 2s infinite', boxShadow: '0 0 5px #34d399' }} />
-              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 9, fontWeight: 700, letterSpacing: '0.05em' }}>LIVE WALL</span>
+            {/* Picachoo logo always at top */}
+            <div style={{
+              position: 'absolute', top: 28, left: 0, right: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 5, zIndex: 5,
+              opacity: stage === 0 ? 0 : 1, transition: 'opacity 0.4s',
+            }}>
+              <div style={{ width: 18, height: 18, borderRadius: 5, background: 'linear-gradient(135deg,#6045f4,#53e6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg viewBox="0 0 24 24" fill="white" width="11" height="11"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
+              </div>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: 13, letterSpacing: '-0.01em' }}>Picachoo</span>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
-              {REAL_PHOTOS.slice(0, 6).map((src, i) => (
+
+            {/* ── Stage 0: Invite Card ── */}
+            <StageInvite active={stage === 0} entering={entering && stage === 0} />
+
+            {/* ── Stage 1: QR Scan ── */}
+            <StageQR active={stage === 1} entering={entering && stage === 1} />
+
+            {/* ── Stage 2: People joining ── */}
+            <StageJoining active={stage === 2} entering={entering && stage === 2} />
+
+            {/* ── Stage 3: Welcome / Enter name ── */}
+            <StageWelcome active={stage === 3} entering={entering && stage === 3} />
+
+            {/* ── Stage 4 (inside phone): Camera shutter → photo flies out ── */}
+            <StageCamera active={stage === 4} entering={entering && stage === 4} />
+
+            {/* ── Stage 5: Live wall ── */}
+            <StageLiveWall active={stage === 5} entering={entering && stage === 5} />
+          </div>
+          {/* Home bar */}
+          <div style={{ height: 4, margin: '8px auto 2px', width: 60, borderRadius: 99, background: 'rgba(255,255,255,0.25)' }} />
+        </div>
+
+        {/* Right side: cloud / live wall context */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Cloud upload indicator (stages 4) */}
+          <div style={{
+            opacity: stage === 4 ? 1 : 0,
+            transition: 'opacity 0.6s ease',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
+          }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '50%',
+              background: 'linear-gradient(135deg,#6045f4,#53e6d4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 0 0 10px rgba(96,69,244,0.15)',
+            }}>
+              <svg viewBox="0 0 24 24" fill="white" width="28" height="28"><path d="M19.35 10.04A7.49 7.49 0 0 0 12 4C9.11 4 6.6 5.64 5.35 8.04A5.994 5.994 0 0 0 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96z"/></svg>
+            </div>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, fontWeight: 600, textAlign: 'center' }}>Your cloud storage</p>
+            {['Google Drive', 'OneDrive', 'Dropbox'].map((s, i) => (
+              <div key={s} style={{
+                display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+                borderRadius: 10, padding: '6px 10px',
+                animation: `heroFadeIn 0.4s ease ${i * 0.25}s both`,
+              }}>
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#34d399', animation: 'ping 1.5s infinite' }} />
+                <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 600 }}>{s}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Live wall grid (stage 5) */}
+          <div style={{
+            opacity: stage === 5 ? 1 : 0,
+            transition: 'opacity 0.6s ease',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399', animation: 'ping 1.5s infinite' }} />
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>Event live wall</span>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 5 }}>
+              {REAL_PHOTOS.slice(0, 4).map((src, i) => (
                 <div key={i} style={{
-                  aspectRatio: '1', borderRadius: 6, overflow: 'hidden',
-                  animation: `wallPop 0.4s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.4}s both`,
+                  aspectRatio: '1', borderRadius: 10, overflow: 'hidden',
+                  animation: `wallPop 0.4s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.35}s both`,
                 }}>
                   <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* Upload queue */}
-          {[
-            { name: 'ceremony.jpg',    done: true,  pct: 100, src: REAL_PHOTOS[0] },
-            { name: 'first_dance.mp4', done: false, pct: 65,  src: REAL_PHOTOS[1] },
-            { name: 'sparklers.jpg',   done: false, pct: 0,   src: REAL_PHOTOS[2] },
-          ].map((f, i) => (
-            <div key={f.name} style={{
-              background: 'rgba(255,255,255,0.07)',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: 10, padding: '6px 8px',
+            <div style={{
+              marginTop: 8, padding: '6px 12px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
               display: 'flex', alignItems: 'center', gap: 6,
-              animation: `heroFadeIn 0.5s ease ${i * 0.4}s both`,
             }}>
-              <div style={{ width: 24, height: 24, borderRadius: 6, overflow: 'hidden', flexShrink: 0, border: '1px solid rgba(255,255,255,0.2)' }}>
-                <img src={f.src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: 9, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{f.name}</p>
-                <div style={{ marginTop: 2, height: 2, borderRadius: 99, background: 'rgba(255,255,255,0.1)', overflow: 'hidden' }}>
-                  <div style={{ height: '100%', borderRadius: 99, width: `${f.pct}%`, transition: 'width 0.3s',
-                    background: f.done ? '#34d399' : 'linear-gradient(90deg,#6045f4,#53e6d4)',
-                    animation: (!f.done && f.pct > 0) ? 'progressGrow 3s ease infinite' : 'none',
-                  }} />
-                </div>
-              </div>
-              <div style={{ flexShrink: 0, width: 14, height: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {f.done
-                  ? <svg viewBox="0 0 20 20" fill="#34d399" width="12" height="12"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd"/></svg>
-                  : f.pct > 0
-                    ? <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" width="10" height="10" style={{ animation: 'spin 1s linear infinite' }}><circle cx="12" cy="12" r="9" strokeOpacity="0.2"/><path d="M12 3a9 9 0 019 9" strokeLinecap="round"/></svg>
-                    : <div style={{ width: 4, height: 4, borderRadius: '50%', background: 'rgba(255,255,255,0.3)' }} />
-                }
-              </div>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#34d399' }} />
+              <span style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: 600 }}>47 photos uploaded live</span>
             </div>
-          ))}
+          </div>
         </div>
-      </div>
-
-      {/* Floating badge */}
-      <div style={{
-        position: 'absolute', bottom: -14, left: 20,
-        background: '#fff', borderRadius: 10,
-        padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6,
-        boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-      }}>
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: '#34d399', animation: 'ping 2s infinite' }} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: '#111' }}>47 photos &amp; videos uploaded</span>
       </div>
     </div>
   );
 }
 
-function GuestPhone({ src, label, delay }) {
+/* ── Phone screen stages ──────────────────────────────────────────────────── */
+
+function StageInvite({ active, entering }) {
+  if (!active) return null;
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 7,
-      background: 'rgba(255,255,255,0.07)',
-      border: '1px solid rgba(255,255,255,0.14)',
-      borderRadius: 10, padding: '6px 8px',
-      animation: `heroFadeIn 0.6s ease ${delay}s both`,
+      position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', padding: 20,
+      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
     }}>
+      {/* Invite card */}
       <div style={{
-        width: 26, height: 36, borderRadius: 5,
-        border: '1.5px solid rgba(255,255,255,0.3)',
-        flexShrink: 0, overflow: 'hidden', position: 'relative',
+        width: '100%', borderRadius: 16, overflow: 'hidden',
+        background: 'linear-gradient(145deg,#fffdf5,#fff9e8)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+        border: '1px solid rgba(255,220,100,0.4)',
+        padding: '20px 16px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
       }}>
-        <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        {/* Decorative top */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {['#f472b6','#fb923c','#a78bfa'].map((c,i) => (
+            <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: c }} />
+          ))}
+        </div>
+        <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.18em', color: '#92400e', textAlign: 'center', lineHeight: 1.3 }}>
+          CAPTURE AND SHARE MOMENTS
+        </p>
+        <p style={{ fontSize: 8, color: '#b45309', textAlign: 'center' }}>Phil &amp; Jane's Wedding</p>
+        {/* QR code SVG */}
+        <div style={{ padding: 8, background: '#fff', borderRadius: 10, border: '1px solid #e5e7eb' }}>
+          <QRCodeSVG size={80} />
+        </div>
+        <p style={{ fontSize: 7, color: '#92400e', textAlign: 'center', opacity: 0.7 }}>
+          Scan to share your photos
+        </p>
+        <p style={{ fontSize: 7, color: '#b45309', fontWeight: 600 }}>picachoo.com</p>
+      </div>
+    </div>
+  );
+}
+
+function StageQR({ active, entering }) {
+  if (!active) return null;
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 12, padding: '48px 16px 16px',
+      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
+    }}>
+      <div style={{ padding: 12, background: '#fff', borderRadius: 16, boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}>
+        <QRCodeSVG size={100} />
+      </div>
+      <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, textAlign: 'center' }}>
+        Point your camera here to join
+      </p>
+      {/* Scanning line animation */}
+      <div style={{ position: 'absolute', top: '50%', left: '16px', right: '16px', height: 2,
+        background: 'linear-gradient(90deg,transparent,#53e6d4,transparent)',
+        animation: 'scanLine 2s ease-in-out infinite',
+      }} />
+    </div>
+  );
+}
+
+function StageJoining({ active, entering }) {
+  if (!active) return null;
+  const guests = ['Alex', 'Maria', 'Tom', 'Sophie', 'James'];
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+      padding: '52px 14px 14px', gap: 6,
+      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
+    }}>
+      <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 4 }}>
+        Guests joining…
+      </p>
+      {guests.map((name, i) => (
+        <div key={name} style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 10, padding: '7px 10px',
+          animation: `heroFadeIn 0.4s ease ${i * 0.3}s both`,
+        }}>
+          <div style={{
+            width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
+            background: `linear-gradient(135deg,${['#f472b6','#fb923c','#a78bfa','#34d399','#60a5fa'][i]},${['#a78bfa','#f472b6','#53e6d4','#60a5fa','#f472b6'][i]})`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <span style={{ color: '#fff', fontSize: 10, fontWeight: 700 }}>{name[0]}</span>
+          </div>
+          <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 600 }}>{name}</span>
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 3 }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d399', animation: 'ping 1.5s infinite' }} />
+            <span style={{ color: '#34d399', fontSize: 9 }}>joined</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function StageWelcome({ active, entering }) {
+  if (!active) return null;
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center', gap: 12, padding: '52px 20px 20px',
+      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
+    }}>
+      <div style={{ textAlign: 'center' }}>
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9, textTransform: 'uppercase', letterSpacing: '0.1em' }}>You're invited to</p>
+        <p style={{ color: '#fff', fontSize: 15, fontWeight: 800, marginTop: 4, lineHeight: 1.2 }}>
+          PHIL &amp; JANE'S<br/>WEDDING
+        </p>
+      </div>
+      {/* Name input */}
+      <div style={{
+        width: '100%', padding: '9px 12px',
+        background: 'rgba(255,255,255,0.08)', border: '1.5px solid rgba(255,255,255,0.2)',
+        borderRadius: 12, display: 'flex', alignItems: 'center', gap: 6,
+      }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.4)" strokeWidth="1.5" width="13" height="13"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11 }}>Enter your name</span>
+      </div>
+      {/* Open Camera button */}
+      <button style={{
+        width: '100%', padding: '11px 0',
+        background: 'linear-gradient(135deg,#6045f4,#53e6d4)',
+        border: 'none', borderRadius: 12, cursor: 'pointer',
+        color: '#fff', fontSize: 12, fontWeight: 800, letterSpacing: '0.03em',
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+        boxShadow: '0 4px 16px rgba(96,69,244,0.5)',
+      }}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" width="14" height="14">
+          <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
+        OPEN CAMERA
+      </button>
+    </div>
+  );
+}
+
+function StageCamera({ active, entering }) {
+  const [flash, setFlash] = useState(false);
+  useEffect(() => {
+    if (!active) return;
+    const t = setTimeout(() => setFlash(true), 1800);
+    return () => { clearTimeout(t); setFlash(false); };
+  }, [active]);
+
+  if (!active) return null;
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, overflow: 'hidden',
+      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
+    }}>
+      {/* Camera viewfinder — real photo as background */}
+      <img src={REAL_PHOTOS[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      {/* Viewfinder overlay */}
+      <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)' }} />
+      {/* Corner guides */}
+      {[{top:20,left:20},{top:20,right:20},{bottom:60,left:20},{bottom:60,right:20}].map((pos,i) => (
+        <div key={i} style={{
+          position: 'absolute', ...pos, width: 18, height: 18,
+          borderTop: i < 2 ? '2px solid #fff' : 'none',
+          borderBottom: i >= 2 ? '2px solid #fff' : 'none',
+          borderLeft: i % 2 === 0 ? '2px solid #fff' : 'none',
+          borderRight: i % 2 === 1 ? '2px solid #fff' : 'none',
+          borderRadius: i === 0 ? '4px 0 0 0' : i === 1 ? '0 4px 0 0' : i === 2 ? '0 0 0 4px' : '0 0 4px 0',
+        }} />
+      ))}
+      {/* Shutter button */}
+      <div style={{
+        position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)',
+        width: 44, height: 44, borderRadius: '50%',
+        border: '3px solid rgba(255,255,255,0.8)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>
         <div style={{
-          position: 'absolute', inset: 0, background: 'white',
-          animation: `shutterFlash 3.5s ease ${delay + 1.2}s infinite`,
-          opacity: 0,
+          width: 32, height: 32, borderRadius: '50%',
+          background: flash ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.7)',
+          transition: 'background 0.1s',
         }} />
       </div>
-      <div style={{ minWidth: 0, flex: 1 }}>
-        <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</p>
-        <p style={{ color: '#53e6d4', fontSize: 9, marginTop: 1 }}>Uploading…</p>
-      </div>
-      <div style={{ width: 5, height: 5, borderRadius: '50%', flexShrink: 0, background: '#53e6d4', animation: `ping 1.5s ease ${delay}s infinite` }} />
+      {/* Flash overlay */}
+      {flash && (
+        <div style={{ position: 'absolute', inset: 0, background: '#fff', animation: 'shutterFlash 0.4s ease both' }} />
+      )}
+      {/* Flying photo chip after flash */}
+      {flash && (
+        <div style={{
+          position: 'absolute', bottom: 20, right: 16,
+          width: 36, height: 36, borderRadius: 8, overflow: 'hidden',
+          border: '2px solid #fff', boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+          animation: 'flyOut 0.8s cubic-bezier(0.34,1.56,0.64,1) 0.3s both',
+        }}>
+          <img src={REAL_PHOTOS[0]} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        </div>
+      )}
     </div>
+  );
+}
+
+function StageLiveWall({ active, entering }) {
+  const [liveToggle, setLiveToggle] = useState(false);
+  useEffect(() => {
+    if (!active) { setLiveToggle(false); return; }
+    const t = setTimeout(() => setLiveToggle(true), 900);
+    return () => clearTimeout(t);
+  }, [active]);
+
+  if (!active) return null;
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+      padding: '52px 12px 12px', gap: 10,
+      animation: entering ? 'slideInRight 0.5s cubic-bezier(0.34,1.56,0.64,1) both' : 'slideOutLeft 0.4s ease both',
+    }}>
+      {/* Toggle row */}
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)',
+        borderRadius: 12, padding: '8px 12px',
+      }}>
+        <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 600 }}>Enable Live Wall</span>
+        {/* Toggle switch */}
+        <div onClick={() => setLiveToggle(v => !v)} style={{
+          width: 36, height: 20, borderRadius: 99, cursor: 'pointer',
+          background: liveToggle ? 'linear-gradient(135deg,#6045f4,#53e6d4)' : 'rgba(255,255,255,0.2)',
+          transition: 'background 0.3s', position: 'relative',
+        }}>
+          <div style={{
+            position: 'absolute', top: 2, left: liveToggle ? 18 : 2,
+            width: 16, height: 16, borderRadius: '50%', background: '#fff',
+            transition: 'left 0.3s', boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+          }} />
+        </div>
+      </div>
+
+      {/* Live wall grid */}
+      {liveToggle && (
+        <div style={{
+          flex: 1, borderRadius: 14, overflow: 'hidden',
+          background: '#000', position: 'relative',
+        }}>
+          <div style={{
+            position: 'absolute', top: 6, left: 8, display: 'flex', alignItems: 'center', gap: 4, zIndex: 2,
+          }}>
+            <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#34d399', animation: 'ping 1.5s infinite' }} />
+            <span style={{ color: '#fff', fontSize: 8, fontWeight: 700, textShadow: '0 1px 4px rgba(0,0,0,0.8)' }}>LIVE WALL</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, height: '100%', paddingTop: 22 }}>
+            {REAL_PHOTOS.slice(0, 4).map((src, i) => (
+              <div key={i} style={{
+                overflow: 'hidden',
+                animation: `wallPop 0.4s cubic-bezier(0.34,1.56,0.64,1) ${i * 0.3}s both`,
+              }}>
+                <img src={src} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* Simple QR code SVG placeholder */
+function QRCodeSVG({ size = 80 }) {
+  const cell = size / 10;
+  const pattern = [
+    [1,1,1,1,1,1,1,0,1,0],
+    [1,0,0,0,0,0,1,0,0,1],
+    [1,0,1,1,1,0,1,0,1,0],
+    [1,0,1,1,1,0,1,0,0,1],
+    [1,0,1,1,1,0,1,0,1,1],
+    [1,0,0,0,0,0,1,0,0,0],
+    [1,1,1,1,1,1,1,0,1,0],
+    [0,0,0,0,0,0,0,0,1,1],
+    [1,0,1,1,0,1,0,1,0,1],
+    [0,1,0,0,1,0,1,1,1,0],
+  ];
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <rect width={size} height={size} fill="white"/>
+      {pattern.map((row, r) =>
+        row.map((bit, c) => bit ? (
+          <rect key={`${r}-${c}`} x={c * cell} y={r * cell} width={cell} height={cell} fill="#111"/>
+        ) : null)
+      )}
+    </svg>
   );
 }
 

@@ -196,6 +196,26 @@ body.mkt #root {
 .anim-delay-3 { animation-delay: 0.3s; }
 .anim-delay-4 { animation-delay: 0.45s; }
 
+/* ── Phone story scene transitions ── */
+@keyframes slideInRight {
+  from { opacity: 0; transform: translateX(40px) scale(0.97); }
+  to   { opacity: 1; transform: translateX(0)    scale(1); }
+}
+@keyframes slideOutLeft {
+  from { opacity: 1; transform: translateX(0)     scale(1); }
+  to   { opacity: 0; transform: translateX(-40px) scale(0.97); }
+}
+@keyframes scanLine {
+  0%   { transform: translateY(-80px); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(80px);  opacity: 0; }
+}
+@keyframes flyOut {
+  from { opacity: 1; transform: scale(1)    translate(0,   0); }
+  to   { opacity: 0; transform: scale(0.4)  translate(60px,-60px); }
+}
+
 /* ── Subtle texture on hero ── */
 .bezl-hero::before {
   content: '';
