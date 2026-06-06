@@ -6,45 +6,6 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
 
   const isVideo = blob.type?.startsWith('video/');
 
-  async function saveToGallery() {
-    const ext  = isVideo ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
-    const name = `picachoo-${Date.now()}.${ext}`;
-    const file = new File([blob], name, { type: blob.type });
-
-    // iOS Safari 15+ and Android Chrome: Web Share API with files triggers
-    // the native share sheet where user can "Save to Photos / Downloads".
-    // This is the only path that reaches the iOS Camera Roll from a web app.
-    if (navigator.canShare?.({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: name });
-        return;
-      } catch (err) {
-        // AbortError = user dismissed share sheet — that's fine, still upload
-        if (err.name !== 'AbortError') throw err;
-      }
-    }
-
-    // Android / desktop fallback: programmatic <a download> saves to Downloads
-    const url = URL.createObjectURL(file);
-    try {
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = name;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } finally {
-      // small delay so the browser has time to start the download before revoke
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    }
-  }
-
-  async function handleUpload() {
-    // Fire-and-forget: save attempt must not block the upload flow
-    saveToGallery().catch(() => {});
-    onUpload();
-  }
-
   return (
     <div className="flex flex-col h-full bg-black select-none">
 
@@ -103,7 +64,7 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
 
         {/* Upload — centre, shutter-sized */}
         <button
-          onClick={handleUpload}
+          onClick={onUpload}
           aria-label="Upload photo"
           className="relative flex items-center justify-center active:scale-90 transition-transform focus:outline-none"
           style={{ width: 80, height: 80 }}

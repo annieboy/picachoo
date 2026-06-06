@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import NameScreen        from '../components/NameScreen';
 import CameraView        from '../components/CameraView';
@@ -68,11 +68,14 @@ export default function GuestPage() {
     setScreen(SCREENS.CAMERA);
   }, []);
 
+  const uploadedBlobRef = useRef(null);
+
   const handleSuccess = useCallback(() => {
+    uploadedBlobRef.current = pendingBlob;
     setPendingBlob(null);
     setPendingFiles(null);
     setScreen(SCREENS.SUCCESS);
-  }, []);
+  }, [pendingBlob]);
 
   const uploadsLocked = event && event.wall_upload_mode === 'host_only';
 
@@ -182,7 +185,8 @@ export default function GuestPage() {
       {screen === SCREENS.SUCCESS && (
         <SuccessScreen
           eventName={event?.name}
-          onSnapAnother={() => { setPendingBlob(null); setPendingFiles(null); setScreen(SCREENS.CAMERA); }}
+          blob={uploadedBlobRef.current}
+          onSnapAnother={() => { uploadedBlobRef.current = null; setPendingBlob(null); setPendingFiles(null); setScreen(SCREENS.CAMERA); }}
         />
       )}
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 const CONFETTI_COLORS = ['#fff', '#c4b5fd', '#a5f3fc', '#fbbf24', '#f472b6', '#34d399'];
 const PIECES = Array.from({ length: 18 }, (_, i) => ({
@@ -11,13 +11,54 @@ const PIECES = Array.from({ length: 18 }, (_, i) => ({
 
 const BG = { background: 'linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%)' };
 
-export default function SuccessScreen({ eventName, onSnapAnother }) {
+// Save blob to device gallery.
+// iOS Safari: Web Share API → native share sheet → "Save to Photos"
+// Android / desktop: <a download> → Downloads folder
+async function saveToGallery(blob) {
+  const isVideo = blob.type?.startsWith('video/');
+  const ext  = isVideo ? (blob.type.includes('mp4') ? 'mp4' : 'webm') : 'jpg';
+  const name = `picachoo-${Date.now()}.${ext}`;
+  const file = new File([blob], name, { type: blob.type });
+
+  if (navigator.canShare?.({ files: [file] })) {
+    await navigator.share({ files: [file], title: name });
+    return;
+  }
+
+  const url = URL.createObjectURL(file);
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
+
+export default function SuccessScreen({ eventName, blob, onSnapAnother }) {
   const headingRef = useRef(null);
+  const [saveState, setSaveState] = useState('idle'); // idle | saving | saved | error
+
   useEffect(() => {
     headingRef.current?.focus();
     const t = setTimeout(onSnapAnother, 3000);
     return () => clearTimeout(t);
   }, [onSnapAnother]);
+
+  async function handleSave() {
+    if (!blob || saveState === 'saving' || saveState === 'saved') return;
+    setSaveState('saving');
+    try {
+      await saveToGallery(blob);
+      setSaveState('saved');
+    } catch (err) {
+      // AbortError = user dismissed share sheet — treat as cancel, not error
+      setSaveState(err.name === 'AbortError' ? 'idle' : 'error');
+    }
+  }
 
   return (
     <div className="relative flex flex-col items-center justify-center min-h-full px-6 gap-8 overflow-hidden" style={BG}>
@@ -59,7 +100,7 @@ export default function SuccessScreen({ eventName, onSnapAnother }) {
         </p>
       </div>
 
-      {/* CTA */}
+      {/* CTAs */}
       <div className="flex flex-col items-center gap-3 animate-pop-in relative z-10 w-full max-w-xs" style={{ animationDelay: '0.2s' }}>
         <button
           onClick={onSnapAnother}
@@ -68,6 +109,21 @@ export default function SuccessScreen({ eventName, onSnapAnother }) {
         >
           Take another photo
         </button>
+
+        {blob && (
+          <button
+            onClick={handleSave}
+            disabled={saveState === 'saving' || saveState === 'saved'}
+            className="w-full rounded-2xl py-3.5 text-base font-semibold active:scale-95 transition-transform duration-100 focus:outline-none disabled:opacity-60"
+            style={{ background: 'rgba(255,255,255,0.18)', color: '#fff', border: '1.5px solid rgba(255,255,255,0.3)' }}
+          >
+            {saveState === 'saving' ? 'Saving…'
+              : saveState === 'saved' ? 'Saved to gallery ✓'
+              : saveState === 'error' ? 'Could not save — tap to retry'
+              : 'Save to my gallery'}
+          </button>
+        )}
+
         <p className="text-white/50 text-xs">Returning to camera in 3 seconds…</p>
       </div>
     </div>
