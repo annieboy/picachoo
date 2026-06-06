@@ -116,7 +116,7 @@ function Hero() {
 
       {/* Sub-headline */}
       <p className="anim-fade-up anim-delay-1 text-center text-white/70 text-base sm:text-lg max-w-xl px-4 mt-3" style={{ lineHeight: 1.6 }}>
-        Guests scan a QR code, snap photos, and they land directly in your album. Perfect for families, trips, schools, clubs, weddings, and events.
+        Perfect for families, groups, organisations and all events.
       </p>
 
       {/* Numbered steps */}
