@@ -102,12 +102,40 @@ export default function GuestPage() {
     setUploads(prev => prev.filter(u => u.id !== id)),
   []);
 
+  const uploadsLocked = event && event.wall_upload_mode === 'host_only';
+
   if (eventError) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center bg-black px-6 gap-4 text-center">
         <p className="text-5xl">📷</p>
         <p className="text-white text-xl font-semibold">Event not found</p>
         <p className="text-zinc-400 text-sm">{eventError}</p>
+      </div>
+    );
+  }
+
+  if (uploadsLocked && screen !== SCREENS.NAME) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center px-8 gap-6 text-center"
+           style={{ background: 'linear-gradient(140deg,#5B52E8 0%,#7B65EE 45%,#29BFBF 100%)' }}>
+        <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/15">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-7 h-7">
+            <rect x="5" y="11" width="14" height="10" rx="2"/>
+            <path d="M8 11V7a4 4 0 018 0v4"/>
+          </svg>
+        </div>
+        <div className="space-y-2">
+          {event?.name && (
+            <p className="text-white/70 text-sm"
+               style={{ fontFamily: "'Caveat',cursive", fontSize: '1.3rem', fontWeight: 700 }}>
+              {event.name}
+            </p>
+          )}
+          <p className="text-white text-2xl font-black">Uploads closed</p>
+          <p className="text-white/60 text-sm leading-relaxed">
+            The host has paused photo contributions for this event.
+          </p>
+        </div>
       </div>
     );
   }
