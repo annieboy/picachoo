@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { useCamera } from '../hooks/useCamera';
 
 export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
@@ -10,14 +10,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
   } = useCamera();
 
   const fileInputRef = useRef(null);
-  const mediaRecRef  = useRef(null);
-  const recordChunks = useRef([]);
   const pinchRef     = useRef({ active: false, startDist: 0, startZoom: 1 });
-
-  const [mode,       setMode]       = useState('photo');
-  const [recording,  setRecording]  = useState(false);
-  const [recordSecs, setRecordSecs] = useState(0);
-  const timerRef = useRef(null);
 
   useEffect(() => { startCamera(); return stopStream; }, [startCamera, stopStream]);
   useEffect(() => { if (capturedBlob) onCapture(capturedBlob); }, [capturedBlob, onCapture]);
@@ -52,44 +45,6 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
     onGalleryFiles(files);
   }
 
-  const startRecording = useCallback(() => {
-    const stream = videoRef.current?.srcObject;
-    if (!stream) return;
-    const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4'
-                   : MediaRecorder.isTypeSupported('video/webm;codecs=vp9') ? 'video/webm;codecs=vp9'
-                   : 'video/webm';
-    const mr = new MediaRecorder(stream, { mimeType });
-    recordChunks.current = [];
-    mr.ondataavailable = e => { if (e.data.size > 0) recordChunks.current.push(e.data); };
-    mr.onstop = () => { stopStream(); onCapture(new Blob(recordChunks.current, { type: mimeType })); };
-    mr.start(250);
-    mediaRecRef.current = mr;
-    setRecording(true);
-    setRecordSecs(0);
-    timerRef.current = setInterval(() => setRecordSecs(s => s + 1), 1000);
-  }, [videoRef, stopStream, onCapture]);
-
-  const stopRecording = useCallback(() => {
-    clearInterval(timerRef.current);
-    mediaRecRef.current?.stop();
-    setRecording(false);
-    setRecordSecs(0);
-  }, []);
-
-  function handleModeChange(m) {
-    if (recording) stopRecording();
-    setMode(m);
-  }
-
-  function handleShutter() {
-    if (mode === 'video') recording ? stopRecording() : startRecording();
-    else snapPhoto().catch(console.error);
-  }
-
-  function fmtSecs(s) {
-    return `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
-  }
-
   const needsFallback = cameraState === 'denied' || cameraState === 'unavailable';
   const isActive      = cameraState === 'active';
   const isStarting    = cameraState === 'starting';
@@ -102,11 +57,10 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Video */}
+      {/* Viewfinder */}
       {!needsFallback && (
         <>
-          {/* Single video element always mounted — wrapper changes shape per mode */}
-          <div style={mode === 'photo' ? {
+          <div style={{
             position: 'absolute',
             top: '52px',
             left: 0,
@@ -114,14 +68,11 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
             height: 'calc(100vw * 4 / 3)',
             maxHeight: 'calc(100dvh - 52px - 112px)',
             overflow: 'hidden',
-          } : {
-            position: 'absolute',
-            inset: 0,
           }}>
             <video ref={videoRef} autoPlay playsInline muted
               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
 
-            {/* Title + flash overlaid inside the photo box */}
+            {/* Title + torch overlaid inside the viewfinder */}
             <div className="absolute inset-x-0 top-0 z-10 flex items-center justify-center px-4 pt-3 pb-2"
                  style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, transparent 100%)' }}>
               {eventName && (
@@ -132,23 +83,16 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
                   {eventName}
                 </span>
               )}
-              <div className="absolute right-3 flex items-center gap-2">
-                {recording && (
-                  <span className="flex items-center gap-1.5 bg-black/40 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm font-semibold tabular-nums">
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                    {fmtSecs(recordSecs)}
-                  </span>
-                )}
-                {torchSupported && !recording && (
-                  <button onClick={toggleTorch}
-                    className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
-                    style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}>
-                    <FlashIcon on={torchOn} />
-                  </button>
-                )}
-              </div>
+              {torchSupported && (
+                <button onClick={toggleTorch}
+                  className="absolute right-3 w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-sm transition-all active:scale-90"
+                  style={torchOn ? { background: '#FACC15', color: '#000' } : { background: 'rgba(0,0,0,0.35)', color: '#fff' }}>
+                  <FlashIcon on={torchOn} />
+                </button>
+              )}
             </div>
           </div>
+
           {flashVisible && (
             <div className="absolute inset-0 bg-white pointer-events-none z-30 animate-shutter-flash" />
           )}
@@ -190,7 +134,7 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
         style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))', paddingTop: '1rem',
                  background: 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)' }}
       >
-        {hasZoom && isActive && !recording && (
+        {hasZoom && isActive && (
           <div className="flex items-center gap-2">
             {zoomLevels.map(level => {
               const active = Math.abs(zoom - level) < 0.3;
@@ -207,59 +151,30 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
           </div>
         )}
 
-        {/* Photo / Video toggle */}
-        {!needsFallback && (
-          <div className="flex items-center gap-1 bg-black/30 backdrop-blur-sm p-1 rounded-full">
-            {['photo', 'video'].map(m => (
-              <button key={m} onClick={() => handleModeChange(m)}
-                className="px-5 py-1.5 rounded-full text-sm font-semibold transition-all active:scale-95"
-                style={mode === m
-                  ? { background: 'rgba(255,255,255,0.2)', color: '#fff' }
-                  : { color: 'rgba(255,255,255,0.45)' }}>
-                {m.charAt(0).toUpperCase() + m.slice(1)}
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Flip · Shutter · Gallery */}
         <div className="flex items-center justify-between w-full px-10">
-          <button onClick={flipCamera} disabled={recording}
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-30"
+          <button onClick={flipCamera}
+            className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
             style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.2)' }}>
             <FlipIcon />
           </button>
 
-          <button disabled={!isActive} onClick={handleShutter}
+          <button disabled={!isActive} onClick={() => snapPhoto().catch(console.error)}
             className="relative flex items-center justify-center active:scale-90 transition-transform disabled:opacity-40 focus:outline-none"
             style={{ width: 80, height: 80 }}>
-            {mode === 'photo' ? (
-              <>
-                <span className="absolute inset-0 rounded-full border-[3.5px] border-white/80" />
-                <span className="block w-[64px] h-[64px] rounded-full bg-white" />
-              </>
-            ) : recording ? (
-              <>
-                <span className="absolute inset-0 rounded-full border-[3.5px] border-red-500" />
-                <span className="block w-8 h-8 rounded-lg bg-red-500" />
-              </>
-            ) : (
-              <>
-                <span className="absolute inset-0 rounded-full border-[3.5px] border-white/80" />
-                <span className="block w-[64px] h-[64px] rounded-full bg-red-500" />
-              </>
-            )}
+            <span className="absolute inset-0 rounded-full border-[3.5px] border-white/80" />
+            <span className="block w-[64px] h-[64px] rounded-full bg-white" />
           </button>
 
-          <button onClick={() => fileInputRef.current?.click()} disabled={recording}
-            className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform disabled:opacity-30"
+          <button onClick={() => fileInputRef.current?.click()}
+            className="w-12 h-12 rounded-full flex items-center justify-center text-white active:scale-90 transition-transform"
             style={{ background: 'rgba(255,255,255,0.15)', border: '1.5px solid rgba(255,255,255,0.2)' }}>
             <GalleryIcon />
           </button>
         </div>
       </div>
 
-      <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple className="sr-only" onChange={handleGalleryChange} />
+      <input ref={fileInputRef} type="file" accept="image/*" multiple className="sr-only" onChange={handleGalleryChange} />
     </div>
   );
 }

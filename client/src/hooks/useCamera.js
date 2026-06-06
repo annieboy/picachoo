@@ -139,8 +139,8 @@ export function useCamera() {
   }, [startCameraFacing, facingMode]);
 
   return {
-    videoRef, cameraState, capturedBlob, flashVisible, captureMethod,
-    facingMode, torchOn, torchSupported, zoom, zoomRange,
-    startCamera, snapPhoto, retake, stopStream, flipCamera, toggleTorch, applyZoom,
+    videoRef, cameraState, capturedBlob, flashVisible,
+    torchOn, torchSupported, zoom, zoomRange,
+    startCamera, snapPhoto, stopStream, flipCamera, toggleTorch, applyZoom,
   };
 }
