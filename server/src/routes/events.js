@@ -158,6 +158,21 @@ router.patch('/:eventId', requireAuth, async (req, res, next) => {
       return next(err);
     }
 
+    // Live Wall is a Pro feature — free hosts can only set it to 'off'
+    if (wallMode && wallMode !== 'off') {
+      const { rows: tierRows } = await pool.query(
+        `SELECT tier FROM hosts WHERE auth_id = $1`,
+        [req.user.authId],
+      );
+      const tier = tierRows[0]?.tier ?? 'free';
+      const isPaid = ['pro', 'pro_annual', 'business_annual'].includes(tier);
+      if (!isPaid) {
+        const err = new Error('Live Wall is available on Pro and Business plans. Upgrade to enable it.');
+        err.status = 403;
+        return next(err);
+      }
+    }
+
     // Verify ownership via auth_id
     const { rows } = await pool.query(
       `UPDATE events SET

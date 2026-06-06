@@ -416,6 +416,35 @@ input::placeholder { color: #d1d5db; }
 .wall-section-row-sub { margin-top: 0.25rem; padding-top: 0.5rem; border-top: 1px solid #f0eeff; }
 .wall-sub-label { font-size: 0.72rem; color: #9ca3af; font-weight: 500; }
 
+/* ── Live wall locked state (free tier) ─────────────────────────────────── */
+.wall-section--locked { background: #faf9ff; border: 1px dashed rgba(107,92,231,0.25); border-radius: 12px; padding: 0.875rem 1rem; }
+.wall-locked-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.wall-locked-label { font-size: 0.82rem; font-weight: 600; color: #6b7280; }
+.wall-locked-badge {
+  font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 2px 7px; border-radius: 999px;
+  background: linear-gradient(135deg, #6045f4, #53e6d4); color: #fff;
+}
+.wall-locked-upgrade {
+  font-size: 0.75rem; font-weight: 600; color: var(--brand);
+  background: #f0eeff; border: 1px solid rgba(107,92,231,0.2);
+  border-radius: 999px; padding: 5px 14px; cursor: pointer;
+  white-space: nowrap; transition: background 0.15s;
+}
+.wall-locked-upgrade:hover { background: #e9e4fe; }
+.wall-locked-desc { font-size: 0.72rem; color: #9ca3af; margin: 0.5rem 0 0; }
+
+/* ── Lock badge on action buttons ───────────────────────────────────────── */
+.row-action-btn--locked { position: relative; }
+.lock-badge {
+  position: absolute; top: 2px; right: 2px;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: linear-gradient(135deg, #6045f4, #53e6d4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 6px; color: #fff; font-weight: 900; line-height: 1;
+  pointer-events: none;
+}
+
 .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 1.25rem; height: 1.25rem; padding: 0 0.375rem; border-radius: 999px; background: rgba(107,92,231,0.12); color: var(--brand); font-size: 0.65rem; font-weight: 700; }
 .msg-error { color: #dc2626; font-size: 0.8rem; margin: 0; }
 

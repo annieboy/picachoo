@@ -309,7 +309,7 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
       {!isPro && (
         <div className="upgrade-banner">
           <div className="upgrade-banner-text">
-            <strong>Upgrade to Pro</strong> — unlimited events, full-resolution originals (25 MB+), priority uploads, and priority support.
+            <strong>Upgrade to Pro</strong> — unlimited events, full-resolution originals (25 MB+), live photo wall, and priority support.
           </div>
           <button className="upgrade-banner-btn" onClick={() => setShowUpgrade(true)}>
             View plans
@@ -397,11 +397,13 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
               <EventRow
                 key={ev.id}
                 event={ev}
+                isPro={isPro}
                 token={session?.access_token}
                 loginHint={session?.user?.app_metadata?.provider === 'google' ? session?.user?.email : undefined}
                 onUpdate={handleEventUpdate}
                 onDelete={handleEventDelete}
                 onShare={()=>setShareEvent(ev)}
+                onUpgrade={() => setShowUpgrade(true)}
               />
             ))}
           </div>
@@ -409,7 +411,7 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
       )}
     </Shell>
 
-    {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+    {showUpgrade && <UpgradeModal host={host} onClose={() => setShowUpgrade(false)} />}
     {showCreateModal && (
       <CreateEventModal
         onClose={()=>setShowCreateModal(false)}
@@ -446,7 +448,7 @@ function OnboardingScreen({ host, onContinueFree }) {
       name:        'Free',
       price:       'Free',
       note:        'Always free',
-      description: '1 event/month · Up to 10 participants · 2 MB per upload · Google Drive, OneDrive, Dropbox · Live photo wall · QR code sharing',
+      description: '1 event/month · Up to 10 participants · 2 MB per upload · Google Drive, OneDrive, Dropbox · QR code sharing',
       cta:         'Continue for free',
       popular:     false,
     },
@@ -455,7 +457,7 @@ function OnboardingScreen({ host, onContinueFree }) {
       name:        'Pro',
       price:       '£9',
       note:        '/mo · billed £108/yr',
-      description: 'Unlimited events & guests · Full-resolution originals (25 MB+) · No browser compression · Priority upload queue · Priority support · Google Drive, OneDrive, Dropbox · Live photo wall',
+      description: 'Unlimited events & guests · Full-resolution originals (25 MB+) · Live photo wall · No browser compression · Priority upload queue · Priority support · Google Drive, OneDrive, Dropbox',
       cta:         'Get Pro',
       popular:     true,
       badge:       'Most popular',
@@ -1031,7 +1033,7 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
 
 // ── EventRow ──────────────────────────────────────────────────────────────────
 
-function EventRow({ event, token, loginHint, onUpdate, onDelete, onShare }) {
+function EventRow({ event, isPro, token, loginHint, onUpdate, onDelete, onShare, onUpgrade }) {
   const [ev, setEv] = useState(event);
   const [expanded, setExpanded] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -1100,7 +1102,10 @@ function EventRow({ event, token, loginHint, onUpdate, onDelete, onShare }) {
         {/* Actions */}
         <div className="event-row-actions" onClick={e=>e.stopPropagation()}>
           <button className="row-action-btn" onClick={onShare} title="Share & QR"><ShareIcon /></button>
-          <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="row-action-btn" title="Live Wall"><TVIcon /></a>
+          {isPro
+            ? <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="row-action-btn" title="Live Wall"><TVIcon /></a>
+            : <button className="row-action-btn row-action-btn--locked" onClick={onUpgrade} title="Live Wall · Pro feature"><TVIcon /><LockBadge /></button>
+          }
           <div style={{position:'relative'}} ref={menuRef}>
             <button className="row-action-btn" onClick={()=>setMenuOpen(v=>!v)} title="More"><MoreIcon /></button>
             {menuOpen && (
@@ -1121,7 +1126,7 @@ function EventRow({ event, token, loginHint, onUpdate, onDelete, onShare }) {
       {/* Expanded body: wall + storage */}
       {expanded && (
         <div className="event-row-body">
-          <WallControls ev={ev} setEv={setEv} onUpdate={onUpdate} />
+          <WallControls ev={ev} setEv={setEv} onUpdate={onUpdate} isPro={isPro} onUpgrade={onUpgrade} />
           {ev.linked_provider
             ? <StorageStatus provider={ev.linked_provider} account={ev.linked_account} eventId={ev.id} onDisconnected={handleDisconnected} />
             : <StoragePicker eventId={ev.id} loginHint={loginHint} />
@@ -1148,7 +1153,7 @@ function EventRow({ event, token, loginHint, onUpdate, onDelete, onShare }) {
 
 // ── WallControls ──────────────────────────────────────────────────────────────
 
-function WallControls({ ev, setEv, onUpdate }) {
+function WallControls({ ev, setEv, onUpdate, isPro, onUpgrade }) {
   const [wallPicker, setWallPicker] = useState(false);
   const [wallSaving, setWallSaving] = useState(false);
   const [uploadPicker, setUploadPicker] = useState(false);
@@ -1171,6 +1176,27 @@ function WallControls({ ev, setEv, onUpdate }) {
       const m = { ...ev, ...u }; setEv(m); onUpdate?.(m); setUploadPicker(false);
     } catch (err) { setError(err.message); }
     finally { setUploadSaving(false); }
+  }
+
+  // Free tier: show a locked upgrade prompt
+  if (!isPro) {
+    return (
+      <div className="wall-section wall-section--locked">
+        <div className="wall-locked-row">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 16 }}>📺</span>
+            <span className="wall-locked-label">Live Wall</span>
+            <span className="wall-locked-badge">Pro</span>
+          </div>
+          <button className="wall-locked-upgrade" onClick={onUpgrade}>
+            Upgrade to unlock
+          </button>
+        </div>
+        <p className="wall-locked-desc">
+          Display a real-time photo stream on any screen. Available on Pro and Business plans.
+        </p>
+      </div>
+    );
   }
 
   return (
@@ -1469,9 +1495,7 @@ const UPGRADE_PLANS = [
       'Up to 10 participants',
       'Up to 2 MB per upload (compressed)',
       'Google Drive, OneDrive, Dropbox',
-      'Live photo wall',
       'QR code sharing',
-      'No event name on camera',
     ],
     cta:   'Current plan',
     badge: null,
@@ -1486,10 +1510,10 @@ const UPGRADE_PLANS = [
       'Unlimited guests',
       'Full-resolution originals (25 MB+)',
       'No browser compression',
+      'Live photo wall',
       'Priority upload queue',
       'Priority support',
       'Google Drive, OneDrive, Dropbox',
-      'Live photo wall',
     ],
     cta:   'Get Pro',
     badge: 'Most popular',
@@ -1909,6 +1933,10 @@ function FolderIcon() {
 
 function TVIcon() {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:14,height:14}} aria-hidden="true"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8m-4-4v4"/></svg>;
+}
+
+function LockBadge() {
+  return <span className="lock-badge" aria-label="Pro feature">✦</span>;
 }
 
 function MoreIcon() {
