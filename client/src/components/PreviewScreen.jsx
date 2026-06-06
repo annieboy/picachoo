@@ -9,27 +9,35 @@ export default function PreviewScreen({ blob, onUpload, onRetake, eventName }) {
   return (
     <div className="flex flex-col h-full bg-black select-none">
 
-      {/* ── Photo / Video fills all remaining space ── */}
-      <div className="flex-1 relative overflow-hidden bg-zinc-900">
+      {/* ── Preview area ── */}
+      <div className="flex-1 relative overflow-hidden bg-black">
         {isVideo ? (
+          /* Video: full screen */
           <video src={objectUrl.current} className="absolute inset-0 w-full h-full object-cover"
                  autoPlay loop muted playsInline />
         ) : (
-          <img src={objectUrl.current} alt="Preview"
-               className="absolute inset-0 w-full h-full object-cover" />
+          /* Photo: 3:4 frame matching camera viewfinder */
+          <div style={{
+            position: 'absolute',
+            top: '8px',
+            left: 0,
+            right: 0,
+            aspectRatio: '3/4',
+            maxHeight: 'calc(100% - 8px)',
+            overflow: 'hidden',
+          }}>
+            <img src={objectUrl.current} alt="Preview"
+                 style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+          </div>
         )}
 
-        {/* Event name — centred top overlay */}
+        {/* Event name */}
         {eventName && (
           <div className="absolute inset-x-0 top-0 z-10 flex justify-center px-4"
-               style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
+               style={{ paddingTop: 'max(1.25rem, env(safe-area-inset-top))' }}>
             <span
               className="text-white drop-shadow-lg"
-              style={{
-                fontFamily: "'Caveat','Segoe Script',cursive",
-                fontSize: '1.4rem', fontWeight: 700,
-                textShadow: '0 1px 8px rgba(0,0,0,0.55)',
-              }}
+              style={{ fontFamily: "'Caveat','Segoe Script',cursive", fontSize: '1.4rem', fontWeight: 700, textShadow: '0 1px 8px rgba(0,0,0,0.55)' }}
             >
               {eventName}
             </span>
