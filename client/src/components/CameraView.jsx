@@ -105,24 +105,24 @@ export default function CameraView({ eventName, onCapture, onGalleryFiles }) {
       {/* Video */}
       {!needsFallback && (
         <>
-          <video
-            ref={videoRef}
-            autoPlay playsInline muted
-            style={mode === 'photo' ? {
+          {/* Photo: 3:4 container centred — iOS ignores aspect-ratio on <video> so we clip a div */}
+          {mode === 'photo' ? (
+            <div style={{
               position: 'absolute',
               width: '100%',
               aspectRatio: '3/4',
               top: '50%',
               transform: 'translateY(-50%)',
-              objectFit: 'cover',
-            } : {
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-            }}
-          />
+              overflow: 'hidden',
+            }}>
+              <video ref={videoRef} autoPlay playsInline muted
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+            </div>
+          ) : (
+            /* Video: fill full screen */
+            <video ref={videoRef} autoPlay playsInline muted
+              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+          )}
           {flashVisible && (
             <div className="absolute inset-0 bg-white pointer-events-none z-30 animate-shutter-flash" />
           )}
