@@ -275,21 +275,19 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
     <Shell>
       {/* Top bar */}
       <div className="dash-topbar">
-        <div>
-          <p className="dash-welcome">
-            Welcome back, <strong>{host?.display_name}</strong>
-            <span className={`tier-badge ${tierMeta.cls}`}>{tierMeta.label}</span>
-          </p>
-          <p className="dash-email">{host?.email}</p>
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          {/* Avatar circle with user initials */}
+          <div className="dash-avatar">
+            {(host?.display_name ?? 'U').split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase()}
+          </div>
+          <div>
+            <p className="dash-welcome">Good to see you, <strong>{host?.display_name?.split(' ')[0]}</strong></p>
+            <p className="dash-email">{host?.email} <span className={`tier-badge ${tierMeta.cls}`}>{tierMeta.label}</span></p>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button
-            className={`btn-ghost btn-sm${tab === 'account' ? ' btn-ghost-active' : ''}`}
-            onClick={() => setTab(t => t === 'account' ? 'events' : 'account')}
-          >
-            Account
-          </button>
-          <button className="btn-ghost" onClick={signOut}>Sign out</button>
+        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+          <button className={`btn-ghost btn-sm${tab === 'account' ? ' btn-ghost-active' : ''}`} onClick={() => setTab(t => t === 'account' ? 'events' : 'account')}>Account</button>
+          <button className="btn-ghost btn-sm" onClick={signOut}>Sign out</button>
         </div>
       </div>
 
@@ -331,8 +329,30 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
       {/* Events tab */}
       {tab === 'events' && (
         <>
-          <section className="dash-section">
-            <h2>New event</h2>
+          {/* Stats row */}
+          <div className="stats-row">
+            <div className="stat-card">
+              <span className="stat-num">{events.length}</span>
+              <span className="stat-label">Events</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-num">{events.reduce((s,e) => s + parseInt(e.photo_count||0,10), 0)}</span>
+              <span className="stat-label">Photos collected</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-num">{events.filter(e => e.linked_provider).length}</span>
+              <span className="stat-label">Cloud connected</span>
+            </div>
+          </div>
+
+          <section className="dash-section create-section">
+            <div className="create-section-header">
+              <div className="create-section-icon">＋</div>
+              <div>
+                <p className="create-section-title">Create new event</p>
+                <p className="create-section-sub">Share a QR code — guests snap photos straight to your cloud</p>
+              </div>
+            </div>
             <form className="create-form" onSubmit={handleCreateEvent}>
               <input
                 type="text"
@@ -349,7 +369,7 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
           </section>
 
           <section className="dash-section">
-            <h2>Your events {events.length > 0 && <span className="badge">{events.length}</span>}</h2>
+            <h2 className="events-heading">Your events {events.length > 0 && <span className="badge">{events.length}</span>}</h2>
             {events.length === 0
               ? <p className="empty-state">Create your first event above to get started.</p>
               : events.map(ev => (
@@ -812,116 +832,119 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
     : null;
 
   return (
-    <div className="event-card">
+    <div className={`event-card event-card--${ev.status}`}>
+      {/* Card header */}
       <div className="event-card-header">
-        <div>
-          <h3>{ev.name}</h3>
-          <span className={`status-pill ${statusColors[ev.status] ?? ''}`}>{ev.status}</span>
+        <div style={{ flex:1, minWidth:0 }}>
+          <h3 className="event-name">{ev.name}</h3>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:4 }}>
+            <span className={`status-pill ${statusColors[ev.status] ?? ''}`}>{ev.status}</span>
+            <span className="event-code">#{ev.join_code}</span>
+          </div>
         </div>
         <div className="event-card-actions">
-          <button className="btn-ghost btn-sm" onClick={handleShare} title="Share event link">
-            {copied ? '✓ Copied' : <ShareIcon />}
+          <button className="action-btn" onClick={handleShare} title="Share event link">
+            {copied ? <span style={{fontSize:11,fontWeight:700,color:'#059669'}}>Copied!</span> : <ShareIcon />}
           </button>
-          <button className="btn-ghost btn-sm" onClick={() => setShowQR(v => !v)}>
-            {showQR ? 'Hide QR' : 'QR'}
+          <button className="action-btn" onClick={() => setShowQR(v => !v)} title="QR code">
+            <QRIcon />
           </button>
         </div>
       </div>
 
-      {/* Analytics */}
-      <div className="event-analytics">
-        <span className="event-stat">
+      {/* Stats row */}
+      <div className="event-stats-row">
+        <div className="event-stat-chip">
           <PhotoCountIcon />
-          {photoCount === 0 ? 'No photos yet' : `${photoCount} photo${photoCount !== 1 ? 's' : ''}`}
-        </span>
-        {lastPhotoFmt && (
-          <span className="event-stat">
-            <ClockIcon />
-            Last: {lastPhotoFmt}
-          </span>
-        )}
-      </div>
-
-      {/* Live wall section */}
-      <div className="wall-section">
-        <div className="wall-section-row">
-          <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="wall-link">
-            <span>📺</span> Open Live Wall
-          </a>
-          <button
-            className={`wall-toggle-btn${ev.wall_mode !== 'off' ? ' wall-toggle-on' : ''}`}
-            onClick={() => ev.wall_mode !== 'off' ? handleWallMode('off') : setWallPicker(true)}
-            disabled={wallSaving}
-          >
-            <span className={`wall-toggle-dot${ev.wall_mode !== 'off' ? ' wall-toggle-dot-on' : ''}`} />
-            {ev.wall_mode === 'off' ? 'Wall off' : ev.wall_mode === 'everyone' ? 'Visible to all' : 'Visible: host only'}
-          </button>
+          <span>{photoCount === 0 ? 'No photos yet' : `${photoCount} photo${photoCount !== 1 ? 's' : ''}`}</span>
         </div>
-
-        {/* View picker */}
-        {wallPicker && (
-          <div className="wall-picker">
-            <p className="wall-picker-label">Who can view the live wall?</p>
-            <div className="wall-picker-options">
-              <button className="wall-picker-opt" onClick={() => handleWallMode('everyone')} disabled={wallSaving}>
-                <span className="wall-picker-opt-icon">🌐</span>
-                <div>
-                  <strong>Everyone</strong>
-                  <p>Guests and host can see the live wall</p>
-                </div>
-              </button>
-              <button className="wall-picker-opt" onClick={() => handleWallMode('host_only')} disabled={wallSaving}>
-                <span className="wall-picker-opt-icon">🔒</span>
-                <div>
-                  <strong>Host only</strong>
-                  <p>Only you can see the live wall</p>
-                </div>
-              </button>
-            </div>
-            <button className="wall-picker-cancel" onClick={() => setWallPicker(false)}>Cancel</button>
+        {lastPhotoFmt && (
+          <div className="event-stat-chip">
+            <ClockIcon />
+            <span>Last: {lastPhotoFmt}</span>
           </div>
         )}
-
-        {/* Contribute control — only shown when wall is on */}
-        {ev.wall_mode !== 'off' && (
-          <>
-            <div className="wall-section-row wall-section-row-sub">
-              <span className="wall-sub-label">Who can contribute photos?</span>
-              <button
-                className={`wall-toggle-btn${ev.wall_upload_mode === 'host_only' ? ' wall-toggle-on' : ''}`}
-                onClick={() => setUploadPicker(true)}
-                disabled={uploadSaving}
-              >
-                <span className={`wall-toggle-dot${ev.wall_upload_mode === 'host_only' ? ' wall-toggle-dot-on' : ''}`} />
-                {ev.wall_upload_mode === 'host_only' ? 'Host only' : 'Everyone'}
-              </button>
-            </div>
-
-            {uploadPicker && (
-              <div className="wall-picker">
-                <p className="wall-picker-label">Who can add photos to the wall?</p>
-                <div className="wall-picker-options">
-                  <button className="wall-picker-opt" onClick={() => handleUploadMode('everyone')} disabled={uploadSaving}>
-                    <span className="wall-picker-opt-icon">👥</span>
-                    <div>
-                      <strong>Everyone</strong>
-                      <p>All guests can submit photos to the live wall</p>
-                    </div>
-                  </button>
-                  <button className="wall-picker-opt" onClick={() => handleUploadMode('host_only')} disabled={uploadSaving}>
-                    <span className="wall-picker-opt-icon">🎛️</span>
-                    <div>
-                      <strong>Host only</strong>
-                      <p>Only you can add photos — curated wall</p>
-                    </div>
-                  </button>
-                </div>
-                <button className="wall-picker-cancel" onClick={() => setUploadPicker(false)}>Cancel</button>
-              </div>
-            )}
-          </>
-        )}
       </div>
+
+      {/* Live wall row */}
+      <div className="wall-row">
+        <div style={{display:'flex', alignItems:'center', gap:8}}>
+          <span className="wall-row-icon">📺</span>
+          <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="wall-link">Live Wall</a>
+        </div>
+        <button
+          className={`wall-toggle-btn${ev.wall_mode !== 'off' ? ' wall-toggle-on' : ''}`}
+          onClick={() => ev.wall_mode !== 'off' ? handleWallMode('off') : setWallPicker(true)}
+          disabled={wallSaving}
+        >
+          <span className={`wall-toggle-dot${ev.wall_mode !== 'off' ? ' wall-toggle-dot-on' : ''}`} />
+          {ev.wall_mode === 'off' ? 'Off' : ev.wall_mode === 'everyone' ? 'Everyone' : 'Host only'}
+        </button>
+      </div>
+
+      {/* View picker */}
+      {wallPicker && (
+        <div className="wall-picker">
+          <p className="wall-picker-label">Who can view the live wall?</p>
+          <div className="wall-picker-options">
+            <button className="wall-picker-opt" onClick={() => handleWallMode('everyone')} disabled={wallSaving}>
+              <span className="wall-picker-opt-icon">🌐</span>
+              <div>
+                <strong>Everyone</strong>
+                <p>Guests and host can see the live wall</p>
+              </div>
+            </button>
+            <button className="wall-picker-opt" onClick={() => handleWallMode('host_only')} disabled={wallSaving}>
+              <span className="wall-picker-opt-icon">🔒</span>
+              <div>
+                <strong>Host only</strong>
+                <p>Only you can see the live wall</p>
+              </div>
+            </button>
+          </div>
+          <button className="wall-picker-cancel" onClick={() => setWallPicker(false)}>Cancel</button>
+        </div>
+      )}
+
+      {/* Contribute control — only shown when wall is on */}
+      {ev.wall_mode !== 'off' && (
+        <>
+          <div className="wall-section-row wall-section-row-sub">
+            <span className="wall-sub-label">Who can contribute photos?</span>
+            <button
+              className={`wall-toggle-btn${ev.wall_upload_mode === 'host_only' ? ' wall-toggle-on' : ''}`}
+              onClick={() => setUploadPicker(true)}
+              disabled={uploadSaving}
+            >
+              <span className={`wall-toggle-dot${ev.wall_upload_mode === 'host_only' ? ' wall-toggle-dot-on' : ''}`} />
+              {ev.wall_upload_mode === 'host_only' ? 'Host only' : 'Everyone'}
+            </button>
+          </div>
+
+          {uploadPicker && (
+            <div className="wall-picker">
+              <p className="wall-picker-label">Who can add photos to the wall?</p>
+              <div className="wall-picker-options">
+                <button className="wall-picker-opt" onClick={() => handleUploadMode('everyone')} disabled={uploadSaving}>
+                  <span className="wall-picker-opt-icon">👥</span>
+                  <div>
+                    <strong>Everyone</strong>
+                    <p>All guests can submit photos to the live wall</p>
+                  </div>
+                </button>
+                <button className="wall-picker-opt" onClick={() => handleUploadMode('host_only')} disabled={uploadSaving}>
+                  <span className="wall-picker-opt-icon">🎛️</span>
+                  <div>
+                    <strong>Host only</strong>
+                    <p>Only you can add photos — curated wall</p>
+                  </div>
+                </button>
+              </div>
+              <button className="wall-picker-cancel" onClick={() => setUploadPicker(false)}>Cancel</button>
+            </div>
+          )}
+        </>
+      )}
 
       {ev.linked_provider ? (
         <StorageStatus
@@ -969,7 +992,6 @@ function EventCard({ event, token, loginHint, onUpdate, onDelete }) {
       </div>
 
       {showQR && <QRCard event={ev} />}
-
     </div>
   );
 }
@@ -1277,16 +1299,19 @@ function StorageStatus({ provider, account, eventId, onDisconnected }) {
 function StoragePicker({ eventId, token, loginHint }) {
   return (
     <div className="storage-picker">
-      <p className="storage-picker-label">Connect cloud storage to receive photos</p>
+      <p className="storage-picker-label">☁ Connect cloud storage to receive photos</p>
       <div className="storage-picker-btns">
-        <a href={googleAuthUrl({ eventId, loginHint, token })} className="btn-drive">
-          <DriveIcon /> Google Drive
+        <a href={googleAuthUrl({ eventId, loginHint, token })} className="storage-provider-card">
+          <DriveIcon />
+          <span>Google Drive</span>
         </a>
-        <a href={dropboxAuthUrl({ eventId, token })} className="btn-dropbox">
-          <DropboxIcon /> Dropbox
+        <a href={dropboxAuthUrl({ eventId, token })} className="storage-provider-card">
+          <DropboxIcon />
+          <span>Dropbox</span>
         </a>
-        <a href={oneDriveAuthUrl({ eventId, token })} className="btn-onedrive">
-          <OneDriveIcon /> OneDrive
+        <a href={oneDriveAuthUrl({ eventId, token })} className="storage-provider-card">
+          <OneDriveIcon />
+          <span>OneDrive</span>
         </a>
       </div>
     </div>
@@ -1336,6 +1361,15 @@ function ShareIcon() {
          strokeLinecap="round" strokeLinejoin="round" className="drive-icon" aria-hidden="true">
       <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
       <path d="M8.59 13.51l6.83 3.98M15.41 6.51L8.59 10.49"/>
+    </svg>
+  );
+}
+
+function QRIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{width:14,height:14}} aria-hidden="true">
+      <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+      <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/>
     </svg>
   );
 }
