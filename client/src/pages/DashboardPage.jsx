@@ -9,6 +9,7 @@ import {
   updateHostProfile, deleteAccount, cancelSubscription,
   getCohosts, inviteCohost, removeCohost,
   activateCheckout,
+  uploadWallAsset, deleteWallAsset,
 } from '../api';
 import QRCard from '../components/QRCard';
 import { QRCodeSVG } from 'qrcode.react';
@@ -1167,6 +1168,100 @@ function EventRow({ event, isPro, token, loginHint, onUpdate, onDelete, onShare,
 
 // ── WallControls ──────────────────────────────────────────────────────────────
 
+// Validate image dimensions in-browser before sending to server.
+// Returns null if OK, or an error string.
+async function validateImageDims(file, specW, specH) {
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const tol = 0.05;
+      const wOk = Math.abs(img.naturalWidth  - specW) / specW <= tol;
+      const hOk = Math.abs(img.naturalHeight - specH) / specH <= tol;
+      if (!wOk || !hOk) {
+        resolve(`Wrong dimensions: got ${img.naturalWidth} × ${img.naturalHeight} px, need ${specW} × ${specH} px (±5%).`);
+      } else {
+        resolve(null);
+      }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve('Could not read image dimensions.'); };
+    img.src = url;
+  });
+}
+
+function WallBrandingUploader({ ev, setEv, onUpdate, type }) {
+  const isBackground = type === 'background';
+  const spec = isBackground
+    ? { w: 1920, h: 1080, maxMB: 4, accept: 'image/jpeg,image/png,image/webp', label: '1920 × 1080 px · JPEG, PNG or WebP · max 4 MB' }
+    : { w: 600,  h: 800,  maxMB: 2, accept: 'image/png',                       label: '600 × 800 px (3:4) · PNG with transparency · max 2 MB' };
+
+  const currentUrl = isBackground ? ev.wall_background_url : ev.wall_frame_url;
+  const [saving, setSaving]   = useState(false);
+  const [error,  setError]    = useState('');
+  const inputRef = useRef(null);
+
+  async function handleFile(e) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setError('');
+
+    // Client-side checks first — saves a round trip
+    if (file.size > spec.maxMB * 1024 * 1024) {
+      return setError(`File too large. Max ${spec.maxMB} MB.`);
+    }
+    const dimErr = await validateImageDims(file, spec.w, spec.h);
+    if (dimErr) return setError(dimErr);
+
+    setSaving(true);
+    try {
+      const { event: u } = await uploadWallAsset(ev.id, type, file);
+      const m = { ...ev, ...u };
+      setEv(m); onUpdate?.(m);
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
+  }
+
+  async function handleRemove() {
+    setSaving(true);
+    try {
+      const { event: u } = await deleteWallAsset(ev.id, type);
+      const m = { ...ev, ...u };
+      setEv(m); onUpdate?.(m);
+    } catch (err) { setError(err.message); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="wall-branding-uploader">
+      <div className="wall-branding-header">
+        <span className="wall-sub-label">{isBackground ? 'Background image' : 'Photo frame overlay'}</span>
+        {currentUrl ? (
+          <div className="wall-branding-actions">
+            <button className="wall-branding-change" onClick={() => inputRef.current?.click()} disabled={saving}>
+              {saving ? 'Uploading…' : 'Change'}
+            </button>
+            <button className="wall-branding-remove" onClick={handleRemove} disabled={saving}>Remove</button>
+          </div>
+        ) : (
+          <button className="wall-toggle-btn" onClick={() => inputRef.current?.click()} disabled={saving}>
+            {saving ? 'Uploading…' : 'Upload'}
+          </button>
+        )}
+      </div>
+      {currentUrl && (
+        <div className="wall-branding-preview">
+          <img src={currentUrl} alt={type} />
+        </div>
+      )}
+      <p className="wall-branding-spec">{spec.label}</p>
+      {error && <p className="msg-error" style={{ marginTop: 4 }}>{error}</p>}
+      <input ref={inputRef} type="file" accept={spec.accept} className="sr-only" onChange={handleFile} />
+    </div>
+  );
+}
+
 function WallControls({ ev, setEv, onUpdate, isPro, onUpgrade }) {
   const [wallPicker, setWallPicker] = useState(false);
   const [wallSaving, setWallSaving] = useState(false);
@@ -1258,6 +1353,12 @@ function WallControls({ ev, setEv, onUpdate, isPro, onUpgrade }) {
             </div>
           )}
         </>
+      )}
+      {ev.wall_mode !== 'off' && (
+        <div className="wall-branding-section">
+          <WallBrandingUploader ev={ev} setEv={setEv} onUpdate={onUpdate} type="background" />
+          <WallBrandingUploader ev={ev} setEv={setEv} onUpdate={onUpdate} type="frame" />
+        </div>
       )}
       {error && <p className="msg-error">{error}</p>}
     </div>
