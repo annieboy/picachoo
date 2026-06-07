@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
-import { getEvent, API_BASE } from '../api';
+import { getEvent, setAuthToken, deletePhoto, API_BASE } from '../api';
 
 const INITIAL_LIMIT = 40;
 
@@ -55,9 +55,29 @@ export default function WallPage() {
   const [presentIdx, setPresentIdx]   = useState(0);
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [uiVisible, setUiVisible]     = useState(true);
+  const [isHost, setIsHost]           = useState(false);
   const uiTimerRef  = useRef(null);
   const channelRef  = useRef(null);
   const colCount    = useColumnCount();
+
+  // Check if the current Supabase session belongs to this event's host
+  useEffect(() => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      setAuthToken(session.access_token);
+      // Confirm by fetching host record — success means they're authenticated
+      try {
+        const res = await fetch(`${API_BASE}/api/hosts/me`, {
+          headers: { Authorization: `Bearer ${session.access_token}` },
+        });
+        if (!res.ok) return;
+        const { events: hostEvents } = await res.json();
+        if (hostEvents?.some(e => e.join_code === eventCode.toUpperCase())) {
+          setIsHost(true);
+        }
+      } catch { /* not a host, silently ignore */ }
+    });
+  }, [eventCode]);
 
   useEffect(() => {
     Promise.all([getEvent(eventCode), fetchRecentPhotos(eventCode)])
@@ -130,6 +150,14 @@ export default function WallPage() {
     window.addEventListener('keydown', handle);
     return () => window.removeEventListener('keydown', handle);
   }, [presentMode, photos.length, lightboxPhoto]);
+
+  const handleDeletePhoto = useCallback(async (photoId) => {
+    try {
+      await deletePhoto(photoId);
+      setPhotos(prev => prev.filter(p => p.id !== photoId));
+      if (lightboxPhoto?.id === photoId) setLightboxPhoto(null);
+    } catch { /* silently ignore */ }
+  }, [lightboxPhoto]);
 
   const enterPresentation = () => {
     setPresentIdx(photos.length - 1); // start with newest
@@ -392,7 +420,9 @@ export default function WallPage() {
                     photo={photo}
                     frameUrl={wallFrame}
                     isNew={newIds.has(photo.id)}
+                    isHost={isHost}
                     onClick={() => setLightboxPhoto(photo)}
+                    onDelete={() => handleDeletePhoto(photo.id)}
                   />
                 ))}
               </div>
@@ -405,7 +435,9 @@ export default function WallPage() {
       {lightboxPhoto && (
         <Lightbox
           photo={lightboxPhoto}
+          isHost={isHost}
           onClose={() => setLightboxPhoto(null)}
+          onDelete={() => handleDeletePhoto(lightboxPhoto.id)}
         />
       )}
 
@@ -421,7 +453,7 @@ export default function WallPage() {
 
 // ── PhotoTile ─────────────────────────────────────────────────────────────────
 
-function PhotoTile({ photo, isNew, frameUrl, onClick }) {
+function PhotoTile({ photo, isNew, frameUrl, isHost, onClick, onDelete }) {
   const [loaded, setLoaded] = useState(false);
 
   return (
@@ -456,6 +488,21 @@ function PhotoTile({ photo, isNew, frameUrl, onClick }) {
         </div>
       </div>
 
+      {/* Host delete button */}
+      {isHost && (
+        <button
+          onClick={e => { e.stopPropagation(); onDelete(); }}
+          className="absolute top-1.5 right-1.5 z-30 w-6 h-6 rounded-full bg-black/60 backdrop-blur-sm
+                     flex items-center justify-center opacity-0 group-hover:opacity-100
+                     hover:bg-red-600 transition-all duration-150"
+          title="Remove from wall"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-3 h-3">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      )}
+
       {/* Frame overlay — PNG with transparency, sits above photo */}
       {frameUrl && (
         <img
@@ -478,7 +525,7 @@ function PhotoTile({ photo, isNew, frameUrl, onClick }) {
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────
 
-function Lightbox({ photo, onClose }) {
+function Lightbox({ photo, isHost, onClose, onDelete }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center"
@@ -521,6 +568,18 @@ function Lightbox({ photo, onClose }) {
           <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
         </svg>
       </button>
+
+      {isHost && (
+        <button
+          onClick={e => { e.stopPropagation(); onDelete(); }}
+          className="absolute top-4 left-4 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600/80 hover:bg-red-600 backdrop-blur-sm text-white text-xs font-semibold transition-all z-10"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
+          Remove from wall
+        </button>
+      )}
     </div>
   );
 }

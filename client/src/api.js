@@ -162,6 +162,11 @@ export function linkGoogleDriveFromSession({ eventId, accessToken, refreshToken,
   });
 }
 
+// ── Photos ────────────────────────────────────────────────────────────────────
+export function deletePhoto(photoId) {
+  return apiFetch(`/api/photos/${photoId}`, { method: 'DELETE' });
+}
+
 // ── Wall branding ─────────────────────────────────────────────────────────────
 export function uploadWallAsset(eventId, type, file) {
   const form = new FormData();
