@@ -1454,18 +1454,26 @@ function EditEventModal({ event, onClose, onSaved }) {
 // ── CreateEventModal ──────────────────────────────────────────────────────────
 
 function CreateEventModal({ onClose, onCreated }) {
-  const [name, setName] = useState('');
-  const [creating, setCreating] = useState(false);
-  const [error, setError] = useState('');
+  const [name,        setName]        = useState('');
+  const [description, setDescription] = useState('');
+  const [startsAt,    setStartsAt]    = useState('');
+  const [endsAt,      setEndsAt]      = useState('');
+  const [creating,    setCreating]    = useState(false);
+  const [error,       setError]       = useState('');
   const inputRef = useRef(null);
-  useEffect(()=>{ inputRef.current?.focus(); },[]);
+  useEffect(() => { inputRef.current?.focus(); }, []);
 
   async function handleCreate(e) {
     e.preventDefault();
     if (!name.trim()) return;
     setError(''); setCreating(true);
     try {
-      const { event } = await createEvent({ name: name.trim() });
+      const { event } = await createEvent({
+        name:        name.trim(),
+        description: description.trim() || undefined,
+        startsAt:    startsAt || undefined,
+        endsAt:      endsAt   || undefined,
+      });
       onCreated(event);
     } catch (err) { setError(err.message); setCreating(false); }
   }
@@ -1476,9 +1484,30 @@ function CreateEventModal({ onClose, onCreated }) {
         <h2 className="modal-title">Create your event</h2>
         <form onSubmit={handleCreate}>
           <label className="modal-label">
-            Give your event a name
-            <input ref={inputRef} type="text" className="modal-input" placeholder="Event name" value={name} onChange={e=>setName(e.target.value)} required />
+            Event name
+            <input ref={inputRef} type="text" className="modal-input" placeholder="e.g. Annie's Birthday" value={name} onChange={e=>setName(e.target.value)} required />
           </label>
+          <label className="modal-label" style={{ marginTop: 12 }}>
+            Message to guests <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
+            <textarea
+              className="modal-input"
+              rows={2}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="A short message guests see when they join"
+              style={{ resize: 'vertical', minHeight: 60 }}
+            />
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+            <label className="modal-label">
+              Start <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
+              <input type="datetime-local" className="modal-input" value={startsAt} onChange={e => setStartsAt(e.target.value)} />
+            </label>
+            <label className="modal-label">
+              End <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
+              <input type="datetime-local" className="modal-input" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
+            </label>
+          </div>
           {error && <p className="msg-error" style={{marginTop:8}}>{error}</p>}
           <div className="modal-privacy-note">
             <svg viewBox="0 0 20 20" fill="currentColor" style={{width:14,height:14,flexShrink:0,color:'#6045f4'}}><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
