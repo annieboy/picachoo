@@ -1247,7 +1247,14 @@ function WallBrandingUploader({ ev, setEv, onUpdate, type }) {
   return (
     <div className="wall-branding-uploader">
       <div className="wall-branding-header">
-        <span className="wall-sub-label">{isBackground ? 'Background image' : 'Photo frame overlay'}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {currentUrl && (
+            <div className="wall-branding-preview">
+              <img src={currentUrl} alt={type} />
+            </div>
+          )}
+          <span className="wall-sub-label">{isBackground ? 'Background image' : 'Photo frame overlay'}</span>
+        </div>
         {currentUrl ? (
           <div className="wall-branding-actions">
             <button className="wall-branding-change" onClick={() => inputRef.current?.click()} disabled={saving}>
@@ -1261,11 +1268,6 @@ function WallBrandingUploader({ ev, setEv, onUpdate, type }) {
           </button>
         )}
       </div>
-      {currentUrl && (
-        <div className="wall-branding-preview">
-          <img src={currentUrl} alt={type} />
-        </div>
-      )}
       <p className="wall-branding-spec">{spec.label}</p>
       {error && <p className="msg-error" style={{ marginTop: 4 }}>{error}</p>}
       <input ref={inputRef} type="file" accept={spec.accept} className="sr-only" onChange={handleFile} />
