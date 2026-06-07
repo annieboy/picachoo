@@ -1249,7 +1249,7 @@ function WallBrandingUploader({ ev, setEv, onUpdate, type }) {
       <div className="wall-branding-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {currentUrl && (
-            <div className="wall-branding-preview">
+            <div className={`wall-branding-preview wall-branding-preview--${isBackground ? 'bg' : 'frame'}`}>
               <img src={currentUrl} alt={type} />
             </div>
           )}
