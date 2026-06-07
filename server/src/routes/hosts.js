@@ -36,6 +36,7 @@ router.get('/me', requireAuth, async (req, res, next) => {
       `SELECT
          e.id, e.name, e.join_code, e.status, e.wall_mode, e.wall_upload_mode, e.created_at,
          e.is_premium_pass, e.pass_expires_at,
+         e.wall_background_url, e.wall_frame_url,
          ct.provider               AS linked_provider,
          ct.provider_account_email AS linked_account,
          COUNT(p.id)               AS photo_count,
@@ -129,6 +130,7 @@ router.get('/:hostId', requireAuth, async (req, res, next) => {
     const { rows: eventRows } = await pool.query(
       `SELECT
          e.id, e.name, e.join_code, e.status, e.wall_mode, e.wall_upload_mode, e.created_at,
+         e.wall_background_url, e.wall_frame_url,
          ct.provider               AS linked_provider,
          ct.provider_account_email AS linked_account,
          COUNT(p.id)               AS photo_count,
