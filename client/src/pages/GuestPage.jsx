@@ -90,6 +90,7 @@ export default function GuestPage() {
   // Wait for event data before showing NameScreen so the event name
   // doesn't flash from code → name after load
   if (eventLoading && screen === SCREENS.NAME) {
+
     return (
       <div className="fixed inset-0 flex items-center justify-center"
            style={{ background: 'linear-gradient(140deg,#6045f4 0%,#7060f6 45%,#53e6d4 100%)' }}>
@@ -111,7 +112,7 @@ export default function GuestPage() {
     );
   }
 
-  if (uploadsLocked && screen !== SCREENS.NAME) {
+  if (uploadsLocked) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center px-8 gap-6 text-center"
            style={{ background: 'linear-gradient(140deg,#6045f4 0%,#7060f6 45%,#53e6d4 100%)' }}>

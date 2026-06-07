@@ -56,6 +56,7 @@ export default function WallPage() {
   const [lightboxPhoto, setLightboxPhoto] = useState(null);
   const [uiVisible, setUiVisible]     = useState(true);
   const [isHost, setIsHost]           = useState(false);
+  const [hostChecked, setHostChecked] = useState(false);
   const uiTimerRef  = useRef(null);
   const channelRef  = useRef(null);
   const colCount    = useColumnCount();
@@ -63,19 +64,20 @@ export default function WallPage() {
   // Check if the current Supabase session belongs to this event's host
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) return;
+      if (!session) { setHostChecked(true); return; }
       setAuthToken(session.access_token);
-      // Confirm by fetching host record — success means they're authenticated
       try {
         const res = await fetch(`${API_BASE}/api/hosts/me`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-        if (!res.ok) return;
-        const { events: hostEvents } = await res.json();
-        if (hostEvents?.some(e => e.join_code === eventCode.toUpperCase())) {
-          setIsHost(true);
+        if (res.ok) {
+          const { events: hostEvents } = await res.json();
+          if (hostEvents?.some(e => e.join_code === eventCode.toUpperCase())) {
+            setIsHost(true);
+          }
         }
-      } catch { /* not a host, silently ignore */ }
+      } catch { /* not a host */ }
+      finally { setHostChecked(true); }
     });
   }, [eventCode]);
 
@@ -184,6 +186,26 @@ export default function WallPage() {
 
   const wallBg    = event?.wall_background_url;
   const wallFrame = event?.wall_frame_url;
+
+  // ── Host-only wall: block non-hosts ────────────────────────────────────────
+  // Wait for the host check to resolve before deciding — avoids a flash for the host.
+  if (event?.wall_mode === 'host_only' && hostChecked && !isHost) {
+    return (
+      <div className="fixed inset-0 flex flex-col items-center justify-center gap-6 px-8 text-center bg-[#080810]">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/10">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" className="w-7 h-7">
+            <rect x="5" y="11" width="14" height="10" rx="2"/>
+            <path d="M8 11V7a4 4 0 018 0v4"/>
+          </svg>
+        </div>
+        <div className="space-y-2">
+          {event?.name && <p className="text-white/50 text-base font-medium">{event.name}</p>}
+          <p className="text-white text-2xl font-black">Wall is private</p>
+          <p className="text-white/40 text-sm leading-relaxed">This live wall is only visible to the host.</p>
+        </div>
+      </div>
+    );
+  }
 
   // ── Presentation mode ──────────────────────────────────────────────────────
   if (presentMode && photos.length > 0) {

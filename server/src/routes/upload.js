@@ -126,6 +126,7 @@ router.post(
            e.id              AS event_id,
            e.name            AS event_name,
            e.status          AS event_status,
+           e.wall_upload_mode,
            e.drive_folder_id,
            e.is_premium_pass,
            e.pass_expires_at,
@@ -160,6 +161,12 @@ router.post(
 
       if (row.event_status === 'draft') {
         const err = new Error('This event has not started yet.');
+        err.status = 403;
+        return next(err);
+      }
+
+      if (row.wall_upload_mode === 'host_only') {
+        const err = new Error('Photo uploads are currently disabled for this event.');
         err.status = 403;
         return next(err);
       }
@@ -257,6 +264,7 @@ router.post(
            e.id              AS event_id,
            e.name            AS event_name,
            e.status          AS event_status,
+           e.wall_upload_mode,
            e.drive_folder_id,
            e.is_premium_pass,
            e.pass_expires_at,
@@ -279,6 +287,12 @@ router.post(
 
       if (row.event_status === 'closed') {
         const err = new Error('This event has ended and is no longer accepting uploads.');
+        err.status = 403;
+        return next(err);
+      }
+
+      if (row.wall_upload_mode === 'host_only') {
+        const err = new Error('Photo uploads are currently disabled for this event.');
         err.status = 403;
         return next(err);
       }
