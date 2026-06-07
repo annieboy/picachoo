@@ -98,6 +98,16 @@ export default function WallPage() {
         setNewIds(prev => new Set([...prev, photo.id]));
         setTimeout(() => setNewIds(prev => { const s = new Set(prev); s.delete(photo.id); return s; }), 1200);
       })
+      .on('postgres_changes', {
+        event: 'DELETE', schema: 'public', table: 'photos',
+        filter: `event_id=eq.${event.id}`,
+      }, (payload) => {
+        const deletedId = payload.old?.id;
+        if (deletedId) {
+          setPhotos(prev => prev.filter(p => p.id !== deletedId));
+          setLightboxPhoto(prev => prev?.id === deletedId ? null : prev);
+        }
+      })
       .subscribe(state =>
         setStatus(state === 'SUBSCRIBED' ? 'live' : state === 'CHANNEL_ERROR' ? 'error' : 'connecting')
       );
