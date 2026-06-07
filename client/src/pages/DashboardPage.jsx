@@ -358,12 +358,12 @@ function Dashboard({ session, host, setHost, events, setEvents, signOut }) {
               <span className="stat-label">Events</span>
             </div>
             <div className="stat-card">
-              <span className="stat-num">{events.reduce((s,e) => s + parseInt(e.photo_count||0,10), 0)}</span>
-              <span className="stat-label">Photos collected</span>
-            </div>
-            <div className="stat-card">
               <span className="stat-num">{events.filter(e => e.linked_provider).length}</span>
               <span className="stat-label">Cloud connected</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-num">{events.filter(e => e.wall_mode !== 'off').length}</span>
+              <span className="stat-label">Live wall active</span>
             </div>
           </div>
 
