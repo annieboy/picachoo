@@ -118,9 +118,10 @@ export default function WallPage() {
           setLightboxPhoto(prev => prev?.id === deletedId ? null : prev);
         }
       })
-      .subscribe(state =>
-        setStatus(state === 'SUBSCRIBED' ? 'live' : state === 'CHANNEL_ERROR' ? 'error' : 'connecting')
-      );
+      .subscribe((state, err) => {
+        console.log('[wall] channel state:', state, err ?? '');
+        setStatus(state === 'SUBSCRIBED' ? 'live' : state === 'CHANNEL_ERROR' ? 'error' : 'connecting');
+      });
     channelRef.current = channel;
     return () => supabase.removeChannel(channel);
   }, [event?.id]);
