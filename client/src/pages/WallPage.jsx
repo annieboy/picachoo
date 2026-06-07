@@ -3,13 +3,13 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getEvent, setAuthToken, deletePhoto, API_BASE } from '../api';
 
-const INITIAL_LIMIT = 40;
+const PAGE_SIZE  = 60;
+const WALL_CAP   = 200; // max photos kept in memory on the live wall
 
-async function fetchRecentPhotos(eventCode) {
-  const res = await fetch(`${API_BASE}/api/events/${eventCode}/photos?limit=${INITIAL_LIMIT}`);
+async function fetchPhotos(eventCode, offset = 0) {
+  const res = await fetch(`${API_BASE}/api/events/${eventCode}/photos?limit=${PAGE_SIZE}&offset=${offset}`);
   if (!res.ok) throw new Error('Failed to load photos');
-  const { photos } = await res.json();
-  return photos.reverse(); // oldest → newest
+  return res.json(); // { photos, hasMore }
 }
 
 function useColumnCount() {
@@ -59,6 +59,8 @@ export default function WallPage() {
   const [uiVisible, setUiVisible]     = useState(true);
   const [isHost, setIsHost]           = useState(false);
   const [hostChecked, setHostChecked] = useState(false);
+  const [hasMore, setHasMore]         = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const uiTimerRef  = useRef(null);
   const channelRef  = useRef(null);
   const colCount    = useColumnCount();
@@ -84,10 +86,25 @@ export default function WallPage() {
   }, [eventCode]);
 
   useEffect(() => {
-    Promise.all([getEvent(eventCode, wallToken), fetchRecentPhotos(eventCode)])
-      .then(([ev, initialPhotos]) => { setEvent(ev); setPhotos(initialPhotos); })
+    Promise.all([getEvent(eventCode, wallToken), fetchPhotos(eventCode)])
+      .then(([ev, { photos: initial, hasMore: more }]) => {
+        setEvent(ev);
+        setPhotos([...initial].reverse()); // oldest → newest
+        setHasMore(more);
+      })
       .catch(() => setStatus('error'));
   }, [eventCode, wallToken]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const { photos: older, hasMore: more } = await fetchPhotos(eventCode, photos.length);
+      setPhotos(prev => [...older.reverse(), ...prev]); // prepend older photos
+      setHasMore(more);
+    } catch { /* silently ignore */ }
+    finally { setLoadingMore(false); }
+  }, [eventCode, photos.length, loadingMore, hasMore]);
 
   useEffect(() => {
     if (!event?.id) return;
@@ -98,7 +115,12 @@ export default function WallPage() {
         filter: `event_id=eq.${event.id}`,
       }, (payload) => {
         const photo = payload.new;
-        setPhotos(prev => prev.some(p => p.id === photo.id) ? prev : [...prev, photo]);
+        setPhotos(prev => {
+          if (prev.some(p => p.id === photo.id)) return prev;
+          const next = [...prev, photo];
+          // Keep only the newest WALL_CAP photos to avoid unbounded growth
+          return next.length > WALL_CAP ? next.slice(next.length - WALL_CAP) : next;
+        });
         setNewIds(prev => new Set([...prev, photo.id]));
         setTimeout(() => setNewIds(prev => { const s = new Set(prev); s.delete(photo.id); return s; }), 1200);
       })
@@ -445,6 +467,19 @@ export default function WallPage() {
         <EmptyState eventName={event?.name} />
       ) : (
         <div className="pt-[52px] px-1.5 pb-8">
+          {hasMore && (
+            <div className="flex justify-center py-4">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white/60 hover:text-white border border-white/10 hover:border-white/25 transition-all disabled:opacity-40"
+              >
+                {loadingMore
+                  ? <><svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/><path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> Loading…</>
+                  : '↑ Load older photos'}
+              </button>
+            </div>
+          )}
           <div className="flex gap-1.5">
             {columns.map((col, ci) => (
               <div key={ci} className="flex flex-col gap-1.5 flex-1 min-w-0">

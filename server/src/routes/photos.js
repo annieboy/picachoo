@@ -7,19 +7,20 @@ const requireAuth = require('../middleware/requireAuth');
 // Public endpoint (no auth) — the wall is meant to be projected openly.
 router.get('/events/:eventCode/photos', async (req, res, next) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit ?? '20', 10), 50);
+    const limit  = Math.min(parseInt(req.query.limit  ?? '60',  10), 200);
+    const offset = Math.max(parseInt(req.query.offset ?? '0',   10), 0);
 
     const { rows } = await pool.query(
-      `SELECT p.id, p.guest_name, p.thumbnail_url, p.created_at
+      `SELECT p.id, p.guest_name, p.thumbnail_url, p.created_at, p.aspect_ratio
          FROM photos p
          JOIN events e ON e.id = p.event_id
         WHERE e.join_code = $1
         ORDER BY p.created_at DESC
-        LIMIT $2`,
-      [req.params.eventCode.toUpperCase(), limit],
+        LIMIT $2 OFFSET $3`,
+      [req.params.eventCode.toUpperCase(), limit, offset],
     );
 
-    res.json({ photos: rows });
+    res.json({ photos: rows, hasMore: rows.length === limit });
   } catch (err) {
     next(err);
   }
