@@ -66,9 +66,11 @@ async function createEvent(req, res, next) {
     if (!joinCode) throw new Error('Could not generate a unique join code, please try again');
 
     const { rows } = await pool.query(
-      `INSERT INTO events (host_id, name, description, join_code, status, starts_at, ends_at)
-       VALUES ($1, $2, $3, $4, 'active', $5, $6)
-       RETURNING id, name, description, join_code, status, starts_at, ends_at, wall_mode, wall_upload_mode, created_at`,
+      `INSERT INTO events (host_id, name, description, join_code, status, starts_at, ends_at,
+                           wall_view_token)
+       VALUES ($1, $2, $3, $4, 'active', $5, $6,
+               encode(gen_random_bytes(6), 'hex'))
+       RETURNING id, name, description, join_code, status, starts_at, ends_at, wall_mode, wall_upload_mode, wall_view_token, created_at`,
       [hostId, name.trim(), description?.trim() ?? null, joinCode, startsAt ?? null, endsAt ?? null],
     );
 
@@ -90,7 +92,7 @@ router.get('/by-code/:joinCode', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT e.id, e.name, e.description, e.join_code, e.status, e.wall_mode, e.wall_upload_mode,
-              e.wall_background_url, e.wall_frame_url,
+              e.wall_background_url, e.wall_frame_url, e.wall_view_token,
               h.tier AS host_tier,
               CASE WHEN e.is_premium_pass AND e.pass_expires_at > NOW()
                    THEN 'pro' ELSE h.tier END AS effective_tier
@@ -104,7 +106,16 @@ router.get('/by-code/:joinCode', async (req, res, next) => {
       err.status = 404;
       return next(err);
     }
-    res.json({ event: rows[0] });
+    const event = rows[0];
+
+    // Check if the requester supplied a valid wall view token
+    const suppliedToken = req.query.wallToken;
+    const wallAccessGranted = !!(suppliedToken && suppliedToken === event.wall_view_token);
+
+    // Never expose the secret token in the public response
+    const { wall_view_token, ...safeEvent } = event;
+
+    res.json({ event: { ...safeEvent, wall_access_granted: wallAccessGranted } });
   } catch (err) {
     next(err);
   }

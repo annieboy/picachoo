@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getEvent, setAuthToken, deletePhoto, API_BASE } from '../api';
 
@@ -46,7 +46,9 @@ function distributeColumns(photos, n) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function WallPage() {
-  const { eventCode } = useParams();
+  const { eventCode }       = useParams();
+  const [searchParams]      = useSearchParams();
+  const wallToken           = searchParams.get('v') ?? undefined;
   const [event, setEvent]             = useState(null);
   const [photos, setPhotos]           = useState([]);
   const [newIds, setNewIds]           = useState(new Set());
@@ -82,10 +84,10 @@ export default function WallPage() {
   }, [eventCode]);
 
   useEffect(() => {
-    Promise.all([getEvent(eventCode), fetchRecentPhotos(eventCode)])
+    Promise.all([getEvent(eventCode, wallToken), fetchRecentPhotos(eventCode)])
       .then(([ev, initialPhotos]) => { setEvent(ev); setPhotos(initialPhotos); })
       .catch(() => setStatus('error'));
-  }, [eventCode]);
+  }, [eventCode, wallToken]);
 
   useEffect(() => {
     if (!event?.id) return;
@@ -189,7 +191,7 @@ export default function WallPage() {
 
   // ── Host-only wall: block non-hosts ────────────────────────────────────────
   // Wait for the host check to resolve before deciding — avoids a flash for the host.
-  if (event?.wall_mode === 'host_only' && hostChecked && !isHost) {
+  if (event?.wall_mode === 'host_only' && hostChecked && !isHost && !event?.wall_access_granted) {
     return (
       <div className="fixed inset-0 flex flex-col items-center justify-center gap-6 px-8 text-center bg-[#080810]">
         <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white/10">

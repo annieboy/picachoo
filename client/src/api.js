@@ -51,8 +51,9 @@ export function createEvent({ name, description, endsAt }) {
   });
 }
 
-export function getEvent(eventCode) {
-  return apiFetch(`/api/events/by-code/${eventCode}`).then(d => d.event);
+export function getEvent(eventCode, wallToken) {
+  const qs = wallToken ? `?wallToken=${encodeURIComponent(wallToken)}` : '';
+  return apiFetch(`/api/events/by-code/${eventCode}${qs}`).then(d => d.event);
 }
 
 export function updateEvent(eventId, patch) {

@@ -1367,6 +1367,9 @@ function WallControls({ ev, setEv, onUpdate, isPro, onUpgrade }) {
           )}
         </>
       )}
+      {ev.wall_mode === 'host_only' && ev.wall_view_token && (
+        <WallViewLink ev={ev} />
+      )}
       {ev.wall_mode !== 'off' && (
         <div className="wall-branding-section">
           <WallBrandingUploader ev={ev} setEv={setEv} onUpdate={onUpdate} type="background" />
@@ -1374,6 +1377,37 @@ function WallControls({ ev, setEv, onUpdate, isPro, onUpgrade }) {
         </div>
       )}
       {error && <p className="msg-error">{error}</p>}
+    </div>
+  );
+}
+
+function WallViewLink({ ev }) {
+  const [copied, setCopied] = useState(false);
+  const url = `${window.location.origin}/e/${ev.join_code}/wall?v=${ev.wall_view_token}`;
+
+  function handleCopy() {
+    navigator.clipboard.writeText(url).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="wall-section-row wall-section-row-sub" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+      <span className="wall-sub-label">Shareable wall link</span>
+      <p style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 4 }}>
+        Share this link so others can view the wall without full host access.
+      </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+        <input
+          readOnly
+          value={url}
+          style={{ flex: 1, fontSize: 11, fontFamily: 'monospace', padding: '5px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text-muted)', minWidth: 0 }}
+          onFocus={e => e.target.select()}
+        />
+        <button className="wall-toggle-btn" onClick={handleCopy} style={{ flexShrink: 0 }}>
+          {copied ? '✓ Copied' : 'Copy'}
+        </button>
+      </div>
     </div>
   );
 }
