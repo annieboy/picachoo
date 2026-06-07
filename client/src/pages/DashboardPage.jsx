@@ -1056,6 +1056,7 @@ function EventRow({ event, isPro, token, loginHint, onUpdate, onDelete, onShare,
   const [delConfirm, setDelConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [mgmtError, setMgmtError] = useState('');
+  const [showEdit, setShowEdit] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -1125,6 +1126,7 @@ function EventRow({ event, isPro, token, loginHint, onUpdate, onDelete, onShare,
             <button className="row-action-btn" onClick={()=>setMenuOpen(v=>!v)} title="More"><MoreIcon /></button>
             {menuOpen && (
               <div className="row-dropdown">
+                <button onClick={()=>{setMenuOpen(false);setShowEdit(true);}}>Edit event</button>
                 <button onClick={()=>{setMenuOpen(false);handleToggleStatus();}} disabled={toggling||ev.status==='draft'}>
                   {ev.status==='active'?'Close event':'Reopen event'}
                 </button>
@@ -1148,6 +1150,15 @@ function EventRow({ event, isPro, token, loginHint, onUpdate, onDelete, onShare,
           }
           {mgmtError && <p className="msg-error">{mgmtError}</p>}
         </div>
+      )}
+
+      {/* Edit modal */}
+      {showEdit && (
+        <EditEventModal
+          event={ev}
+          onClose={() => setShowEdit(false)}
+          onSaved={updated => { const m = { ...ev, ...updated }; setEv(m); onUpdate?.(m); setShowEdit(false); }}
+        />
       )}
 
       {/* Delete confirm */}
@@ -1361,6 +1372,79 @@ function WallControls({ ev, setEv, onUpdate, isPro, onUpgrade }) {
         </div>
       )}
       {error && <p className="msg-error">{error}</p>}
+    </div>
+  );
+}
+
+// ── EditEventModal ────────────────────────────────────────────────────────────
+
+function EditEventModal({ event, onClose, onSaved }) {
+  const [name,        setName]        = useState(event.name ?? '');
+  const [description, setDescription] = useState(event.description ?? '');
+  const [startsAt,    setStartsAt]    = useState(event.starts_at ? event.starts_at.slice(0, 16) : '');
+  const [endsAt,      setEndsAt]      = useState(event.ends_at   ? event.ends_at.slice(0, 16)   : '');
+  const [saving,      setSaving]      = useState(false);
+  const [error,       setError]       = useState('');
+  const inputRef = useRef(null);
+  useEffect(() => { inputRef.current?.focus(); }, []);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    if (!name.trim()) return;
+    setError(''); setSaving(true);
+    try {
+      const { event: updated } = await updateEvent(event.id, {
+        name:        name.trim(),
+        description: description.trim() || null,
+        startsAt:    startsAt || null,
+        endsAt:      endsAt   || null,
+      });
+      onSaved(updated);
+    } catch (err) {
+      setError(err.message);
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal-card">
+        <h2 className="modal-title">Edit event</h2>
+        <form onSubmit={handleSave}>
+          <label className="modal-label">
+            Event name
+            <input ref={inputRef} type="text" className="modal-input" value={name} onChange={e => setName(e.target.value)} required />
+          </label>
+          <label className="modal-label" style={{ marginTop: 12 }}>
+            Description <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
+            <textarea
+              className="modal-input"
+              rows={3}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Add a short description visible to guests"
+              style={{ resize: 'vertical', minHeight: 72 }}
+            />
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
+            <label className="modal-label">
+              Start date &amp; time <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
+              <input type="datetime-local" className="modal-input" value={startsAt} onChange={e => setStartsAt(e.target.value)} />
+            </label>
+            <label className="modal-label">
+              End date &amp; time <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
+              <input type="datetime-local" className="modal-input" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
+            </label>
+          </div>
+          {error && <p className="msg-error" style={{ marginTop: 8 }}>{error}</p>}
+          <div className="modal-footer">
+            <button type="button" className="btn-ghost" onClick={onClose}>Cancel</button>
+            <button type="submit" className="btn-create-event" disabled={!name.trim() || saving}>
+              {saving ? 'Saving…' : 'Save changes'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }
