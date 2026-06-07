@@ -70,15 +70,16 @@ function xhrPut(url, blob, headers = {}, onProgress) {
 export default function UploadScreen({
   blob, guestName, eventCode, eventName,
   hostTier = 'free',   // 'free' | 'pro' — controls whether to compress
-  onSuccess, onError, onRetake,
+  onSuccess, onError, onRetake, onTakeAnother,
 }) {
   const [phase,    setPhase]    = useState('init');
   const [progress, setProgress] = useState(0);
   const [subLabel, setSubLabel] = useState('');
   const [isDirect, setIsDirect] = useState(false);
 
-  const abortRef   = useRef(false);
-  const xhrRef     = useRef(null);
+  const abortRef    = useRef(false);
+  const detachedRef = useRef(false); // set true when "take another" is clicked — keeps XHR alive
+  const xhrRef      = useRef(null);
   const previewUrl = useRef(URL.createObjectURL(blob));
   useEffect(() => () => URL.revokeObjectURL(previewUrl.current), []);
 
@@ -291,7 +292,7 @@ export default function UploadScreen({
 
     return () => {
       abortRef.current = true;
-      xhrRef.current?.abort();
+      if (!detachedRef.current) xhrRef.current?.abort();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -387,9 +388,19 @@ export default function UploadScreen({
         </div>
       </div>
 
-      <button onClick={onRetake} className="text-white/50 text-sm active:text-white transition-colors">
-        Cancel and retake
-      </button>
+      <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+        {onTakeAnother && (phase === 'uploading' || phase === 'recording') && (
+          <button
+            onClick={() => { detachedRef.current = true; onTakeAnother(); }}
+            className="w-full rounded-2xl py-3.5 text-sm font-semibold text-white active:scale-95 transition-transform"
+            style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)' }}>
+            📷 Take another photo
+          </button>
+        )}
+        <button onClick={onRetake} className="text-white/50 text-sm active:text-white transition-colors">
+          Cancel and retake
+        </button>
+      </div>
     </div>
   );
 }

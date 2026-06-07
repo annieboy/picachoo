@@ -29,6 +29,7 @@ export default function GuestPage() {
   const [pendingBlob,  setPendingBlob]  = useState(null);
   const [pendingFiles, setPendingFiles] = useState(null);
   const [uploadError,  setUploadError]  = useState('');
+  const [bgUpload,     setBgUpload]     = useState(null); // { blob, guestName } when uploading in background
 
   useEffect(() => {
     getEvent(eventCode)
@@ -67,6 +68,13 @@ export default function GuestPage() {
     setPendingFiles(null);
     setScreen(SCREENS.CAMERA);
   }, []);
+
+  const handleTakeAnother = useCallback(() => {
+    // Keep the current upload running in background; go back to camera
+    setBgUpload({ blob: pendingBlob, guestName });
+    setPendingBlob(null);
+    setScreen(SCREENS.CAMERA);
+  }, [pendingBlob, guestName]);
 
   const uploadedBlobRef = useRef(null);
 
@@ -167,6 +175,7 @@ export default function GuestPage() {
           onSuccess={handleSuccess}
           onError={msg => { setUploadError(msg); setScreen(SCREENS.ERROR); }}
           onRetake={handleRetake}
+          onTakeAnother={handleTakeAnother}
         />
       )}
 
@@ -189,6 +198,34 @@ export default function GuestPage() {
           blob={uploadedBlobRef.current}
           onSnapAnother={() => { uploadedBlobRef.current = null; setPendingBlob(null); setPendingFiles(null); setScreen(SCREENS.CAMERA); }}
         />
+      )}
+
+      {/* Background upload — mounted hidden so the XHR keeps running while user takes another photo */}
+      {bgUpload && (
+        <div style={{ position: 'absolute', width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          <UploadScreen
+            blob={bgUpload.blob}
+            guestName={bgUpload.guestName}
+            eventCode={eventCode}
+            eventName={event?.name}
+            hostTier={event?.effective_tier ?? event?.host_tier ?? 'free'}
+            onSuccess={() => setBgUpload(null)}
+            onError={() => setBgUpload(null)}
+            onRetake={() => setBgUpload(null)}
+          />
+        </div>
+      )}
+
+      {/* Floating pill shown on camera/preview when a background upload is in progress */}
+      {bgUpload && (screen === SCREENS.CAMERA || screen === SCREENS.PREVIEW) && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold text-white"
+             style={{ background: 'rgba(96,69,244,0.85)', border: '1px solid rgba(255,255,255,0.25)', backdropFilter: 'blur(8px)', pointerEvents: 'none' }}>
+          <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
+            <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+          </svg>
+          Uploading previous photo…
+        </div>
       )}
 
       {screen === SCREENS.ERROR && (
