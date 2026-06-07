@@ -1,5 +1,23 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+async function getDeviceIdForFacing(facing) {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const videos   = devices.filter(d => d.kind === 'videoinput');
+    if (videos.length <= 1) return null;
+
+    // iOS labels contain "front" / "back"; Android labels vary
+    const label = facing === 'user' ? 'front' : 'back';
+    const match = videos.find(d => d.label.toLowerCase().includes(label));
+    if (match) return match.deviceId;
+
+    // Fallback: assume index 0 = back, 1 = front (common on iOS)
+    return facing === 'user' ? videos[videos.length - 1].deviceId : videos[0].deviceId;
+  } catch {
+    return null;
+  }
+}
+
 export function useCamera() {
   const videoRef         = useRef(null);
   const streamRef        = useRef(null);
@@ -30,40 +48,29 @@ export function useCamera() {
     setZoom(1);
 
     try {
-      // Progressive constraint fallback — iOS Safari is strict about combining
-      // facingMode with resolution constraints, especially on the front camera.
-      const attempts = [
-        { facingMode: { exact: facing }, width: { ideal: 2448 }, height: { ideal: 3264 } },
-        { facingMode: { ideal: facing }, width: { ideal: 2448 }, height: { ideal: 3264 } },
-        { facingMode: { exact: facing } },
-        { facingMode: { ideal: facing } },
-        true, // last resort: let the browser pick any camera
-      ];
+      // Try to get exact device ID first (fixes iOS flip)
+      const deviceId = await getDeviceIdForFacing(facing);
 
-      let stream;
-      let lastErr;
-      for (const constraints of attempts) {
-        try {
-          stream = await navigator.mediaDevices.getUserMedia({
-            video: constraints,
-            audio: false,
-          });
-          break;
-        } catch (err) {
-          lastErr = err;
-          const name = err.name;
-          // Only retry on constraint-related errors; permission errors are final
-          if (name === 'NotAllowedError' || name === 'PermissionDeniedError') throw err;
-        }
-      }
-      if (!stream) throw lastErr;
+      const videoConstraints = deviceId
+        ? { deviceId: { exact: deviceId }, width: { ideal: 3840 }, height: { ideal: 2160 } }
+        : { facingMode: { ideal: facing }, width: { ideal: 3840 }, height: { ideal: 2160 } };
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: videoConstraints,
+        audio: false,   // audio requested only when recording starts
+      });
+
       streamRef.current = stream;
 
       try {
         const track = stream.getVideoTracks()[0];
         const caps   = track?.getCapabilities?.();
         setTorchSupported(!!(caps?.torch));
-        setZoomRange(caps?.zoom ? { min: caps.zoom.min ?? 1, max: caps.zoom.max ?? 1 } : { min: 1, max: 1 });
+        if (caps?.zoom) {
+          setZoomRange({ min: caps.zoom.min ?? 1, max: caps.zoom.max ?? 1 });
+        } else {
+          setZoomRange({ min: 1, max: 1 });
+        }
       } catch { setTorchSupported(false); }
 
       if (videoRef.current) {
@@ -73,6 +80,21 @@ export function useCamera() {
       setCameraState('active');
     } catch (err) {
       stopStream();
+      // NotReadableError = hardware still held by previous stream.
+      // Retry once after 600ms before giving up.
+      if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+        await new Promise(r => setTimeout(r, 600));
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: facing }, width: { ideal: 2448 }, height: { ideal: 3264 } },
+            audio: false,
+          });
+          streamRef.current = stream;
+          if (videoRef.current) { videoRef.current.srcObject = stream; await videoRef.current.play(); }
+          setCameraState('active');
+          return;
+        } catch { /* fall through to unavailable */ }
+      }
       setCameraState(
         err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' ? 'denied' : 'unavailable',
       );
@@ -85,17 +107,8 @@ export function useCamera() {
     const next = facingMode === 'environment' ? 'user' : 'environment';
     setFacingMode(next);
 
-    const tracks = streamRef.current?.getVideoTracks() ?? [];
-    stopStream();
+    const track = streamRef.current?.getVideoTracks()[0];
 
-    if (tracks.length === 0) {
-      startCameraFacing(next);
-      return;
-    }
-
-    // Wait for the track's ended event before acquiring the new camera.
-    // iOS holds hardware open briefly after stop(); starting getUserMedia
-    // before release causes NotReadableError on all attempts.
     let started = false;
     const start = () => {
       if (started) return;
@@ -103,22 +116,34 @@ export function useCamera() {
       startCameraFacing(next);
     };
 
-    tracks[0].addEventListener('ended', start, { once: true });
-    // Safety net: if ended never fires (some browsers skip it), proceed anyway
-    setTimeout(start, 500);
+    // Register BEFORE stopping — iOS 15/16 fires 'ended' synchronously
+    // inside track.stop(), so registering after would miss the event.
+    if (track) track.addEventListener('ended', start, { once: true });
+
+    stopStream();
+
+    // Fallback for browsers that never fire 'ended' — 1s covers iOS 15/16
+    // which can hold hardware open longer than older 200/500ms guesses.
+    setTimeout(start, 1000);
   }, [facingMode, stopStream, startCameraFacing]);
 
   const toggleTorch = useCallback(async () => {
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
     const next = !torchOn;
-    try { await track.applyConstraints({ advanced: [{ torch: next }] }); setTorchOn(next); } catch { /* unsupported */ }
+    try {
+      await track.applyConstraints({ advanced: [{ torch: next }] });
+      setTorchOn(next);
+    } catch { /* not supported */ }
   }, [torchOn]);
 
   const applyZoom = useCallback(async (level) => {
     const track = streamRef.current?.getVideoTracks()[0];
     if (!track) return;
-    try { await track.applyConstraints({ advanced: [{ zoom: level }] }); setZoom(level); } catch { /* unsupported */ }
+    try {
+      await track.applyConstraints({ advanced: [{ zoom: level }] });
+      setZoom(level);
+    } catch { /* not supported */ }
   }, []);
 
   const snapPhoto = useCallback(async () => {
@@ -130,27 +155,33 @@ export function useCamera() {
     setTimeout(() => setFlashVisible(false), 350);
     setCameraState('capturing');
 
-    // Always use canvas so we control the 3:4 crop precisely
-    const blob = await new Promise(resolve => {
-      const vw = video.videoWidth;
-      const vh = video.videoHeight;
-      const targetAR = 3 / 4;
-      const streamAR = vw / vh;
-      let sx = 0, sy = 0, sw = vw, sh = vh;
-      if (streamAR > targetAR) {
-        sw = Math.round(vh * targetAR);
-        sx = Math.round((vw - sw) / 2);
-      } else if (streamAR < targetAR) {
-        sh = Math.round(vw / targetAR);
-        sy = Math.round((vh - sh) / 2);
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width  = sw;
-      canvas.height = sh;
-      canvas.getContext('2d').drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
-      canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95);
-    });
-    setCaptureMethod('canvas');
+    const videoTrack = stream.getVideoTracks()[0];
+    let blob = null;
+
+    if (videoTrack && typeof ImageCapture !== 'undefined') {
+      try {
+        const ic = new ImageCapture(videoTrack);
+        let settings = {};
+        try {
+          const caps = await ic.getPhotoCapabilities();
+          if (caps.imageWidth?.max && caps.imageHeight?.max)
+            settings = { imageWidth: caps.imageWidth.max, imageHeight: caps.imageHeight.max };
+        } catch { /* skip */ }
+        blob = await ic.takePhoto(settings);
+        setCaptureMethod('imagecapture');
+      } catch { blob = null; }
+    }
+
+    if (!blob) {
+      blob = await new Promise(resolve => {
+        const canvas = document.createElement('canvas');
+        canvas.width  = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        canvas.toBlob(b => resolve(b), 'image/jpeg', 0.95);
+      });
+      setCaptureMethod('canvas');
+    }
 
     stopStream();
     setCapturedBlob(blob);
@@ -163,8 +194,8 @@ export function useCamera() {
   }, [startCameraFacing, facingMode]);
 
   return {
-    videoRef, cameraState, capturedBlob, flashVisible,
-    torchOn, torchSupported, zoom, zoomRange,
-    startCamera, snapPhoto, stopStream, flipCamera, toggleTorch, applyZoom,
+    videoRef, cameraState, capturedBlob, flashVisible, captureMethod,
+    facingMode, torchOn, torchSupported, zoom, zoomRange,
+    startCamera, snapPhoto, retake, stopStream, flipCamera, toggleTorch, applyZoom,
   };
 }
