@@ -59,8 +59,6 @@ export default function WallPage() {
   const [uiVisible, setUiVisible]     = useState(true);
   const [isHost, setIsHost]           = useState(false);
   const [hostChecked, setHostChecked] = useState(false);
-  const [hasMore, setHasMore]         = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
   const uiTimerRef  = useRef(null);
   const channelRef  = useRef(null);
   const colCount    = useColumnCount();
@@ -87,24 +85,12 @@ export default function WallPage() {
 
   useEffect(() => {
     Promise.all([getEvent(eventCode, wallToken), fetchPhotos(eventCode)])
-      .then(([ev, { photos: initial, hasMore: more }]) => {
+      .then(([ev, { photos: initial }]) => {
         setEvent(ev);
         setPhotos([...initial].reverse()); // oldest → newest
-        setHasMore(more);
       })
       .catch(() => setStatus('error'));
   }, [eventCode, wallToken]);
-
-  const loadMore = useCallback(async () => {
-    if (loadingMore || !hasMore) return;
-    setLoadingMore(true);
-    try {
-      const { photos: older, hasMore: more } = await fetchPhotos(eventCode, photos.length);
-      setPhotos(prev => [...older.reverse(), ...prev]); // prepend older photos
-      setHasMore(more);
-    } catch { /* silently ignore */ }
-    finally { setLoadingMore(false); }
-  }, [eventCode, photos.length, loadingMore, hasMore]);
 
   useEffect(() => {
     if (!event?.id) return;
@@ -467,19 +453,6 @@ export default function WallPage() {
         <EmptyState eventName={event?.name} />
       ) : (
         <div className="pt-[52px] px-1.5 pb-8">
-          {hasMore && (
-            <div className="flex justify-center py-4">
-              <button
-                onClick={loadMore}
-                disabled={loadingMore}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold text-white/60 hover:text-white border border-white/10 hover:border-white/25 transition-all disabled:opacity-40"
-              >
-                {loadingMore
-                  ? <><svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/><path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/></svg> Loading…</>
-                  : '↑ Load older photos'}
-              </button>
-            </div>
-          )}
           <div className="flex gap-1.5">
             {columns.map((col, ci) => (
               <div key={ci} className="flex flex-col gap-1.5 flex-1 min-w-0">
