@@ -135,6 +135,7 @@ export default function GuestPage() {
       {screen === SCREENS.NAME && (
         <NameScreen
           eventName={event?.name ?? eventCode}
+          hostMessage={event?.description ?? ''}
           onConfirm={handleNameConfirm}
         />
       )}

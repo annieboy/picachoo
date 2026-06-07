@@ -29,7 +29,7 @@ function useInstallPrompt() {
   return { deferredPrompt, isIOS, isStandalone, triggerInstall };
 }
 
-export default function NameScreen({ eventName, onConfirm }) {
+export default function NameScreen({ eventName, hostMessage, onConfirm }) {
   const [name, setName] = useState('');
   const [dismissed, setDismissed] = useState(false);
   const trimmed = name.trim();
@@ -85,9 +85,17 @@ export default function NameScreen({ eventName, onConfirm }) {
               style={{ fontSize: 'clamp(1.6rem, 7vw, 2.2rem)' }}>
             {eventName || 'This Event'}
           </h1>
-          <p className="text-white/60 text-sm leading-relaxed">
-            Share your photos and help capture the memories.
-          </p>
+          {hostMessage ? (
+            <div className="mt-1 mx-auto max-w-xs rounded-2xl px-4 py-3 text-center"
+                 style={{ background: 'rgba(255,255,255,0.13)', border: '1px solid rgba(255,255,255,0.2)' }}>
+              <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest mb-1">Message from host</p>
+              <p className="text-white/90 text-sm leading-relaxed">{hostMessage}</p>
+            </div>
+          ) : (
+            <p className="text-white/60 text-sm leading-relaxed">
+              Share your photos and help capture the memories.
+            </p>
+          )}
         </div>
 
         {/* Name form */}
