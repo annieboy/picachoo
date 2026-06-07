@@ -43,11 +43,11 @@ export function deleteAccount() {
 
 // ── Events ────────────────────────────────────────────────────────────────────
 
-export function createEvent({ name }) {
+export function createEvent({ name, description, endsAt }) {
   return apiFetch('/api/events/create', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ name }),
+    body:    JSON.stringify({ name, description, endsAt }),
   });
 }
 

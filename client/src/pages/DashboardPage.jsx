@@ -1456,7 +1456,6 @@ function EditEventModal({ event, onClose, onSaved }) {
 function CreateEventModal({ onClose, onCreated }) {
   const [name,        setName]        = useState('');
   const [description, setDescription] = useState('');
-  const [startsAt,    setStartsAt]    = useState('');
   const [endsAt,      setEndsAt]      = useState('');
   const [creating,    setCreating]    = useState(false);
   const [error,       setError]       = useState('');
@@ -1471,8 +1470,7 @@ function CreateEventModal({ onClose, onCreated }) {
       const { event } = await createEvent({
         name:        name.trim(),
         description: description.trim() || undefined,
-        startsAt:    startsAt || undefined,
-        endsAt:      endsAt   || undefined,
+        endsAt:      endsAt || undefined,
       });
       onCreated(event);
     } catch (err) { setError(err.message); setCreating(false); }
@@ -1498,16 +1496,10 @@ function CreateEventModal({ onClose, onCreated }) {
               style={{ resize: 'vertical', minHeight: 60 }}
             />
           </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }}>
-            <label className="modal-label">
-              Start <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
-              <input type="datetime-local" className="modal-input" value={startsAt} onChange={e => setStartsAt(e.target.value)} />
-            </label>
-            <label className="modal-label">
-              End <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
-              <input type="datetime-local" className="modal-input" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
-            </label>
-          </div>
+          <label className="modal-label" style={{ marginTop: 12 }}>
+            End date &amp; time <span style={{ fontWeight: 400, color: '#9ca3af' }}>(optional)</span>
+            <input type="datetime-local" className="modal-input" value={endsAt} onChange={e => setEndsAt(e.target.value)} />
+          </label>
           {error && <p className="msg-error" style={{marginTop:8}}>{error}</p>}
           <div className="modal-privacy-note">
             <svg viewBox="0 0 20 20" fill="currentColor" style={{width:14,height:14,flexShrink:0,color:'#6045f4'}}><path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"/></svg>
