@@ -84,12 +84,13 @@ export default function WallPage() {
   }, [eventCode]);
 
   useEffect(() => {
-    Promise.all([getEvent(eventCode, wallToken), fetchPhotos(eventCode)])
-      .then(([ev, { photos: initial }]) => {
-        setEvent(ev);
-        setPhotos([...initial].reverse()); // oldest → newest
-      })
+    getEvent(eventCode, wallToken)
+      .then(ev => setEvent(ev))
       .catch(() => setStatus('error'));
+
+    fetchPhotos(eventCode)
+      .then(({ photos: initial }) => setPhotos([...initial].reverse()))
+      .catch(() => {}); // photo load failure doesn't affect connection status
   }, [eventCode, wallToken]);
 
   useEffect(() => {

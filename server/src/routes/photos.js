@@ -11,7 +11,7 @@ router.get('/events/:eventCode/photos', async (req, res, next) => {
     const offset = Math.max(parseInt(req.query.offset ?? '0',   10), 0);
 
     const { rows } = await pool.query(
-      `SELECT p.id, p.guest_name, p.thumbnail_url, p.created_at, p.aspect_ratio
+      `SELECT p.id, p.guest_name, p.thumbnail_url, p.created_at
          FROM photos p
          JOIN events e ON e.id = p.event_id
         WHERE e.join_code = $1
