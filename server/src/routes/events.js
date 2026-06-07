@@ -90,6 +90,7 @@ router.get('/by-code/:joinCode', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT e.id, e.name, e.description, e.join_code, e.status, e.wall_mode, e.wall_upload_mode,
+              e.wall_background_url, e.wall_frame_url,
               h.tier AS host_tier,
               CASE WHEN e.is_premium_pass AND e.pass_expires_at > NOW()
                    THEN 'pro' ELSE h.tier END AS effective_tier
