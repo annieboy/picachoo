@@ -144,6 +144,9 @@ export default function WallPage() {
   const displayedPhotos = [...photos].reverse(); // newest first
   const columns = distributeColumns(displayedPhotos, colCount);
 
+  const wallBg    = event?.wall_background_url;
+  const wallFrame = event?.wall_frame_url;
+
   // ── Presentation mode ──────────────────────────────────────────────────────
   if (presentMode && photos.length > 0) {
     const current = displayedPhotos[presentIdx % displayedPhotos.length];
@@ -154,17 +157,24 @@ export default function WallPage() {
         onMouseMove={nudgeUi}
         onClick={nudgeUi}
       >
-        {/* Blurred backdrop — fills all dead space regardless of photo orientation */}
-        <div
-          key={`bg-${current?.id}`}
-          className="absolute inset-0 scale-110 animate-present-in"
-          style={{
-            backgroundImage: `url(${current?.thumbnail_url})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            filter: 'blur(32px) brightness(0.35) saturate(1.4)',
-          }}
-        />
+        {/* Custom background or blurred photo backdrop */}
+        {wallBg ? (
+          <div
+            className="absolute inset-0"
+            style={{ backgroundImage: `url(${wallBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+          />
+        ) : (
+          <div
+            key={`bg-${current?.id}`}
+            className="absolute inset-0 scale-110 animate-present-in"
+            style={{
+              backgroundImage: `url(${current?.thumbnail_url})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              filter: 'blur(32px) brightness(0.35) saturate(1.4)',
+            }}
+          />
+        )}
 
         {/* Vignette */}
         <div className="absolute inset-0 bg-gradient-radial from-transparent to-black/60 pointer-events-none" />
@@ -346,6 +356,12 @@ export default function WallPage() {
         </div>
       </header>
 
+      {/* Custom background */}
+      {wallBg && (
+        <div className="fixed inset-0 -z-10"
+             style={{ backgroundImage: `url(${wallBg})`, backgroundSize: 'cover', backgroundPosition: 'center' }} />
+      )}
+
       {/* Masonry grid */}
       {photos.length === 0 ? (
         <EmptyState eventName={event?.name} />
@@ -358,6 +374,7 @@ export default function WallPage() {
                   <PhotoTile
                     key={photo.id}
                     photo={photo}
+                    frameUrl={wallFrame}
                     isNew={newIds.has(photo.id)}
                     onClick={() => setLightboxPhoto(photo)}
                   />
@@ -388,7 +405,7 @@ export default function WallPage() {
 
 // ── PhotoTile ─────────────────────────────────────────────────────────────────
 
-function PhotoTile({ photo, isNew, onClick }) {
+function PhotoTile({ photo, isNew, frameUrl, onClick }) {
   const [loaded, setLoaded] = useState(false);
 
   return (
@@ -423,8 +440,17 @@ function PhotoTile({ photo, isNew, onClick }) {
         </div>
       </div>
 
+      {/* Frame overlay — PNG with transparency, sits above photo */}
+      {frameUrl && (
+        <img
+          src={frameUrl}
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover pointer-events-none z-10"
+        />
+      )}
+
       {isNew && (
-        <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full
+        <div className="absolute top-1.5 left-1.5 px-2 py-0.5 rounded-full z-20
                         bg-violet-500 text-white text-[9px] font-bold uppercase tracking-wide
                         shadow-md shadow-violet-500/50 animate-pulse-dot">
           New

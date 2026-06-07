@@ -161,3 +161,15 @@ export function linkGoogleDriveFromSession({ eventId, accessToken, refreshToken,
     body:    JSON.stringify({ eventId, accessToken, refreshToken, expiryDate }),
   });
 }
+
+// ── Wall branding ─────────────────────────────────────────────────────────────
+export function uploadWallAsset(eventId, type, file) {
+  const form = new FormData();
+  form.append('asset', file);
+  form.append('type', type);
+  return apiFetch(`/api/events/${eventId}/wall-branding`, { method: 'POST', body: form });
+}
+
+export function deleteWallAsset(eventId, type) {
+  return apiFetch(`/api/events/${eventId}/wall-branding/${type}`, { method: 'DELETE' });
+}
