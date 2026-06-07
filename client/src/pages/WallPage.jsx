@@ -216,22 +216,28 @@ export default function WallPage() {
           </div>
         </div>
 
-        {/* Main photo — centred, object-contain, fills as much space as possible */}
+        {/* Main photo — constrained to 3:4 so frame aligns exactly with photo edges */}
         <div className="absolute inset-0 flex items-center justify-center px-16 py-20">
-          <div className="relative max-w-full max-h-full">
+          <div
+            className="relative rounded-2xl overflow-hidden animate-present-in"
+            style={{
+              aspectRatio: '3 / 4',
+              maxHeight: '100%',
+              maxWidth: '100%',
+              boxShadow: '0 32px 80px rgba(0,0,0,0.7)',
+            }}
+          >
             <img
               key={current?.id}
               src={current?.thumbnail_url}
               alt={`Photo by ${current?.guest_name}`}
-              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl animate-present-in"
-              style={{ boxShadow: '0 32px 80px rgba(0,0,0,0.7)', display: 'block' }}
+              className="w-full h-full object-cover"
             />
             {wallFrame && (
               <img
                 src={wallFrame}
                 aria-hidden="true"
                 className="absolute inset-0 w-full h-full object-fill pointer-events-none"
-                style={{ borderRadius: 'inherit' }}
               />
             )}
           </div>

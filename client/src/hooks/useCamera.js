@@ -1,5 +1,36 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 
+// Centre-crop a blob to 3:4 portrait so the saved photo matches the viewfinder.
+async function cropTo3x4(blob) {
+  return new Promise(resolve => {
+    const img = new Image();
+    const url = URL.createObjectURL(blob);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const { naturalWidth: w, naturalHeight: h } = img;
+      const targetAR = 3 / 4; // portrait
+      const srcAR    = w / h;
+      let sx, sy, sw, sh;
+      if (srcAR > targetAR) {
+        // wider than 3:4 — trim sides
+        sw = h * targetAR; sh = h;
+        sx = (w - sw) / 2;  sy = 0;
+      } else {
+        // taller than 3:4 — trim top/bottom
+        sw = w; sh = w / targetAR;
+        sx = 0; sy = (h - sh) / 2;
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(sw);
+      canvas.height = Math.round(sh);
+      canvas.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(b => resolve(b ?? blob), 'image/jpeg', 0.92);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(blob); };
+    img.src = url;
+  });
+}
+
 async function getDeviceIdForFacing(facing) {
   try {
     const devices = await navigator.mediaDevices.enumerateDevices();
@@ -182,6 +213,9 @@ export function useCamera() {
       });
       setCaptureMethod('canvas');
     }
+
+    // Crop to 3:4 portrait to match the viewfinder — camera sensor is often 16:9 or 4:3
+    if (blob) blob = await cropTo3x4(blob);
 
     stopStream();
     setCapturedBlob(blob);
