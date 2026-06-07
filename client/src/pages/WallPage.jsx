@@ -3,8 +3,8 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { getEvent, setAuthToken, deletePhoto, API_BASE } from '../api';
 
-const PAGE_SIZE  = 60;
-const WALL_CAP   = 200; // max photos kept in memory on the live wall
+const PAGE_SIZE  = 24;
+const WALL_CAP   = 24; // photos visible on the live wall at any one time
 
 async function fetchPhotos(eventCode, offset = 0) {
   const res = await fetch(`${API_BASE}/api/events/${eventCode}/photos?limit=${PAGE_SIZE}&offset=${offset}`);
