@@ -1276,31 +1276,23 @@ function WallBrandingUploader({ ev, setEv, onUpdate, type }) {
 }
 
 function WallControls({ ev, setEv, onUpdate, isPro, onUpgrade }) {
-  const [wallPicker, setWallPicker] = useState(false);
-  const [wallSaving, setWallSaving] = useState(false);
-  const [uploadPicker, setUploadPicker] = useState(false);
-  const [uploadSaving, setUploadSaving] = useState(false);
-  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(''); // '' | 'wall' | 'visibility' | 'uploads'
+  const [error,  setError]  = useState('');
 
-  async function handleWallMode(mode) {
-    setWallSaving(true);
+  const wallOn      = ev.wall_mode !== 'off';
+  const hostOnly    = ev.wall_mode === 'host_only';
+  const uploadsOpen = ev.wall_upload_mode !== 'host_only';
+
+  async function patch(payload, key) {
+    setSaving(key); setError('');
     try {
-      const { event: u } = await updateEvent(ev.id, { wallMode: mode });
-      const m = { ...ev, ...u }; setEv(m); onUpdate?.(m); setWallPicker(false);
+      const { event: u } = await updateEvent(ev.id, payload);
+      const m = { ...ev, ...u }; setEv(m); onUpdate?.(m);
     } catch (err) { setError(err.message); }
-    finally { setWallSaving(false); }
+    finally { setSaving(''); }
   }
 
-  async function handleUploadMode(mode) {
-    setUploadSaving(true);
-    try {
-      const { event: u } = await updateEvent(ev.id, { wallUploadMode: mode });
-      const m = { ...ev, ...u }; setEv(m); onUpdate?.(m); setUploadPicker(false);
-    } catch (err) { setError(err.message); }
-    finally { setUploadSaving(false); }
-  }
-
-  // Free tier: show a locked upgrade prompt
+  // Free tier locked state
   if (!isPro) {
     return (
       <div className="wall-section wall-section--locked">
@@ -1310,76 +1302,93 @@ function WallControls({ ev, setEv, onUpdate, isPro, onUpgrade }) {
             <span className="wall-locked-label">Live Wall</span>
             <span className="wall-locked-badge">Pro</span>
           </div>
-          <button className="wall-locked-upgrade" onClick={onUpgrade}>
-            Upgrade to unlock
-          </button>
+          <button className="wall-locked-upgrade" onClick={onUpgrade}>Upgrade to unlock</button>
         </div>
-        <p className="wall-locked-desc">
-          Display a real-time photo stream on any screen. Available on Pro and Business plans.
-        </p>
+        <p className="wall-locked-desc">Display a real-time photo stream on any screen. Available on Pro and Business plans.</p>
       </div>
     );
   }
 
   return (
     <div className="wall-section">
-      <div className="wall-section-row">
-        <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="wall-link">
-          <span>📺</span> Open Live Wall
-        </a>
+
+      {/* ── Row 1: Wall on/off ── */}
+      <div className="wc-row">
+        <div className="wc-label-group">
+          <span className="wc-icon">📺</span>
+          <div>
+            <p className="wc-label">Live Wall</p>
+            {wallOn && (
+              <a href={`/e/${ev.join_code}/wall`} target="_blank" rel="noreferrer" className="wc-open-link">
+                Open wall ↗
+              </a>
+            )}
+          </div>
+        </div>
         <button
-          className={`wall-toggle-btn${ev.wall_mode!=='off'?' wall-toggle-on':''}`}
-          onClick={()=>ev.wall_mode!=='off'?handleWallMode('off'):setWallPicker(true)}
-          disabled={wallSaving}
+          className={`wc-switch${wallOn ? ' wc-switch--on' : ''}`}
+          disabled={saving === 'wall'}
+          onClick={() => patch({ wallMode: wallOn ? 'off' : 'everyone' }, 'wall')}
+          aria-label="Toggle live wall"
         >
-          <span className={`wall-toggle-dot${ev.wall_mode!=='off'?' wall-toggle-dot-on':''}`}/>
-          {ev.wall_mode==='off'?'Wall off':ev.wall_mode==='everyone'?'Visible to all':'Visible: host only'}
+          <span className="wc-switch-thumb" />
         </button>
       </div>
-      {wallPicker && (
-        <div className="wall-picker">
-          <p className="wall-picker-label">Who can view the live wall?</p>
-          <div className="wall-picker-options">
-            <button className="wall-picker-opt" onClick={()=>handleWallMode('everyone')} disabled={wallSaving}><span className="wall-picker-opt-icon">🌐</span><div><strong>Everyone</strong><p>Guests and host can see the live wall</p></div></button>
-            <button className="wall-picker-opt" onClick={()=>handleWallMode('host_only')} disabled={wallSaving}><span className="wall-picker-opt-icon">🔒</span><div><strong>Host only</strong><p>Only you can see the live wall</p></div></button>
-          </div>
-          <button className="wall-picker-cancel" onClick={()=>setWallPicker(false)}>Cancel</button>
-        </div>
-      )}
-      {ev.wall_mode !== 'off' && (
+
+      {wallOn && (
         <>
-          <div className="wall-section-row wall-section-row-sub">
-            <span className="wall-sub-label">Who can contribute photos?</span>
-            <button className={`wall-toggle-btn${ev.wall_upload_mode==='host_only'?' wall-toggle-on':''}`} onClick={()=>setUploadPicker(true)} disabled={uploadSaving}>
-              <span className={`wall-toggle-dot${ev.wall_upload_mode==='host_only'?' wall-toggle-dot-on':''}`}/>
-              {ev.wall_upload_mode==='host_only'?'Host only':'Everyone'}
+          {/* ── Row 2: Who can view ── */}
+          <div className="wc-row wc-row--sub">
+            <p className="wc-sub-label">Who can view</p>
+            <div className="wc-seg">
+              <button
+                className={`wc-seg-btn${!hostOnly ? ' wc-seg-btn--active' : ''}`}
+                disabled={saving === 'visibility'}
+                onClick={() => !hostOnly ? null : patch({ wallMode: 'everyone' }, 'visibility')}
+              >
+                Everyone
+              </button>
+              <button
+                className={`wc-seg-btn${hostOnly ? ' wc-seg-btn--active' : ''}`}
+                disabled={saving === 'visibility'}
+                onClick={() => hostOnly ? null : patch({ wallMode: 'host_only' }, 'visibility')}
+              >
+                Host only
+              </button>
+            </div>
+          </div>
+
+          {/* ── Row 3: Guest uploads ── */}
+          <div className="wc-row wc-row--sub">
+            <div>
+              <p className="wc-sub-label">Guest uploads</p>
+              <p className="wc-hint">{uploadsOpen ? 'Guests can add photos' : 'Only you can add photos'}</p>
+            </div>
+            <button
+              className={`wc-switch${uploadsOpen ? ' wc-switch--on' : ''}`}
+              disabled={saving === 'uploads'}
+              onClick={() => patch({ wallUploadMode: uploadsOpen ? 'host_only' : 'everyone' }, 'uploads')}
+              aria-label="Toggle guest uploads"
+            >
+              <span className="wc-switch-thumb" />
             </button>
           </div>
-          {uploadPicker && (
-            <div className="wall-picker">
-              <p className="wall-picker-label">Who can add photos to the wall?</p>
-              <div className="wall-picker-options">
-                <button className="wall-picker-opt" onClick={()=>handleUploadMode('everyone')} disabled={uploadSaving}><span className="wall-picker-opt-icon">👥</span><div><strong>Everyone</strong><p>All guests can submit photos to the live wall</p></div></button>
-                <button className="wall-picker-opt" onClick={()=>handleUploadMode('host_only')} disabled={uploadSaving}><span className="wall-picker-opt-icon">🎛️</span><div><strong>Host only</strong><p>Only you can add photos — curated wall</p></div></button>
-              </div>
-              <button className="wall-picker-cancel" onClick={()=>setUploadPicker(false)}>Cancel</button>
-            </div>
-          )}
-        </>
-      )}
-      {ev.wall_mode === 'host_only' && ev.wall_view_token && (
-        <WallViewLink ev={ev} />
-      )}
-      {ev.wall_mode !== 'off' && (
-        <>
+
+          {/* ── Row 4: Slideshow speed ── */}
           <SlideshowIntervalControl ev={ev} setEv={setEv} onUpdate={onUpdate} />
+
+          {/* ── Row 5: Shareable link (always visible when wall is on) ── */}
+          {ev.wall_view_token && <WallViewLink ev={ev} />}
+
+          {/* ── Row 6: Branding ── */}
           <div className="wall-branding-section">
             <WallBrandingUploader ev={ev} setEv={setEv} onUpdate={onUpdate} type="background" />
             <WallBrandingUploader ev={ev} setEv={setEv} onUpdate={onUpdate} type="frame" />
           </div>
         </>
       )}
-      {error && <p className="msg-error">{error}</p>}
+
+      {error && <p className="msg-error" style={{ marginTop: 4 }}>{error}</p>}
     </div>
   );
 }
@@ -1402,34 +1411,20 @@ function SlideshowIntervalControl({ ev, setEv, onUpdate }) {
     try {
       const { event: u } = await updateEvent(ev.id, { presentationIntervalSecs: secs });
       const m = { ...ev, ...u }; setEv(m); onUpdate?.(m);
-    } catch { /* silently ignore — UI stays on previous value */ }
+    } catch { /* silently ignore */ }
     finally { setSaving(false); }
   }
 
   return (
-    <div className="wall-section-row wall-section-row-sub" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-        <span className="wall-sub-label">Slideshow speed</span>
-      </div>
-      <div style={{ display: 'flex', gap: 6 }}>
+    <div className="wc-row wc-row--sub wc-row--col">
+      <p className="wc-sub-label">Slideshow speed</p>
+      <div className="wc-seg" style={{ flexWrap: 'wrap' }}>
         {INTERVAL_PRESETS.map(({ secs, label }) => (
           <button
             key={secs}
             onClick={() => handleSelect(secs)}
             disabled={saving}
-            style={{
-              padding: '4px 12px',
-              borderRadius: 999,
-              fontSize: 12,
-              fontWeight: 600,
-              border: '1px solid',
-              cursor: saving ? 'default' : 'pointer',
-              transition: 'all 0.15s',
-              borderColor: current === secs ? 'var(--brand)' : 'var(--border)',
-              background:  current === secs ? 'var(--brand)' : 'transparent',
-              color:       current === secs ? '#fff' : 'var(--text-muted)',
-              opacity: saving ? 0.6 : 1,
-            }}
+            className={`wc-seg-btn${current === secs ? ' wc-seg-btn--active' : ''}`}
           >
             {label}
           </button>

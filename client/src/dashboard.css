@@ -280,16 +280,62 @@ input::placeholder { color: #d1d5db; }
 .banner-success { padding: 12px 16px; border-radius: var(--radius-md); background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; font-size: 13px; font-weight: 600; }
 .banner-error   { padding: 12px 16px; border-radius: var(--radius-md); background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 13px; }
 
-/* ── Live wall ───────────────────────────────────────────────────────────── */
-.wall-link { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--brand); text-decoration: none; transition: opacity 0.15s; }
-.wall-link:hover { opacity: 0.8; }
+/* ── Live wall controls ───────────────────────────────────────────────────── */
+.wall-section { display: flex; flex-direction: column; gap: 0; }
 
-.wall-section { display: flex; flex-direction: column; gap: 8px; }
-.wall-section-row { display: flex; align-items: center; justify-content: space-between; }
+/* each row */
+.wc-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 0; gap: 12px;
+}
+.wc-row--sub {
+  border-top: 1px solid var(--border);
+}
+.wc-row--col {
+  flex-direction: column; align-items: flex-start; gap: 8px;
+}
 
-.wall-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--bg); border-radius: var(--radius-md); border: 1px solid var(--border); }
-.wall-row-icon { font-size: 14px; }
+/* label group (icon + text) */
+.wc-icon { font-size: 15px; flex-shrink: 0; }
+.wc-label-group { display: flex; align-items: center; gap: 8px; }
+.wc-label { font-size: 13px; font-weight: 600; color: var(--text); margin: 0; line-height: 1.2; }
+.wc-open-link { font-size: 11px; color: var(--brand); text-decoration: none; font-weight: 600; display: block; margin-top: 1px; }
+.wc-open-link:hover { text-decoration: underline; }
+.wc-sub-label { font-size: 12px; font-weight: 600; color: var(--text-muted); margin: 0; }
+.wc-hint { font-size: 11px; color: var(--text-faint); margin: 2px 0 0; }
 
+/* iOS-style toggle switch */
+.wc-switch {
+  width: 44px; height: 26px; border-radius: 999px; border: none; padding: 3px;
+  background: #d1d5db; cursor: pointer; transition: background 0.22s;
+  flex-shrink: 0; display: flex; align-items: center;
+}
+.wc-switch--on { background: var(--brand); }
+.wc-switch:disabled { opacity: 0.45; cursor: default; }
+.wc-switch-thumb {
+  width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  transition: transform 0.22s; display: block;
+  transform: translateX(0);
+}
+.wc-switch--on .wc-switch-thumb { transform: translateX(18px); }
+
+/* segmented control */
+.wc-seg {
+  display: inline-flex; border-radius: 8px;
+  border: 1px solid var(--border); overflow: hidden; background: var(--bg);
+  flex-shrink: 0;
+}
+.wc-seg-btn {
+  padding: 5px 12px; font-size: 12px; font-weight: 600;
+  color: var(--text-muted); background: transparent;
+  border: none; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.wc-seg-btn + .wc-seg-btn { border-left: 1px solid var(--border); }
+.wc-seg-btn--active { background: var(--brand); color: #fff; }
+.wc-seg-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* legacy kept for WallBrandingUploader compat */
 .wall-toggle-btn {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 12px; border-radius: 999px;
@@ -300,24 +346,6 @@ input::placeholder { color: #d1d5db; }
 .wall-toggle-btn:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
 .wall-toggle-btn.wall-toggle-on { border-color: var(--brand); background: rgba(96,69,244,0.08); color: var(--brand); }
 .wall-toggle-btn:disabled { opacity: 0.5; cursor: default; }
-.wall-toggle-dot { width: 7px; height: 7px; border-radius: 50%; background: #d1d5db; flex-shrink: 0; transition: background 0.18s; }
-.wall-toggle-dot.wall-toggle-dot-on { background: var(--brand); }
-
-.wall-picker { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px; margin-top: 4px; }
-.wall-picker-label { font-size: 11px; font-weight: 700; color: var(--brand); text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 10px; }
-.wall-picker-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
-.wall-picker-opt {
-  display: flex; align-items: flex-start; gap: 10px;
-  padding: 10px 12px; border-radius: var(--radius-sm);
-  border: 1.5px solid var(--border); background: var(--surface);
-  text-align: left; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s;
-}
-.wall-picker-opt:hover:not(:disabled) { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(96,69,244,0.08); }
-.wall-picker-opt strong { display: block; font-size: 13px; color: var(--text); font-weight: 600; }
-.wall-picker-opt p { margin: 2px 0 0; font-size: 12px; color: var(--text-muted); }
-.wall-picker-opt-icon { font-size: 1rem; flex-shrink: 0; margin-top: 2px; }
-.wall-picker-cancel { font-size: 12px; color: var(--text-faint); background: none; border: none; cursor: pointer; padding: 0; }
-.wall-picker-cancel:hover { color: var(--text-muted); }
 
 .wall-section-row-sub { margin-top: 4px; padding-top: 10px; border-top: 1px solid var(--border); }
 .wall-sub-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
