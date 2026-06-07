@@ -1371,12 +1371,70 @@ function WallControls({ ev, setEv, onUpdate, isPro, onUpgrade }) {
         <WallViewLink ev={ev} />
       )}
       {ev.wall_mode !== 'off' && (
-        <div className="wall-branding-section">
-          <WallBrandingUploader ev={ev} setEv={setEv} onUpdate={onUpdate} type="background" />
-          <WallBrandingUploader ev={ev} setEv={setEv} onUpdate={onUpdate} type="frame" />
-        </div>
+        <>
+          <SlideshowIntervalControl ev={ev} setEv={setEv} onUpdate={onUpdate} />
+          <div className="wall-branding-section">
+            <WallBrandingUploader ev={ev} setEv={setEv} onUpdate={onUpdate} type="background" />
+            <WallBrandingUploader ev={ev} setEv={setEv} onUpdate={onUpdate} type="frame" />
+          </div>
+        </>
       )}
       {error && <p className="msg-error">{error}</p>}
+    </div>
+  );
+}
+
+const INTERVAL_PRESETS = [
+  { secs: 3,  label: '3s' },
+  { secs: 6,  label: '6s' },
+  { secs: 10, label: '10s' },
+  { secs: 15, label: '15s' },
+  { secs: 30, label: '30s' },
+];
+
+function SlideshowIntervalControl({ ev, setEv, onUpdate }) {
+  const [saving, setSaving] = useState(false);
+  const current = ev.presentation_interval_secs ?? 6;
+
+  async function handleSelect(secs) {
+    if (secs === current || saving) return;
+    setSaving(true);
+    try {
+      const { event: u } = await updateEvent(ev.id, { presentationIntervalSecs: secs });
+      const m = { ...ev, ...u }; setEv(m); onUpdate?.(m);
+    } catch { /* silently ignore — UI stays on previous value */ }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="wall-section-row wall-section-row-sub" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+        <span className="wall-sub-label">Slideshow speed</span>
+      </div>
+      <div style={{ display: 'flex', gap: 6 }}>
+        {INTERVAL_PRESETS.map(({ secs, label }) => (
+          <button
+            key={secs}
+            onClick={() => handleSelect(secs)}
+            disabled={saving}
+            style={{
+              padding: '4px 12px',
+              borderRadius: 999,
+              fontSize: 12,
+              fontWeight: 600,
+              border: '1px solid',
+              cursor: saving ? 'default' : 'pointer',
+              transition: 'all 0.15s',
+              borderColor: current === secs ? 'var(--brand)' : 'var(--border)',
+              background:  current === secs ? 'var(--brand)' : 'transparent',
+              color:       current === secs ? '#fff' : 'var(--text-muted)',
+              opacity: saving ? 0.6 : 1,
+            }}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

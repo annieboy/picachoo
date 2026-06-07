@@ -92,7 +92,7 @@ router.get('/by-code/:joinCode', async (req, res, next) => {
   try {
     const { rows } = await pool.query(
       `SELECT e.id, e.name, e.description, e.join_code, e.status, e.wall_mode, e.wall_upload_mode,
-              e.wall_background_url, e.wall_frame_url, e.wall_view_token,
+              e.wall_background_url, e.wall_frame_url, e.wall_view_token, e.presentation_interval_secs,
               h.tier AS host_tier,
               CASE WHEN e.is_premium_pass AND e.pass_expires_at > NOW()
                    THEN 'pro' ELSE h.tier END AS effective_tier
@@ -152,7 +152,7 @@ router.get('/:eventId', requireAuth, async (req, res, next) => {
 // ─── PATCH /api/events/:eventId ───────────────────────────────────────────────
 router.patch('/:eventId', requireAuth, async (req, res, next) => {
   try {
-    const { status, name, description, startsAt, endsAt, wallMode, wallUploadMode } = req.body;
+    const { status, name, description, startsAt, endsAt, wallMode, wallUploadMode, presentationIntervalSecs } = req.body;
 
     if (status && !['draft', 'active', 'closed'].includes(status)) {
       const err = new Error('status must be draft, active, or closed');
@@ -171,16 +171,33 @@ router.patch('/:eventId', requireAuth, async (req, res, next) => {
     }
 
     // Live Wall is a Pro feature — free hosts can only set it to 'off'
-    if (wallMode && wallMode !== 'off') {
+    let isPaidHost = false;
+    if (wallMode && wallMode !== 'off' || presentationIntervalSecs !== undefined) {
       const { rows: tierRows } = await pool.query(
         `SELECT tier FROM hosts WHERE auth_id = $1`,
         [req.user.authId],
       );
       const tier = tierRows[0]?.tier ?? 'free';
-      const isPaid = ['pro', 'pro_annual', 'business_annual'].includes(tier);
-      if (!isPaid) {
+      isPaidHost = ['pro', 'pro_annual', 'business_annual'].includes(tier);
+      if (wallMode && wallMode !== 'off' && !isPaidHost) {
         const err = new Error('Live Wall is available on Pro and Business plans. Upgrade to enable it.');
         err.status = 403;
+        return next(err);
+      }
+    }
+
+    // Validate & clamp interval; free tier is locked to 6s
+    let intervalSecs = null;
+    if (presentationIntervalSecs !== undefined) {
+      if (!isPaidHost) {
+        const err = new Error('Custom slideshow speed is a Pro feature.');
+        err.status = 403;
+        return next(err);
+      }
+      intervalSecs = Math.min(Math.max(Math.round(Number(presentationIntervalSecs)), 3), 30);
+      if (!Number.isFinite(intervalSecs)) {
+        const err = new Error('presentationIntervalSecs must be a number between 3 and 30');
+        err.status = 400;
         return next(err);
       }
     }
@@ -188,18 +205,21 @@ router.patch('/:eventId', requireAuth, async (req, res, next) => {
     // Verify ownership via auth_id
     const { rows } = await pool.query(
       `UPDATE events SET
-         name             = COALESCE($1, name),
-         description      = COALESCE($2, description),
-         status           = COALESCE($3, status),
-         starts_at        = COALESCE($4, starts_at),
-         ends_at          = COALESCE($5, ends_at),
-         wall_mode        = COALESCE($8, wall_mode),
-         wall_upload_mode = COALESCE($9, wall_upload_mode)
+         name                       = COALESCE($1, name),
+         description                = COALESCE($2, description),
+         status                     = COALESCE($3, status),
+         starts_at                  = COALESCE($4, starts_at),
+         ends_at                    = COALESCE($5, ends_at),
+         wall_mode                  = COALESCE($8, wall_mode),
+         wall_upload_mode           = COALESCE($9, wall_upload_mode),
+         presentation_interval_secs = COALESCE($10, presentation_interval_secs)
        WHERE id = $6
          AND host_id = (SELECT id FROM hosts WHERE auth_id = $7)
-       RETURNING id, name, description, join_code, status, starts_at, ends_at, wall_mode, wall_upload_mode`,
+       RETURNING id, name, description, join_code, status, starts_at, ends_at,
+                 wall_mode, wall_upload_mode, presentation_interval_secs`,
       [name ?? null, description ?? null, status ?? null, startsAt ?? null, endsAt ?? null,
-       req.params.eventId, req.user.authId, wallMode ?? null, wallUploadMode ?? null],
+       req.params.eventId, req.user.authId, wallMode ?? null, wallUploadMode ?? null,
+       intervalSecs],
     );
 
     if (!rows.length) {

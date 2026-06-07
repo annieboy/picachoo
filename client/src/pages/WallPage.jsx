@@ -127,12 +127,19 @@ export default function WallPage() {
     return () => supabase.removeChannel(channel);
   }, [event?.id]);
 
+  // Slideshow interval — pro events use the host's chosen speed, free locks to 6s
+  const intervalMs = (() => {
+    const isPro = ['pro', 'pro_annual', 'business_annual'].includes(event?.host_tier ?? event?.effective_tier);
+    const secs  = isPro ? (event?.presentation_interval_secs ?? 6) : 6;
+    return Math.min(Math.max(secs, 3), 30) * 1000;
+  })();
+
   // Auto-advance in presentation mode
   useEffect(() => {
     if (!presentMode || photos.length === 0) return;
-    const t = setInterval(() => setPresentIdx(i => (i + 1) % photos.length), 6000);
+    const t = setInterval(() => setPresentIdx(i => (i + 1) % photos.length), intervalMs);
     return () => clearInterval(t);
-  }, [presentMode, photos.length]);
+  }, [presentMode, photos.length, intervalMs]);
 
   // Auto-hide controls in presentation mode
   const nudgeUi = useCallback(() => {
@@ -368,7 +375,7 @@ export default function WallPage() {
             <div
               key={presentIdx}
               className="h-full bg-white/60 rounded-full"
-              style={{ animation: 'progress-fill 6s linear forwards' }}
+              style={{ animation: `progress-fill ${intervalMs / 1000}s linear forwards` }}
             />
           </div>
 

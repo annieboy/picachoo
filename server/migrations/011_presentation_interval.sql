@@ -1,0 +1,2 @@
+ALTER TABLE events
+  ADD COLUMN IF NOT EXISTS presentation_interval_secs INTEGER NOT NULL DEFAULT 6;
