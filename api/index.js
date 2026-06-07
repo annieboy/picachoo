@@ -11,7 +11,8 @@ const { errorHandler, notFound } = require('../server/src/middleware/errorHandle
 const healthRouter   = require('../server/src/routes/health');
 const authRouter     = require('../server/src/routes/auth');
 const hostsRouter    = require('../server/src/routes/hosts');
-const eventsRouter   = require('../server/src/routes/events');
+const eventsRouter        = require('../server/src/routes/events');
+const wallBrandingRouter  = require('../server/src/routes/wallBranding');
 const uploadRouter   = require('../server/src/routes/upload');
 const photosRouter   = require('../server/src/routes/photos');
 const storageRouter  = require('../server/src/routes/storage');
@@ -71,6 +72,7 @@ app.use(rateLimit({
 app.use('/api',          healthRouter);
 app.use('/api/auth',     authRouter);
 app.use('/api/hosts',    hostsRouter);
+app.use('/api/events',   wallBrandingRouter);
 app.use('/api/events',   eventsRouter);
 app.use('/api/events',   cohostsRouter);
 app.use('/api/storage',  storageRouter);
