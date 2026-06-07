@@ -98,13 +98,12 @@ export default function WallPage() {
       .channel(`photos-wall-${event.id}`)
       .on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'photos',
-        filter: `event_id=eq.${event.id}`,
       }, (payload) => {
         const photo = payload.new;
+        if (photo.event_id !== event.id) return; // client-side filter
         setPhotos(prev => {
           if (prev.some(p => p.id === photo.id)) return prev;
           const next = [...prev, photo];
-          // Keep only the newest WALL_CAP photos to avoid unbounded growth
           return next.length > WALL_CAP ? next.slice(next.length - WALL_CAP) : next;
         });
         setNewIds(prev => new Set([...prev, photo.id]));
@@ -112,7 +111,6 @@ export default function WallPage() {
       })
       .on('postgres_changes', {
         event: 'DELETE', schema: 'public', table: 'photos',
-        filter: `event_id=eq.${event.id}`,
       }, (payload) => {
         const deletedId = payload.old?.id;
         if (deletedId) {
