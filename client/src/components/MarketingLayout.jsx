@@ -13,7 +13,7 @@ export default function MarketingLayout({ children, heroNav = false }) {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen text-gray-900" style={{ background: '#fff', color: '#000' }}>
       <Nav heroNav={heroNav} />
       <main>{children}</main>
       <Footer />
@@ -42,7 +42,7 @@ function Nav({ heroNav }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const white = heroNav && !scrolled;   // transparent-on-gradient mode
+  const white = false;   // hero is now light grey — always use dark nav
   const links = [
     { href: '/#features',     label: 'Features' },
     { href: '/pricing',       label: 'Pricing' },
@@ -51,16 +51,12 @@ function Nav({ heroNav }) {
   ];
 
   return (
-    <header
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-        scrolled ? 'nav-white' : heroNav ? 'nav-transparent' : 'nav-white'
-      }`}
-    >
-      <div className="max-w-6xl mx-auto px-6 h-20 flex items-center justify-between">
+    <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 nav-white`}>
+      <div className="max-w-6xl mx-auto px-6 h-18 flex items-center justify-between" style={{ height: '68px' }}>
         {/* Logo */}
         <Link to="/" className="flex flex-col items-start leading-none">
-          <span className={`font-black text-3xl tracking-tight ${white ? 'text-white' : 'text-gray-900'}`}>
-            pica<span style={{ color: white ? '#c4b5fd' : '#6045f4' }}>choo</span>
+          <span className="font-black text-2xl tracking-tight" style={{ color: '#000' }}>
+            pica<span style={{ color: '#6045f4' }}>choo</span>
           </span>
         </Link>
 
@@ -68,9 +64,10 @@ function Nav({ heroNav }) {
         <nav className="hidden md:flex items-center gap-8">
           {links.map(l => (
             <a key={l.href} href={l.href}
-               className={`text-base font-medium transition-colors ${
-                 white ? 'text-white/90 hover:text-white' : 'text-gray-600 hover:text-gray-900'
-               }`}>
+               className="text-sm font-medium transition-colors"
+               style={{ color: '#555' }}
+               onMouseEnter={e => e.target.style.color = '#000'}
+               onMouseLeave={e => e.target.style.color = '#555'}>
               {l.label}
             </a>
           ))}
@@ -85,10 +82,9 @@ function Nav({ heroNav }) {
           ) : (
             <>
               <Link to="/dashboard"
-                    className={`text-sm font-medium transition-colors ${
-                      white ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-gray-800'
-                    }`}>
-                Sign in / Sign up
+                    className="text-sm font-medium transition-colors"
+                    style={{ color: '#555' }}>
+                Sign in
               </Link>
               <Link to="/dashboard" className="btn-purple px-5 py-2.5 text-sm">
                 Get started free
@@ -98,7 +94,7 @@ function Nav({ heroNav }) {
         </div>
 
         {/* Mobile burger */}
-        <button onClick={() => setOpen(!open)} className={`md:hidden p-2 transition-colors ${white ? 'text-white' : 'text-gray-700'}`}>
+        <button onClick={() => setOpen(!open)} className="md:hidden p-2" style={{ color: '#000' }}>
           {open
             ? <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path strokeLinecap="round" d="M6 18L18 6M6 6l12 12"/></svg>
             : <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5"><path strokeLinecap="round" d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -130,51 +126,79 @@ function Nav({ heroNav }) {
 
 function Footer() {
   return (
-    <footer className="bg-gray-50 border-t border-gray-100 mt-0">
-      <div className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-2 md:grid-cols-4 gap-10">
+    <footer style={{ background: '#000', color: '#fff', marginTop: 0 }}>
+      {/* Top CTA band */}
+      <div style={{ background: 'linear-gradient(135deg,#6045f4,#53e6d4)', padding: '48px 24px', textAlign: 'center' }}>
+        <p style={{ fontSize: 26, fontWeight: 900, color: '#fff', letterSpacing: '-0.02em', margin: '0 0 8px' }}>
+          Ready to collect your event photos?
+        </p>
+        <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: 15, marginBottom: 24 }}>
+          Free to start. No credit card required.
+        </p>
+        <Link to="/dashboard" style={{
+          display: 'inline-block', padding: '14px 32px', borderRadius: 999,
+          background: '#fff', color: '#6045f4', fontWeight: 800, fontSize: 15,
+          textDecoration: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
+          transition: 'transform 0.15s',
+        }}>
+          Create your first event — free
+        </Link>
+      </div>
+
+      {/* Links */}
+      <div className="max-w-6xl mx-auto px-6 py-14 grid grid-cols-2 md:grid-cols-4 gap-10">
         <div className="col-span-2 md:col-span-1">
           <Link to="/" className="flex flex-col items-start mb-4">
-            <span className="font-black text-2xl text-gray-900 tracking-tight">
-              pica<span style={{ color: '#6045f4' }}>choo</span>
+            <span className="font-black text-2xl tracking-tight" style={{ color: '#fff' }}>
+              pica<span style={{ color: '#53e6d4' }}>choo</span>
             </span>
           </Link>
-          <p className="text-gray-500 text-sm leading-relaxed">
-            Your memories, straight to your cloud. No apps, no logins, no quality lost.
+          <p style={{ color: '#888', fontSize: 13, lineHeight: 1.7 }}>
+            Your memories, straight to your cloud. No app needed, no quality lost.
           </p>
+          {/* Brand colour swatches */}
+          <div style={{ display: 'flex', gap: 6, marginTop: 16 }}>
+            {['#6045f4','#53e6d4','#ff0038','#c6c6c6'].map(c => (
+              <div key={c} style={{ width: 12, height: 12, borderRadius: '50%', background: c }} />
+            ))}
+          </div>
         </div>
 
         <div>
-          <p className="text-gray-900 font-semibold text-sm mb-4">Product</p>
-          <ul className="space-y-2.5">
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>Product</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[['/#features','Features'],['/#how-it-works','How it works'],['/pricing','Pricing'],['/dashboard','Dashboard']].map(([href,label]) => (
-              <li key={href}><a href={href} className="text-gray-500 hover:text-gray-800 text-sm transition-colors">{label}</a></li>
+              <li key={href}><a href={href} style={{ color: '#888', fontSize: 13, textDecoration: 'none', transition: 'color 0.15s' }}
+                onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#888'}>{label}</a></li>
             ))}
           </ul>
         </div>
 
         <div>
-          <p className="text-gray-900 font-semibold text-sm mb-4">Company</p>
-          <ul className="space-y-2.5">
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>Company</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[['/about','About'],['/contact','Contact'],['/pricing','Upgrade']].map(([href,label]) => (
-              <li key={href}><Link to={href} className="text-gray-500 hover:text-gray-800 text-sm transition-colors">{label}</Link></li>
+              <li key={href}><Link to={href} style={{ color: '#888', fontSize: 13, textDecoration: 'none', transition: 'color 0.15s' }}
+                onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#888'}>{label}</Link></li>
             ))}
           </ul>
         </div>
 
         <div>
-          <p className="text-gray-900 font-semibold text-sm mb-4">Legal</p>
-          <ul className="space-y-2.5">
+          <p style={{ color: '#fff', fontWeight: 700, fontSize: 13, marginBottom: 16 }}>Legal</p>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[['/privacy','Privacy Policy'],['/terms','Terms of Service']].map(([href,label]) => (
-              <li key={href}><Link to={href} className="text-gray-500 hover:text-gray-800 text-sm transition-colors">{label}</Link></li>
+              <li key={href}><Link to={href} style={{ color: '#888', fontSize: 13, textDecoration: 'none', transition: 'color 0.15s' }}
+                onMouseEnter={e => e.target.style.color='#fff'} onMouseLeave={e => e.target.style.color='#888'}>{label}</Link></li>
             ))}
           </ul>
         </div>
       </div>
 
-      <div className="border-t border-gray-100">
-        <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p className="text-gray-400 text-xs">© {new Date().getFullYear()} Picachoo. All rights reserved.</p>
-          <p className="text-gray-400 text-xs">Made with ♥ for photographers, planners &amp; memory-makers.</p>
+      <div style={{ borderTop: '1px solid #222' }}>
+        <div className="max-w-6xl mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-3">
+          <p style={{ color: '#555', fontSize: 12 }}>© {new Date().getFullYear()} Picachoo. All rights reserved.</p>
+          <p style={{ color: '#555', fontSize: 12 }}>Made with ♥ for photographers, planners &amp; memory-makers.</p>
         </div>
       </div>
     </footer>

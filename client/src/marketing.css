@@ -1,10 +1,12 @@
-/* ── Bezl-style marketing CSS for Picachoo ── */
+/* ── Picachoo marketing — official brand palette ── */
 
 body.mkt {
   height: auto !important;
   min-height: 100%;
   overscroll-behavior: auto !important;
-  background-color: #fff !important;
+  background-color: #ffffff !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body.mkt #root {
@@ -12,18 +14,23 @@ body.mkt #root {
   min-height: 100%;
 }
 
-/* ── Brand gradient (Bezl: purple → teal) ── */
+/* ── Brand tokens ── */
 :root {
-  --grad-from: #6045f4;
-  --grad-mid:  #7060f6;
-  --grad-to:   #53e6d4;
-  --grad:      linear-gradient(135deg, #6045f4 0%, #7060f6 50%, #53e6d4 100%);
-  --grad-hero: linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%);
+  --brand:       #6045f4;   /* Royal Purple */
+  --brand-dark:  #4e36d8;
+  --mint:        #53e6d4;   /* Neon Mint */
+  --crimson:     #ff0038;   /* Electric Crimson */
+  --pitch:       #000000;   /* Pitch Black */
+  --silver:      #c6c6c6;   /* Cool Silver */
+  --grey:        #ebebed;   /* Soft Grey */
+
+  --grad:        linear-gradient(135deg, #6045f4 0%, #7060f6 50%, #53e6d4 100%);
+  --grad-hero:   linear-gradient(140deg, #6045f4 0%, #7060f6 45%, #53e6d4 100%);
 }
 
-/* ── Hero gradient background ── */
+/* ── Hero — Soft Grey background ── */
 .bezl-hero {
-  background: var(--grad-hero);
+  background: var(--grey);
 }
 
 /* ── Gradient text ── */
@@ -37,42 +44,70 @@ body.mkt #root {
 /* ── Pill buttons ── */
 .btn-white {
   background: #fff;
-  color: #6045f4;
+  color: var(--brand);
   border-radius: 999px;
   font-weight: 700;
+  border: 1.5px solid var(--silver);
   transition: all 0.2s;
 }
 .btn-white:hover {
-  background: #f0eeff;
+  border-color: var(--brand);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  box-shadow: 0 6px 20px rgba(96,69,244,0.15);
 }
 
 .btn-outline-white {
   background: transparent;
-  color: #fff;
-  border: 2px solid rgba(255,255,255,0.7);
+  color: var(--pitch);
+  border: 2px solid var(--silver);
   border-radius: 999px;
   font-weight: 700;
   transition: all 0.2s;
 }
 .btn-outline-white:hover {
-  background: rgba(255,255,255,0.15);
-  border-color: #fff;
+  border-color: var(--brand);
+  color: var(--brand);
   transform: translateY(-1px);
 }
 
 .btn-purple {
-  background: #6045f4;
+  background: var(--brand);
   color: #fff;
   border-radius: 999px;
   font-weight: 700;
   transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(96,69,244,0.3);
 }
 .btn-purple:hover {
-  background: #5035e8;
+  background: var(--brand-dark);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(107,92,231,0.4);
+  box-shadow: 0 6px 22px rgba(96,69,244,0.42);
+}
+
+.btn-mint {
+  background: var(--mint);
+  color: var(--pitch);
+  border-radius: 999px;
+  font-weight: 700;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(83,230,212,0.3);
+}
+.btn-mint:hover {
+  filter: brightness(0.95);
+  transform: translateY(-1px);
+}
+
+.btn-crimson {
+  background: var(--crimson);
+  color: #fff;
+  border-radius: 999px;
+  font-weight: 700;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(255,0,56,0.25);
+}
+.btn-crimson:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
 }
 
 /* ── Nav ── */
@@ -81,10 +116,10 @@ body.mkt #root {
 }
 
 .nav-white {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 var(--silver);
 }
 
 /* ── Gradient section divider ── */
@@ -98,53 +133,98 @@ body.mkt #root {
   clip-path: ellipse(60% 100% at 50% 100%);
 }
 
-/* ── Cards ── */
+/* ── Feature cards ── */
 .feature-card {
   background: #fff;
   border-radius: 20px;
-  border: 1px solid #f0eeff;
-  box-shadow: 0 2px 16px rgba(107,92,231,0.07);
+  border: 1px solid var(--grey);
+  box-shadow: 0 2px 12px rgba(0,0,0,0.04);
   transition: all 0.25s;
 }
 .feature-card:hover {
-  border-color: #c4b5fd;
-  box-shadow: 0 8px 32px rgba(107,92,231,0.14);
+  border-color: var(--silver);
+  box-shadow: 0 8px 32px rgba(96,69,244,0.1);
   transform: translateY(-3px);
 }
 
 /* ── Icon badge ── */
 .icon-badge {
-  background: linear-gradient(135deg, rgba(107,92,231,0.12), rgba(42,191,191,0.1));
-  border: 1px solid rgba(107,92,231,0.2);
+  background: linear-gradient(135deg, rgba(96,69,244,0.1), rgba(83,230,212,0.08));
+  border: 1px solid rgba(96,69,244,0.18);
   border-radius: 14px;
 }
 
 /* ── Gradient badge / pill label ── */
 .badge-grad {
-  background: linear-gradient(135deg, rgba(107,92,231,0.12), rgba(42,191,191,0.1));
-  border: 1px solid rgba(107,92,231,0.25);
-  color: #6045f4;
+  background: linear-gradient(135deg, rgba(96,69,244,0.08), rgba(83,230,212,0.08));
+  border: 1px solid rgba(96,69,244,0.2);
+  color: var(--brand);
   border-radius: 999px;
+}
+
+/* ── Section eyebrow label ── */
+.section-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background: rgba(96,69,244,0.07);
+  border: 1px solid rgba(96,69,244,0.18);
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.section-eyebrow--mint {
+  background: rgba(83,230,212,0.1);
+  border-color: rgba(83,230,212,0.3);
+  color: #0fa898;
+}
+
+.section-eyebrow--crimson {
+  background: rgba(255,0,56,0.07);
+  border-color: rgba(255,0,56,0.2);
+  color: var(--crimson);
 }
 
 /* ── Testimonial card ── */
 .testi-card {
-  background: #fafafa;
-  border: 1px solid #f0eeff;
+  background: var(--grey);
+  border: 1px solid var(--silver);
   border-radius: 20px;
 }
 
 /* ── Pricing ── */
 .pricing-free {
   background: #fff;
-  border: 1.5px solid #e5e7eb;
+  border: 1.5px solid var(--silver);
   border-radius: 24px;
 }
 .pricing-pro {
   background: var(--grad-hero);
   border-radius: 24px;
   color: #fff;
-  box-shadow: 0 16px 48px rgba(107,92,231,0.35);
+  box-shadow: 0 16px 56px rgba(96,69,244,0.35);
+}
+
+/* ── Accent strip — mint ── */
+.accent-mint-strip {
+  background: var(--mint);
+  color: var(--pitch);
+}
+
+/* ── Accent strip — crimson ── */
+.accent-crimson-strip {
+  background: var(--crimson);
+  color: #fff;
+}
+
+/* ── Grey section ── */
+.section-grey {
+  background: var(--grey);
 }
 
 /* ── Hero scene keyframes ── */
@@ -239,7 +319,8 @@ body.mkt #root {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle at 20% 80%, rgba(255,255,255,0.06) 0%, transparent 60%),
-                    radial-gradient(circle at 80% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+  background-image:
+    radial-gradient(circle at 10% 90%, rgba(96,69,244,0.06) 0%, transparent 50%),
+    radial-gradient(circle at 90% 10%, rgba(83,230,212,0.08) 0%, transparent 50%);
   pointer-events: none;
 }

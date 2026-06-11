@@ -38,56 +38,101 @@ function Hero() {
 
   return (
     <section className="bezl-hero relative flex flex-col items-center px-6 overflow-hidden"
-             style={{ paddingTop: '96px', paddingBottom: '80px' }}>
+             style={{ paddingTop: '100px', paddingBottom: '80px' }}>
 
-      {/* ── Two-tone join capsule ── */}
-      <div className="anim-fade-up mb-8 w-full max-w-sm md:max-w-none md:w-auto"
-           style={{ filter: 'drop-shadow(0 4px 24px rgba(0,0,0,0.25))' }}>
+      {/* Eyebrow badge */}
+      <div className="anim-fade-up mb-6">
+        <span className="section-eyebrow">
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#53e6d4', display: 'inline-block' }} />
+          No app. No sign-up. Just scan &amp; share.
+        </span>
+      </div>
+
+      {/* Headline — dark on grey */}
+      <h1 className="anim-fade-up text-center text-3xl sm:text-4xl md:text-6xl font-black tracking-tight leading-[1.1] max-w-3xl px-2"
+          style={{ color: '#000000' }}>
+        Collect event photos from everyone —{' '}
+        <span className="grad-text">straight into your cloud.</span>
+      </h1>
+
+      {/* Sub-headline */}
+      <p className="anim-fade-up anim-delay-1 text-center text-base sm:text-lg max-w-xl px-4 mt-4"
+         style={{ color: '#555', lineHeight: 1.7 }}>
+        Perfect for weddings, parties, corporate events and family gatherings.
+        Guests snap photos — they land directly in your Google Drive, Dropbox or OneDrive.
+      </p>
+
+      {/* Steps strip */}
+      <div className="anim-fade-up anim-delay-1 mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 px-4">
+        {[
+          { n: '1', text: 'Scan QR code',             bg: '#6045f4', color: '#fff' },
+          { n: '2', text: 'Snap & upload',             bg: '#53e6d4', color: '#000' },
+          { n: '3', text: 'Photos land in your cloud', bg: '#ff0038', color: '#fff' },
+        ].map(({ n, text, bg, color }, i, arr) => (
+          <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+            <span style={{
+              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: bg, color, fontSize: 10, fontWeight: 800,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            }}>{n}</span>
+            <span style={{ color: '#444', fontSize: 13, fontWeight: 600 }}>{text}</span>
+            {i < arr.length - 1 && (
+              <span className="hidden sm:inline" style={{ color: '#c6c6c6', marginLeft: 4, fontSize: 18 }}>›</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* CTAs */}
+      <div className="anim-fade-up anim-delay-2 mt-8 flex flex-col sm:flex-row gap-3 items-center">
+        <Link to="/dashboard"
+              className="btn-purple px-8 py-4 text-base transition-all hover:scale-105 active:scale-95">
+          Create your first event — free
+        </Link>
+        <a href="#how-it-works"
+           className="text-sm font-semibold transition-colors"
+           style={{ color: '#6045f4' }}>
+          See how it works ↓
+        </a>
+      </div>
+
+      {/* Join capsule */}
+      <div className="anim-fade-up anim-delay-3 mt-6 w-full max-w-sm md:max-w-xs">
         <form onSubmit={handleJoin}
               style={{
-                display: 'flex', flexDirection: 'row', alignItems: 'stretch',
+                display: 'flex', alignItems: 'stretch',
                 borderRadius: '9999px', overflow: 'hidden',
-                border: '2.5px solid rgba(255,255,255,0.45)',
-                height: '52px', width: '100%',
+                border: '2px solid #c6c6c6',
+                background: '#fff',
+                height: '48px',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
               }}>
-          {/* Left label — hidden on very small screens */}
-          <div className="hidden sm:flex" style={{
-            alignItems: 'center',
-            padding: '0 20px',
-            background: 'rgba(20,10,60,0.65)',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-          }}>
-            <span style={{ color: '#fff', fontWeight: 700, fontSize: '14px' }}>Joining an event?</span>
-          </div>
-          {/* Input side */}
           <div style={{
             display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '6px 6px 6px 14px',
-            background: 'rgba(255,255,255,0.18)',
-            flex: 1,
+            padding: '6px 6px 6px 16px', flex: 1,
           }}>
-            <span style={{ color: 'rgba(255,255,255,0.55)', fontWeight: 700, fontSize: '15px', flexShrink: 0 }}>#</span>
+            <span style={{ color: '#6045f4', fontWeight: 800, fontSize: '14px', flexShrink: 0 }}>#</span>
             <input
               type="text"
               value={code}
               onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="Enter event code"
+              placeholder="Have a code? Enter it"
               maxLength={12}
               autoCapitalize="characters"
               autoCorrect="off"
               style={{
                 background: 'transparent', border: 'none', outline: 'none',
-                color: '#fff', fontSize: '15px', fontWeight: 500,
-                minWidth: 0, flex: 1, caretColor: '#fff',
+                color: '#000', fontSize: '13px', fontWeight: 500,
+                minWidth: 0, flex: 1,
               }}
             />
             <button
               type="submit"
               aria-label="Join event"
               style={{
-                width: '38px', height: '38px', borderRadius: '50%',
-                background: '#fff', border: 'none', cursor: 'pointer',
+                width: '36px', height: '36px', borderRadius: '50%',
+                background: '#6045f4', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 flexShrink: 0, transition: 'transform 0.15s',
               }}
@@ -95,12 +140,12 @@ function Hero() {
               onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
             >
               {checking ? (
-                <svg style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="#6045f4" strokeWidth="3" strokeOpacity="0.3"/>
-                  <path d="M12 3a9 9 0 019 9" stroke="#6045f4" strokeWidth="3" strokeLinecap="round"/>
+                <svg style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#fff" strokeWidth="3" strokeOpacity="0.4"/>
+                  <path d="M12 3a9 9 0 019 9" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
                 </svg>
               ) : (
-                <svg viewBox="0 0 20 20" fill="#6045f4" style={{ width: 16, height: 16 }}>
+                <svg viewBox="0 0 20 20" fill="#fff" style={{ width: 14, height: 14 }}>
                   <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
                 </svg>
               )}
@@ -109,53 +154,8 @@ function Hero() {
         </form>
       </div>
 
-      {/* Headline */}
-      <h1 className="anim-fade-up text-center text-3xl sm:text-4xl md:text-6xl font-black tracking-tight text-white leading-[1.1] max-w-3xl px-2">
-        Collect event photos from everyone — straight into your cloud.
-      </h1>
-
-      {/* Sub-headline */}
-      <p className="anim-fade-up anim-delay-1 text-center text-white/70 text-base sm:text-lg max-w-xl px-4 mt-3" style={{ lineHeight: 1.6 }}>
-        Perfect for families, groups, organisations and all events.
-      </p>
-
-      {/* Numbered steps */}
-      <div className="anim-fade-up anim-delay-1 mt-5 flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4">
-        {[
-          { n: '1', text: 'Scan a QR code',        grad: 'linear-gradient(135deg,#f472b6,#a78bfa)' },
-          { n: '2', text: 'Snap & contribute',     grad: 'linear-gradient(135deg,#fb923c,#f472b6)' },
-          { n: '3', text: 'Photos land in your cloud', grad: 'linear-gradient(135deg,#34d399,#06b6d4)' },
-        ].map(({ n, text, grad }, i, arr) => (
-          <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-            <span style={{
-              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: grad, boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-              color: '#fff', fontSize: 10, fontWeight: 800,
-            }}>{n}</span>
-            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 500 }}>{text}</span>
-            {i < arr.length - 1 && (
-              <span className="hidden sm:inline" style={{ color: 'rgba(255,255,255,0.3)', marginLeft: 4, fontSize: 18, lineHeight: 1 }}>·</span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* CTAs */}
-      <div className="anim-fade-up anim-delay-2 mt-7 flex flex-col sm:flex-row gap-3 items-center">
-        <Link to="/dashboard"
-              className="px-8 py-4 text-base rounded-full font-bold text-white transition-all hover:scale-105 active:scale-95 shadow-lg"
-              style={{ background: 'linear-gradient(135deg,#22c55e,#16a34a)', boxShadow: '0 4px 20px rgba(34,197,94,0.4)' }}>
-          Create your first event — free
-        </Link>
-        <a href="#how-it-works"
-           className="text-white/60 text-sm font-semibold hover:text-white transition-colors">
-          See how it works ↓
-        </a>
-      </div>
-
       {/* Hero animated scene */}
-      <div className="anim-fade-up anim-delay-3 relative z-10 mt-10 w-full max-w-lg px-2 sm:px-0">
+      <div className="anim-fade-up anim-delay-4 relative z-10 mt-10 w-full max-w-lg px-2 sm:px-0">
         <HeroScene />
       </div>
 
