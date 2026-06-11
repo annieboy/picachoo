@@ -111,7 +111,7 @@ function Hero() {
 
       {/* Headline */}
       <h1 className="anim-fade-up text-center text-3xl sm:text-4xl md:text-6xl font-black tracking-tight text-white leading-[1.1] max-w-3xl px-2">
-        Collect photos from everyone — straight into your cloud.
+        Collect event photos from everyone — straight into your cloud.
       </h1>
 
       {/* Sub-headline */}
