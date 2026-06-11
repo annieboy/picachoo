@@ -153,7 +153,7 @@ input::placeholder { color: #d1d5db; }
   font-size: 0.8rem; font-weight: 600; cursor: pointer;
   transition: background 0.15s, border-color 0.15s;
 }
-.btn-secondary:hover { background: #f5f4ff; border-color: rgba(96,69,244,0.3); }
+.btn-secondary:hover { background: #ede8ff; border-color: rgba(96,69,244,0.3); }
 
 .btn-drive   { display: inline-flex; align-items: center; gap: 0.5rem; padding: 8px 16px; border-radius: 999px; background: #1a73e8; color: #fff; font-size: 0.82rem; font-weight: 700; text-decoration: none; width: fit-content; box-shadow: 0 2px 8px rgba(26,115,232,0.25); transition: background 0.15s; }
 .btn-drive:hover { background: #1558b0; }
@@ -200,11 +200,11 @@ input::placeholder { color: #d1d5db; }
 .storage-folder-link:hover { background: rgba(96,69,244,0.12); }
 
 .storage-quota         { display: flex; flex-direction: column; gap: 5px; }
-.storage-quota-bar-track { height: 5px; border-radius: 99px; background: #e5e7eb; overflow: hidden; }
+.storage-quota-bar-track { height: 5px; border-radius: 99px; background: #c6c6c6; overflow: hidden; }
 .storage-quota-bar-fill  { height: 100%; border-radius: 99px; transition: width 0.6s ease, background 0.3s ease; }
 .storage-quota-labels  { display: flex; justify-content: space-between; font-size: 11px; }
 .storage-quota-pct     { color: var(--text-faint); font-size: 11px; }
-.storage-quota-alert   { font-size: 12px; color: #dc2626; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); padding: 6px 10px; margin: 0; line-height: 1.5; }
+.storage-quota-alert   { font-size: 12px; color: #ff0038; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); padding: 6px 10px; margin: 0; line-height: 1.5; }
 .storage-quota-warn    { font-size: 12px; color: #d97706; margin: 0; }
 .storage-quota-loading { height: 5px; border-radius: 99px; overflow: hidden; }
 .storage-quota-shimmer { height: 100%; background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 99px; }
@@ -214,10 +214,10 @@ input::placeholder { color: #d1d5db; }
 .storage-disconnect-btn { background: none; border: none; padding: 0; color: var(--text-faint); font-size: 12px; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; transition: color 0.15s; }
 .storage-disconnect-btn:hover { color: var(--text-muted); }
 
-.storage-confirm { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; border-top: 1px solid #e5e7eb; }
+.storage-confirm { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; border-top: 1px solid #c6c6c6; }
 .storage-confirm-text { color: var(--text-muted); font-size: 12px; line-height: 1.55; margin: 0; }
 .storage-confirm-btns { display: flex; gap: 8px; }
-.storage-confirm-disconnect { padding: 6px 14px; border-radius: 999px; border: 1px solid #fecaca; background: #fef2f2; color: #dc2626; font-size: 12px; font-weight: 600; cursor: pointer; }
+.storage-confirm-disconnect { padding: 6px 14px; border-radius: 999px; border: 1px solid #fecaca; background: #fef2f2; color: #ff0038; font-size: 12px; font-weight: 600; cursor: pointer; }
 .storage-confirm-disconnect:hover:not(:disabled) { background: #fee2e2; }
 .storage-confirm-disconnect:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -256,7 +256,7 @@ input::placeholder { color: #d1d5db; }
 .status-pill   { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
 .status-active { background: #dcfce7; color: #16a34a; }
 .status-draft  { background: #f3f4f6; color: var(--text-faint); }
-.status-closed { background: #fee2e2; color: #dc2626; }
+.status-closed { background: #fee2e2; color: #ff0038; }
 
 /* ── Event stats chips ───────────────────────────────────────────────────── */
 .event-stats-row { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -278,7 +278,7 @@ input::placeholder { color: #d1d5db; }
 
 /* ── Banners ─────────────────────────────────────────────────────────────── */
 .banner-success { padding: 12px 16px; border-radius: var(--radius-md); background: #dcfce7; border: 1px solid #bbf7d0; color: #166534; font-size: 13px; font-weight: 600; }
-.banner-error   { padding: 12px 16px; border-radius: var(--radius-md); background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; font-size: 13px; }
+.banner-error   { padding: 12px 16px; border-radius: var(--radius-md); background: #fef2f2; border: 1px solid #fecaca; color: #ff0038; font-size: 13px; }
 
 /* ── Live wall controls ───────────────────────────────────────────────────── */
 .wall-section { display: flex; flex-direction: column; gap: 0; }
@@ -381,7 +381,7 @@ input::placeholder { color: #d1d5db; }
 .wall-branding-change:hover:not(:disabled) { background: rgba(96,69,244,0.14); }
 .wall-branding-change:disabled { opacity: 0.5; cursor: default; }
 .wall-branding-remove {
-  font-size: 12px; font-weight: 600; color: #dc2626;
+  font-size: 12px; font-weight: 600; color: #ff0038;
   background: #fef2f2; border: 1px solid #fecaca;
   border-radius: 999px; padding: 5px 12px; cursor: pointer; transition: background 0.15s;
 }
@@ -407,7 +407,7 @@ input::placeholder { color: #d1d5db; }
 }
 
 .badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px; background: rgba(96,69,244,0.1); color: var(--brand); font-size: 10px; font-weight: 700; }
-.msg-error { color: #dc2626; font-size: 12px; margin: 0; }
+.msg-error { color: #ff0038; font-size: 12px; margin: 0; }
 
 /* ── Google sign-in ──────────────────────────────────────────────────────── */
 .btn-google {
@@ -437,18 +437,18 @@ input::placeholder { color: #d1d5db; }
 /* ── Event management ────────────────────────────────────────────────────── */
 .event-mgmt { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); flex-wrap: wrap; }
 .event-close-btn, .event-reopen-btn { flex: 1; padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; border: 1.5px solid; transition: opacity 0.15s; }
-.event-close-btn  { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
+.event-close-btn  { background: #fef2f2; border-color: #fecaca; color: #ff0038; }
 .event-close-btn:hover:not(:disabled)  { background: #fee2e2; }
 .event-reopen-btn { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
 .event-reopen-btn:hover:not(:disabled) { background: #bbf7d0; }
 .event-close-btn:disabled, .event-reopen-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .event-delete-btn { padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; border: 1.5px solid var(--border); color: var(--text-faint); transition: background 0.15s, color 0.15s, border-color 0.15s; }
-.event-delete-btn:hover { background: #fef2f2; border-color: #fecaca; color: #dc2626; }
-.event-delete-confirm { width: 100%; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-md); padding: 14px; font-size: 13px; color: #dc2626; line-height: 1.5; }
-.event-delete-confirm strong { color: #b91c1c; }
+.event-delete-btn:hover { background: #fef2f2; border-color: #fecaca; color: #ff0038; }
+.event-delete-confirm { width: 100%; background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-md); padding: 14px; font-size: 13px; color: #ff0038; line-height: 1.5; }
+.event-delete-confirm strong { color: #cc0030; }
 .event-delete-confirm-btns { display: flex; gap: 8px; margin-top: 10px; }
-.event-delete-confirm-yes { flex: 1; padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; background: #dc2626; border: none; color: #fff; transition: background 0.15s; }
-.event-delete-confirm-yes:hover:not(:disabled) { background: #b91c1c; }
+.event-delete-confirm-yes { flex: 1; padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 700; cursor: pointer; background: #ff0038; border: none; color: #fff; transition: background 0.15s; }
+.event-delete-confirm-yes:hover:not(:disabled) { background: #cc0030; }
 .event-delete-confirm-yes:disabled { opacity: 0.4; cursor: not-allowed; }
 
 /* ── Tier badge ──────────────────────────────────────────────────────────── */
@@ -556,10 +556,10 @@ input::placeholder { color: #d1d5db; }
   border-radius: var(--radius-sm); text-align: left; font-size: 13px; font-weight: 500;
   color: #374151; cursor: pointer; transition: background 0.12s;
 }
-.row-dropdown button:hover:not(:disabled) { background: #f5f4ff; color: var(--brand); }
+.row-dropdown button:hover:not(:disabled) { background: #ede8ff; color: var(--brand); }
 .row-dropdown button:disabled { opacity: 0.4; cursor: not-allowed; }
-.row-dropdown--danger { color: #dc2626 !important; }
-.row-dropdown--danger:hover { background: #fef2f2 !important; color: #dc2626 !important; }
+.row-dropdown--danger { color: #ff0038 !important; }
+.row-dropdown--danger:hover { background: #fef2f2 !important; color: #ff0038 !important; }
 
 .event-row-body {
   border-bottom: 1px solid var(--border);
@@ -625,7 +625,7 @@ input::placeholder { color: #d1d5db; }
 .collab-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .collab-toggle-label { font-size: 14px; font-weight: 600; color: var(--text); margin: 0; }
 .collab-toggle-sub   { font-size: 12px; color: var(--text-faint); margin: 2px 0 0; }
-.toggle-switch { width: 44px; height: 24px; border-radius: 99px; background: #e5e7eb; border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; padding: 0; }
+.toggle-switch { width: 44px; height: 24px; border-radius: 99px; background: #c6c6c6; border: none; cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0; padding: 0; }
 .toggle-switch--on { background: var(--brand); }
 .toggle-knob { position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); display: block; }
 .toggle-switch--on .toggle-knob { transform: translateX(20px); }
