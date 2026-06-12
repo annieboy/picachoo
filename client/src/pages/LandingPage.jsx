@@ -40,65 +40,8 @@ function Hero() {
     <section className="bezl-hero relative flex flex-col items-center px-6 overflow-hidden"
              style={{ paddingTop: '100px', paddingBottom: '80px' }}>
 
-      {/* Eyebrow badge */}
-      <div className="anim-fade-up mb-6">
-        <span className="section-eyebrow">
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#53e6d4', display: 'inline-block' }} />
-          No app. No sign-up. Just scan &amp; share.
-        </span>
-      </div>
-
-      {/* Headline — dark on grey */}
-      <h1 className="anim-fade-up text-center text-3xl sm:text-4xl md:text-6xl font-black tracking-tight leading-[1.1] max-w-3xl px-2"
-          style={{ color: '#000000' }}>
-        Collect event photos from everyone —{' '}
-        <span className="grad-text">straight into your cloud.</span>
-      </h1>
-
-      {/* Sub-headline */}
-      <p className="anim-fade-up anim-delay-1 text-center text-base sm:text-lg max-w-xl px-4 mt-4"
-         style={{ color: '#555', lineHeight: 1.7 }}>
-        Perfect for weddings, parties, corporate events and family gatherings.
-        Guests snap photos — they land directly in your Google Drive, Dropbox or OneDrive.
-      </p>
-
-      {/* Steps strip */}
-      <div className="anim-fade-up anim-delay-1 mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 px-4">
-        {[
-          { n: '1', text: 'Scan QR code',             bg: '#6045f4', color: '#fff' },
-          { n: '2', text: 'Snap & upload',             bg: '#53e6d4', color: '#000' },
-          { n: '3', text: 'Photos land in your cloud', bg: '#ff0038', color: '#fff' },
-        ].map(({ n, text, bg, color }, i, arr) => (
-          <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
-            <span style={{
-              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: bg, color, fontSize: 10, fontWeight: 800,
-              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-            }}>{n}</span>
-            <span style={{ color: '#444', fontSize: 13, fontWeight: 600 }}>{text}</span>
-            {i < arr.length - 1 && (
-              <span className="hidden sm:inline" style={{ color: '#c6c6c6', marginLeft: 4, fontSize: 18 }}>›</span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* CTAs */}
-      <div className="anim-fade-up anim-delay-2 mt-8 flex flex-col sm:flex-row gap-3 items-center">
-        <Link to="/dashboard"
-              className="btn-purple px-8 py-4 text-base transition-all hover:scale-105 active:scale-95">
-          Create your first event — free
-        </Link>
-        <a href="#how-it-works"
-           className="text-sm font-semibold transition-colors"
-           style={{ color: '#6045f4' }}>
-          See how it works ↓
-        </a>
-      </div>
-
-      {/* Join capsule */}
-      <div className="anim-fade-up anim-delay-3 mt-6 w-full max-w-sm">
+      {/* Join capsule — top, above headline */}
+      <div className="anim-fade-up mb-8 w-full max-w-sm">
         <p style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center', marginBottom: 8 }}>
           Already have an event code?
         </p>
@@ -148,13 +91,67 @@ function Hero() {
             >
               {checking ? (
                 <svg style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="#6045f4" strokeWidth="3" strokeOpacity="0.3"/>
-                  <path d="M12 3a9 9 0 019 9" stroke="#6045f4" strokeWidth="3" strokeLinecap="round"/>
+                  <circle cx="12" cy="12" r="9" stroke="#000" strokeWidth="3" strokeOpacity="0.3"/>
+                  <path d="M12 3a9 9 0 019 9" stroke="#000" strokeWidth="3" strokeLinecap="round"/>
                 </svg>
               ) : (
                 <svg viewBox="0 0 20 20" fill="#000000" style={{ width: 16, height: 16 }}>
                   <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
                 </svg>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* Headline — dark on grey */}
+      <h1 className="anim-fade-up text-center text-3xl sm:text-4xl md:text-6xl font-black tracking-tight leading-[1.1] max-w-3xl px-2"
+          style={{ color: '#000000' }}>
+        Easiest way to collect event photos from everyone —{' '}
+        <span className="grad-text">straight into your cloud.</span>
+      </h1>
+
+      {/* Sub-headline */}
+      <p className="anim-fade-up anim-delay-1 text-center text-base sm:text-lg max-w-xl px-4 mt-4"
+         style={{ color: '#555', lineHeight: 1.7 }}>
+        Perfect for weddings, parties, corporate events and family gatherings.
+        Guests snap photos — they land directly in your Google Drive, Dropbox or OneDrive.
+      </p>
+
+      {/* Steps strip */}
+      <div className="anim-fade-up anim-delay-1 mt-6 flex flex-wrap items-center justify-center gap-x-2 gap-y-2 px-4">
+        {[
+          { n: '1', text: 'Scan QR code',             bg: '#6045f4', color: '#fff' },
+          { n: '2', text: 'Snap & upload',             bg: '#53e6d4', color: '#000' },
+          { n: '3', text: 'Photos land in your cloud', bg: '#ff0038', color: '#fff' },
+        ].map(({ n, text, bg, color }, i, arr) => (
+          <div key={n} style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+            <span style={{
+              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: bg, color, fontSize: 10, fontWeight: 800,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            }}>{n}</span>
+            <span style={{ color: '#444', fontSize: 13, fontWeight: 600 }}>{text}</span>
+            {i < arr.length - 1 && (
+              <span className="hidden sm:inline" style={{ color: '#c6c6c6', marginLeft: 4, fontSize: 18 }}>›</span>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* CTAs */}
+      <div className="anim-fade-up anim-delay-2 mt-8 flex flex-col sm:flex-row gap-3 items-center">
+        <Link to="/dashboard"
+              className="btn-purple px-8 py-4 text-base transition-all hover:scale-105 active:scale-95">
+          Create your first event — free
+        </Link>
+        <a href="#how-it-works"
+           className="text-sm font-semibold transition-colors"
+           style={{ color: '#6045f4' }}>
+          See how it works ↓
+        </a>
+      </div>
               )}
             </button>
           </div>
