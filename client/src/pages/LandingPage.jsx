@@ -44,14 +44,15 @@ function Hero() {
       <div className="anim-fade-up mb-8" style={{ width: '100%', maxWidth: '320px' }}>
         <form onSubmit={handleJoin}
               style={{
-                display: 'flex', alignItems: 'center',
+                display: 'flex', flexDirection: 'row', alignItems: 'center',
                 borderRadius: '14px',
-                border: '2px solid #000',
+                border: '1.5px solid var(--silver)',
                 background: '#fff',
                 height: '48px',
-                boxShadow: '3px 3px 0px #000',
+                boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
                 padding: '0 5px 0 14px',
                 gap: '8px',
+                overflow: 'hidden',
               }}>
           <span style={{ color: '#6045f4', fontWeight: 900, fontSize: '15px', flexShrink: 0, lineHeight: 1 }}>#</span>
           <input
@@ -64,9 +65,10 @@ function Hero() {
             autoCorrect="off"
             className="join-input"
             style={{
-              background: 'transparent', border: 'none', outline: 'none',
+              all: 'unset',
               color: '#000', fontSize: '13px', fontWeight: 600,
               minWidth: 0, flex: 1, letterSpacing: '0.01em',
+              cursor: 'text',
             }}
           />
           <button
