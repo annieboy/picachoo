@@ -135,13 +135,16 @@ function Hero() {
               aria-label="Join event"
               style={{
                 width: '44px', height: '44px', borderRadius: '50%',
-                background: '#fff', border: '2px solid #000', cursor: 'pointer',
+                background: '#53e6d4', border: 'none', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, transition: 'transform 0.15s',
+                flexShrink: 0, transition: 'transform 0.15s, box-shadow 0.15s',
                 margin: '0 4px 0 0',
+                boxShadow: '0 4px 14px rgba(83,230,212,0.5)',
               }}
               onMouseDown={e => e.currentTarget.style.transform = 'scale(0.9)'}
               onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(83,230,212,0.7)'}
+              onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(83,230,212,0.5)'}
             >
               {checking ? (
                 <svg style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
@@ -149,7 +152,7 @@ function Hero() {
                   <path d="M12 3a9 9 0 019 9" stroke="#6045f4" strokeWidth="3" strokeLinecap="round"/>
                 </svg>
               ) : (
-                <svg viewBox="0 0 20 20" fill="#6045f4" style={{ width: 16, height: 16 }}>
+                <svg viewBox="0 0 20 20" fill="#000000" style={{ width: 16, height: 16 }}>
                   <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
                 </svg>
               )}
