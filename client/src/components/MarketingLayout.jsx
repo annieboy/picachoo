@@ -197,7 +197,12 @@ function Footer() {
 
       <div style={{ borderTop: '1px solid #222' }}>
         <div className="max-w-6xl mx-auto px-6 py-5 flex flex-col md:flex-row items-center justify-between gap-3">
-          <p style={{ color: '#555', fontSize: 12 }}>© {new Date().getFullYear()} Picachoo. All rights reserved.</p>
+          <p style={{ color: '#555', fontSize: 12 }}>
+            © {new Date().getFullYear()} Picachoo by{' '}
+            <a href="https://www.firstguide.co.uk" target="_blank" rel="noopener noreferrer"
+               style={{ color: '#888', textDecoration: 'underline' }}>First Guide Limited</a>.
+            {' '}All rights reserved.
+          </p>
           <p style={{ color: '#555', fontSize: 12 }}>Made with ♥ for photographers, planners &amp; memory-makers.</p>
         </div>
       </div>
