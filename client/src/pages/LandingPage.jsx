@@ -98,46 +98,51 @@ function Hero() {
       </div>
 
       {/* Join capsule */}
-      <div className="anim-fade-up anim-delay-3 mt-6 w-full max-w-sm md:max-w-xs">
+      <div className="anim-fade-up anim-delay-3 mt-6 w-full max-w-sm">
+        <p style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center', marginBottom: 8 }}>
+          Already have an event code?
+        </p>
         <form onSubmit={handleJoin}
               style={{
                 display: 'flex', alignItems: 'stretch',
-                borderRadius: '9999px', overflow: 'hidden',
-                border: '2px solid #c6c6c6',
+                borderRadius: '16px', overflow: 'hidden',
+                border: '2px solid #000',
                 background: '#fff',
-                height: '48px',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                height: '56px',
+                boxShadow: '4px 4px 0px #000',
               }}>
           <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px',
-            padding: '6px 6px 6px 16px', flex: 1,
+            display: 'flex', alignItems: 'center', gap: '8px',
+            padding: '6px 6px 6px 18px', flex: 1,
           }}>
-            <span style={{ color: '#6045f4', fontWeight: 800, fontSize: '14px', flexShrink: 0 }}>#</span>
+            <span style={{ color: '#6045f4', fontWeight: 900, fontSize: '18px', flexShrink: 0, lineHeight: 1 }}>#</span>
             <input
               type="text"
               value={code}
               onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="Have a code? Enter it"
+              placeholder="Enter event code"
               maxLength={12}
               autoCapitalize="characters"
               autoCorrect="off"
               style={{
                 background: 'transparent', border: 'none', outline: 'none',
-                color: '#000', fontSize: '13px', fontWeight: 500,
-                minWidth: 0, flex: 1,
+                color: '#000', fontSize: '15px', fontWeight: 700,
+                minWidth: 0, flex: 1, letterSpacing: '0.05em',
               }}
             />
             <button
               type="submit"
               aria-label="Join event"
               style={{
-                width: '36px', height: '36px', borderRadius: '50%',
+                height: '44px', paddingLeft: '18px', paddingRight: '18px',
+                borderRadius: '10px', margin: '4px 4px 4px 0',
                 background: '#6045f4', border: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, transition: 'transform 0.15s',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                flexShrink: 0, transition: 'background 0.15s',
+                color: '#fff', fontWeight: 700, fontSize: 13,
               }}
-              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.9)'}
-              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+              onMouseEnter={e => e.currentTarget.style.background = '#4e36d8'}
+              onMouseLeave={e => e.currentTarget.style.background = '#6045f4'}
             >
               {checking ? (
                 <svg style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
@@ -145,15 +150,17 @@ function Hero() {
                   <path d="M12 3a9 9 0 019 9" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
                 </svg>
               ) : (
-                <svg viewBox="0 0 20 20" fill="#fff" style={{ width: 14, height: 14 }}>
-                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
-                </svg>
+                <>
+                  <span>Join</span>
+                  <svg viewBox="0 0 20 20" fill="#fff" style={{ width: 13, height: 13 }}>
+                    <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+                  </svg>
+                </>
               )}
             </button>
           </div>
         </form>
       </div>
-
       {/* Hero animated scene */}
       <div className="anim-fade-up anim-delay-4 relative z-10 mt-10 w-full max-w-lg px-2 sm:px-0">
         <HeroScene />
