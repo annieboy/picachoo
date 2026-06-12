@@ -74,12 +74,17 @@ export default function AboutPage() {
           </div>
 
           {/* CTA */}
-          <div className="bezl-hero relative rounded-3xl p-10 text-center overflow-hidden">
+          <div className="relative rounded-3xl p-10 text-center overflow-hidden"
+               style={{ background: 'linear-gradient(135deg,#6045f4 0%,#7060f6 50%,#53e6d4 100%)', boxShadow: '0 16px 48px rgba(96,69,244,0.25)' }}>
             <h2 className="text-2xl font-black text-white mb-3">Ready to try it?</h2>
-            <p className="text-white/70 mb-6">Free forever for Standard. No credit card.</p>
+            <p className="mb-6" style={{ color: 'rgba(255,255,255,0.8)' }}>Free forever for Standard. No credit card.</p>
             <div className="flex gap-3 justify-center flex-wrap">
               <Link to="/dashboard" className="btn-white px-8 py-3.5 text-sm">Create your first event</Link>
-              <Link to="/contact" className="btn-outline-white px-8 py-3.5 text-sm">Get in touch</Link>
+              <Link to="/contact" className="btn-outline-white px-8 py-3.5 text-sm" style={{ color: '#fff', borderColor: 'rgba(255,255,255,0.5)' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor='#fff'; e.currentTarget.style.color='#fff'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.5)'; e.currentTarget.style.color='#fff'; }}>
+                Get in touch
+              </Link>
             </div>
           </div>
         </div>
