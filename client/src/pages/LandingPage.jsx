@@ -153,11 +153,7 @@ function Hero() {
           See how it works ↓
         </a>
       </div>
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
+
       {/* Hero animated scene */}
       <div className="anim-fade-up anim-delay-4 relative z-10 mt-10 w-full max-w-lg px-2 sm:px-0">
         <HeroScene />
