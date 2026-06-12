@@ -41,17 +41,17 @@ function Hero() {
              style={{ paddingTop: '100px', paddingBottom: '80px' }}>
 
       {/* Join capsule — top, above headline */}
-      <div className="anim-fade-up mb-8" style={{ width: '100%', maxWidth: '280px' }}>
+      <div className="anim-fade-up mb-8" style={{ width: '100%', maxWidth: '320px' }}>
         <form onSubmit={handleJoin}
               style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                display: 'flex', alignItems: 'center',
                 borderRadius: '14px',
                 border: '2px solid #000',
                 background: '#fff',
-                height: '46px',
+                height: '48px',
                 boxShadow: '3px 3px 0px #000',
-                padding: '0 4px 0 12px',
-                gap: '6px',
+                padding: '0 5px 0 14px',
+                gap: '8px',
               }}>
           <span style={{ color: '#6045f4', fontWeight: 900, fontSize: '15px', flexShrink: 0, lineHeight: 1 }}>#</span>
           <input
@@ -65,15 +65,15 @@ function Hero() {
             className="join-input"
             style={{
               background: 'transparent', border: 'none', outline: 'none',
-              color: '#000', fontSize: '13px', fontWeight: 700,
-              minWidth: 0, flex: 1, letterSpacing: '0.03em', textAlign: 'center',
+              color: '#000', fontSize: '13px', fontWeight: 600,
+              minWidth: 0, flex: 1, letterSpacing: '0.01em',
             }}
           />
           <button
             type="submit"
             aria-label="Join event"
             style={{
-              width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
+              width: '36px', height: '36px', borderRadius: '50%', flexShrink: 0,
               background: '#53e6d4', border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               transition: 'transform 0.15s, box-shadow 0.15s',
