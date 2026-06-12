@@ -41,67 +41,60 @@ function Hero() {
              style={{ paddingTop: '100px', paddingBottom: '80px' }}>
 
       {/* Join capsule — top, above headline */}
-      <div className="anim-fade-up mb-8 w-full max-w-sm">
-        <p style={{ fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.1em', textAlign: 'center', marginBottom: 8 }}>
-          Already have an event code?
-        </p>
+      <div className="anim-fade-up mb-8" style={{ width: '100%', maxWidth: '280px' }}>
         <form onSubmit={handleJoin}
               style={{
-                display: 'flex', alignItems: 'stretch',
-                borderRadius: '16px', overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                borderRadius: '14px',
                 border: '2px solid #000',
                 background: '#fff',
-                height: '56px',
-                boxShadow: '4px 4px 0px #000',
+                height: '46px',
+                boxShadow: '3px 3px 0px #000',
+                padding: '0 4px 0 12px',
+                gap: '6px',
               }}>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '8px',
-            padding: '6px 6px 6px 18px', flex: 1,
-          }}>
-            <span style={{ color: '#6045f4', fontWeight: 900, fontSize: '18px', flexShrink: 0, lineHeight: 1 }}>#</span>
-            <input
-              type="text"
-              value={code}
-              onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="Joining event? Enter code."
-              maxLength={12}
-              autoCapitalize="characters"
-              autoCorrect="off"
-              className="join-input"
-              style={{
-                background: 'transparent', border: 'none', outline: 'none',
-                color: '#000', fontSize: '15px', fontWeight: 700,
-                minWidth: 0, flex: 1, letterSpacing: '0.05em',
-              }}
-            />
-            <button
-              type="submit"
-              aria-label="Join event"
-              style={{
-                width: '44px', height: '44px', borderRadius: '50%',
-                background: '#53e6d4', border: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, transition: 'transform 0.15s, box-shadow 0.15s',
-                margin: '0 4px 0 0',
-                boxShadow: '0 4px 14px rgba(83,230,212,0.5)',
-              }}
-              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.9)'}
-              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
-              onMouseEnter={e => e.currentTarget.style.boxShadow = '0 6px 20px rgba(83,230,212,0.7)'}
-              onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 14px rgba(83,230,212,0.5)'}
-            >
-              {checking ? (
-                <svg style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="#000" strokeWidth="3" strokeOpacity="0.3"/>
-                  <path d="M12 3a9 9 0 019 9" stroke="#000" strokeWidth="3" strokeLinecap="round"/>
-                </svg>
-              ) : (
-                <svg viewBox="0 0 20 20" fill="#000000" style={{ width: 16, height: 16 }}>
-                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
-                </svg>
-              )}
-            </button>
-          </div>
+          <span style={{ color: '#6045f4', fontWeight: 900, fontSize: '15px', flexShrink: 0, lineHeight: 1 }}>#</span>
+          <input
+            type="text"
+            value={code}
+            onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+            placeholder="Joining event? Enter code."
+            maxLength={12}
+            autoCapitalize="characters"
+            autoCorrect="off"
+            className="join-input"
+            style={{
+              background: 'transparent', border: 'none', outline: 'none',
+              color: '#000', fontSize: '13px', fontWeight: 700,
+              minWidth: 0, flex: 1, letterSpacing: '0.03em', textAlign: 'center',
+            }}
+          />
+          <button
+            type="submit"
+            aria-label="Join event"
+            style={{
+              width: '34px', height: '34px', borderRadius: '50%', flexShrink: 0,
+              background: '#53e6d4', border: 'none', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'transform 0.15s, box-shadow 0.15s',
+              boxShadow: '0 3px 10px rgba(83,230,212,0.5)',
+            }}
+            onMouseDown={e => e.currentTarget.style.transform = 'scale(0.9)'}
+            onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseEnter={e => e.currentTarget.style.boxShadow = '0 5px 16px rgba(83,230,212,0.7)'}
+            onMouseLeave={e => e.currentTarget.style.boxShadow = '0 3px 10px rgba(83,230,212,0.5)'}
+          >
+            {checking ? (
+              <svg style={{ width: 13, height: 13, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" stroke="#000" strokeWidth="3" strokeOpacity="0.3"/>
+                <path d="M12 3a9 9 0 019 9" stroke="#000" strokeWidth="3" strokeLinecap="round"/>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 20 20" fill="#000" style={{ width: 13, height: 13 }}>
+                <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+              </svg>
+            )}
+          </button>
         </form>
       </div>
 
