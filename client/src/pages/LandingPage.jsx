@@ -134,28 +134,24 @@ function Hero() {
               type="submit"
               aria-label="Join event"
               style={{
-                height: '44px', paddingLeft: '18px', paddingRight: '18px',
-                borderRadius: '10px', margin: '4px 4px 4px 0',
-                background: '#6045f4', border: 'none', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                flexShrink: 0, transition: 'background 0.15s',
-                color: '#fff', fontWeight: 700, fontSize: 13,
+                width: '44px', height: '44px', borderRadius: '50%',
+                background: '#fff', border: '2px solid #000', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0, transition: 'transform 0.15s',
+                margin: '0 4px 0 0',
               }}
-              onMouseEnter={e => e.currentTarget.style.background = '#4e36d8'}
-              onMouseLeave={e => e.currentTarget.style.background = '#6045f4'}
+              onMouseDown={e => e.currentTarget.style.transform = 'scale(0.9)'}
+              onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
             >
               {checking ? (
-                <svg style={{ width: 14, height: 14, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
-                  <circle cx="12" cy="12" r="9" stroke="#fff" strokeWidth="3" strokeOpacity="0.4"/>
-                  <path d="M12 3a9 9 0 019 9" stroke="#fff" strokeWidth="3" strokeLinecap="round"/>
+                <svg style={{ width: 16, height: 16, animation: 'spin 1s linear infinite' }} viewBox="0 0 24 24" fill="none">
+                  <circle cx="12" cy="12" r="9" stroke="#6045f4" strokeWidth="3" strokeOpacity="0.3"/>
+                  <path d="M12 3a9 9 0 019 9" stroke="#6045f4" strokeWidth="3" strokeLinecap="round"/>
                 </svg>
               ) : (
-                <>
-                  <span>Join</span>
-                  <svg viewBox="0 0 20 20" fill="#fff" style={{ width: 13, height: 13 }}>
-                    <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
-                  </svg>
-                </>
+                <svg viewBox="0 0 20 20" fill="#6045f4" style={{ width: 16, height: 16 }}>
+                  <path fillRule="evenodd" d="M10.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L12.586 11H5a1 1 0 110-2h7.586l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd"/>
+                </svg>
               )}
             </button>
           </div>
