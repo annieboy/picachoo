@@ -324,3 +324,6 @@ body.mkt #root {
     radial-gradient(circle at 90% 10%, rgba(83,230,212,0.08) 0%, transparent 50%);
   pointer-events: none;
 }
+
+/* ── Join capsule placeholder ── */
+.join-input::placeholder { color: #000000; opacity: 1; }

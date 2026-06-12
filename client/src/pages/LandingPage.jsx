@@ -63,10 +63,11 @@ function Hero() {
               type="text"
               value={code}
               onChange={e => setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-              placeholder="Enter event code"
+              placeholder="Joining event? Enter code."
               maxLength={12}
               autoCapitalize="characters"
               autoCorrect="off"
+              className="join-input"
               style={{
                 background: 'transparent', border: 'none', outline: 'none',
                 color: '#000', fontSize: '15px', fontWeight: 700,
