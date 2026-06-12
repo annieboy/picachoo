@@ -6,13 +6,13 @@ export default function AboutPage() {
     <MarketingLayout>
       {/* Hero */}
       <div className="bezl-hero relative pt-28 pb-20 px-6 text-center overflow-hidden">
-        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/30 mb-6">
+        <span className="section-eyebrow mb-6">
           Our story
         </span>
-        <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight leading-tight">
+        <h1 className="text-5xl md:text-6xl font-black tracking-tight leading-tight" style={{ color: '#000' }}>
           Built because<br />we were frustrated
         </h1>
-        <p className="mt-5 text-white/70 text-xl max-w-2xl mx-auto">
+        <p className="mt-5 text-xl max-w-2xl mx-auto" style={{ color: '#555' }}>
           Every host has lived the pain: "Just email me your photos." Nobody does. Picachoo is the fix.
         </p>
         <div className="wave-bottom" />

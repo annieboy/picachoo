@@ -62,13 +62,13 @@ export default function PricingPage() {
 
       {/* Hero banner */}
       <div className="bezl-hero relative pt-28 pb-24 px-6 text-center overflow-hidden">
-        <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold bg-white/15 text-white border border-white/30 mb-6">
+        <span className="section-eyebrow mb-6">
           Pricing
         </span>
-        <h1 className="text-5xl md:text-6xl font-black text-white tracking-tight mb-4">
+        <h1 className="text-5xl md:text-6xl font-black tracking-tight mb-4" style={{ color: '#000' }}>
           Simple, honest pricing
         </h1>
-        <p className="text-white/70 text-xl max-w-xl mx-auto mb-10">
+        <p className="text-xl max-w-xl mx-auto mb-10" style={{ color: '#555' }}>
           {isOneTime
             ? 'One-time passes for single events. No subscription needed.'
             : 'Annual plans for power users. Save compared to monthly.'}

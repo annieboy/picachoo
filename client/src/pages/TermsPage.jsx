@@ -4,8 +4,8 @@ export default function TermsPage() {
   return (
     <MarketingLayout>
       <div className="bezl-hero relative pt-28 pb-20 px-6 text-center overflow-hidden">
-        <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight">Terms of Service</h1>
-        <p className="text-white/60 text-sm mt-3">Last updated: June 2025</p>
+        <h1 className="text-4xl md:text-5xl font-black tracking-tight" style={{ color: '#000' }}>Terms of Service</h1>
+        <p className="text-sm mt-3" style={{ color: '#555' }}>Last updated: June 2025</p>
         <div className="wave-bottom" />
       </div>
 
